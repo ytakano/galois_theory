@@ -350,15 +350,97 @@ Qed.
 (** gpow の加法性: g^(m+n) = g^m * g^n  (整数冪)
 
     証明: m, n の符号による場合分け。
-    (0, n): 単位元の左中立性から自明。
-    (+, +): Pos2Nat.inj_add と gpow_nat_add を使用。
+    (>= 0, >= 0): Pos2Nat.inj_add と gpow_nat_add を使用。
     (-, -): 逆元側の gpow_nat_add を使用。
-    (+, -), (-, +): 正負の打ち消しが生じる場合は符号の大小で再度分岐し,
+    (>= 0, -), (-, >= 0): 正負の打ち消しが生じる場合は符号の大小で再度分岐し,
                     inv_right / inv_left と id_right / id_left を使用。  *)
-Lemma gpow_add : forall (G : Group) (a : carrier G) (m n : Z),
-  gpow G a (m + n) = op G (gpow G a m) (gpow G a n).
+
+Lemma gpow_of_nat :
+  forall (G : Group) (a : carrier G) (k : nat),
+    gpow G a (Z.of_nat k) = gpow_nat G a k.
 Proof.
-Admitted.
+  intros G a [|k].
+  - reflexivity.
+  - simpl.
+    rewrite SuccNat2Pos.id_succ.
+    reflexivity.
+Qed.
+
+Lemma gpow_add_pos_pos : forall (G : Group) (a : carrier G) (m n : Z),
+  n >= 0 /\ m >= 0 -> gpow G a (m + n) = op G (gpow G a m) (gpow G a n).
+Proof.
+  intros G a m n [Hn Hm].
+
+  assert (Hm_nat : exists km : nat, m = Z.of_nat km).
+  {
+    exists (Z.to_nat m).
+    symmetry.
+    apply Z2Nat.id.
+    lia.
+  }
+
+  assert (Hn_nat : exists kn : nat, n = Z.of_nat kn).
+  {
+    exists (Z.to_nat n).
+    symmetry.
+    apply Z2Nat.id.
+    lia.
+  }
+
+  destruct Hm_nat as [km Hkm].
+  destruct Hn_nat as [kn Hkn].
+  subst m n.
+
+  rewrite <- Nat2Z.inj_add.
+  rewrite !gpow_of_nat.
+
+  change (gpow_nat G a (km + kn) = op G (gpow_nat G a km) (gpow_nat G a kn)).
+
+  rewrite <- gpow_nat_add.
+  reflexivity.
+Qed.
+
+
+Lemma gpow_neg_of_nat :
+  forall (G : Group) (a : carrier G) (k : nat),
+    gpow G a (- Z.of_nat k) = gpow_nat G (inv G a) k.
+Proof.
+  intros G a [|k].
+  - reflexivity.
+  - simpl.
+    rewrite SuccNat2Pos.id_succ.
+    reflexivity.
+Qed.
+
+Lemma gpow_add_neg_neg : forall (G : Group) (a : carrier G) (m n : Z),
+  n < 0 /\ m < 0 -> gpow G a (m + n) = op G (gpow G a m) (gpow G a n).
+Proof.
+  intros G a m n [Hn Hm].
+
+  assert (Hm_nat : exists km : nat, m = - Z.of_nat km).
+  {
+    exists (Z.to_nat (-m)).
+    rewrite Z2Nat.id by lia.
+    ring.
+  }
+
+  assert (Hn_nat : exists kn : nat, n = - Z.of_nat kn).
+  {
+    exists (Z.to_nat (-n)).
+    rewrite Z2Nat.id by lia.
+    ring.
+  }
+
+  destruct Hm_nat as [km Hkm].
+  destruct Hn_nat as [kn Hkn].
+  subst m n.
+
+  replace (- Z.of_nat km + - Z.of_nat kn) with (- Z.of_nat (km + kn))
+    by (rewrite Nat2Z.inj_add; ring).
+  rewrite !gpow_neg_of_nat.
+  rewrite <- gpow_nat_add.
+  reflexivity.
+Qed.
 
 (** a は自身の冪と可換: a * a^n = a^n * a
 
@@ -380,17 +462,6 @@ Lemma inv_e : forall (G : Group), inv G (e G) = e G.
 Proof.
   intro G.
   rewrite <- (id_left G (inv G (e G))). apply inv_right.
-Qed.
-
-(** 逆元の逆元は元自身: inv(inv(a)) = a  *)
-Lemma inv_inv : forall (G : Group) (a : carrier G), inv G (inv G a) = a.
-Proof.
-  intros G a.
-  rewrite <- (id_right G (inv G (inv G a))).
-  rewrite <- (inv_left G a).
-  rewrite assoc.
-  rewrite inv_left.
-  apply id_left.
 Qed.
 
 (** 右逆元の一意性: x * y = e → y = inv(x)  *)
@@ -434,6 +505,127 @@ Proof.
   - simpl. rewrite IH.
     rewrite <- (inv_op G (gpow_nat G a n') a).
     f_equal. simpl. symmetry. apply gpow_nat_comm.
+Qed.
+
+(** gpow の加法性 (正 + 負の場合):
+    g^(m+n) = g^m * g^n  (m >= 0, n < 0)
+
+    証明: m = Z.of_nat km, n = - Z.of_nat kn と置き,
+    kn <= km の場合と km < kn の場合に分岐する.
+
+    Case 1 (kn <= km, m+n >= 0):
+      g^(km-kn) = g^((km-kn)+kn) * (g^{-1})^kn を gpow_nat_add で展開し,
+      g^kn * (g^{-1})^kn = e (inv_right) を使って右辺を消去する.
+
+    Case 2 (km < kn, m+n < 0):
+      (g^{-1})^(kn-km) = g^km * (g^{-1})^(km+(kn-km)) を gpow_nat_add で展開し,
+      g^km * (g^{-1})^km = e (inv_right) を使って右辺を消去する.  *)
+Lemma gpow_add_pos_neg : forall (G : Group) (a : carrier G) (m n : Z),
+  n < 0 /\ m >= 0 -> gpow G a (m + n) = op G (gpow G a m) (gpow G a n).
+Proof.
+  intros G a m n [Hn Hm].
+
+  assert (Hm_nat : exists km : nat, m = Z.of_nat km).
+  { exists (Z.to_nat m). symmetry. apply Z2Nat.id. lia. }
+
+  assert (Hn_nat : exists kn : nat, n = - Z.of_nat kn).
+  { exists (Z.to_nat (-n)). rewrite Z2Nat.id by lia. ring. }
+
+  destruct Hm_nat as [km Hkm].
+  destruct Hn_nat as [kn Hkn].
+  subst m n.
+
+  destruct (Nat.le_gt_cases kn km) as [Hle | Hlt].
+  - (* Case 1: kn <= km, よって m + n >= 0 *)
+    replace (Z.of_nat km + - Z.of_nat kn) with (Z.of_nat (km - kn))
+      by (rewrite Nat2Z.inj_sub by lia; ring).
+    rewrite gpow_of_nat, gpow_of_nat, gpow_neg_of_nat.
+    (* 目標: gpow_nat G a (km - kn) = op G (gpow_nat G a km) (gpow_nat G (inv G a) kn) *)
+    replace km with (km - kn + kn)%nat at 2 by lia.
+    rewrite gpow_nat_add, <- assoc, (gpow_nat_inv_eq G a kn), inv_right, id_right.
+    reflexivity.
+  - (* Case 2: km < kn, よって m + n < 0 *)
+    replace (Z.of_nat km + - Z.of_nat kn) with (- Z.of_nat (kn - km))
+      by (rewrite Nat2Z.inj_sub by lia; ring).
+    rewrite gpow_of_nat, gpow_neg_of_nat, gpow_neg_of_nat.
+    (* 目標: gpow_nat G (inv G a) (kn - km) = op G (gpow_nat G a km) (gpow_nat G (inv G a) kn) *)
+    replace kn with (km + (kn - km))%nat at 2 by lia.
+    rewrite gpow_nat_add, assoc, (gpow_nat_inv_eq G a km), inv_right, id_left.
+    reflexivity.
+Qed.
+
+(** gpow の加法性 (負 + 正の場合):
+    g^(m+n) = g^m * g^n  (m < 0, n >= 0)
+
+    証明: m = - Z.of_nat km, n = Z.of_nat kn と置き,
+    km <= kn の場合と kn < km の場合に分岐する.
+
+    Case 1 (km <= kn, m+n >= 0):
+      g^(kn-km) = (g^{-1})^km * g^(km+(kn-km)) を gpow_nat_add で展開し,
+      (g^{-1})^km * g^km = e (inv_left) を使って左辺を消去する.
+
+    Case 2 (kn < km, m+n < 0):
+      (g^{-1})^(km-kn) = (g^{-1})^((km-kn)+kn) * g^kn を gpow_nat_add で展開し,
+      (g^{-1})^kn * g^kn = e (inv_left) を使って右辺を消去する.  *)
+Lemma gpow_add_neg_pos : forall (G : Group) (a : carrier G) (m n : Z),
+  n >= 0 /\ m < 0 -> gpow G a (m + n) = op G (gpow G a m) (gpow G a n).
+Proof.
+  intros G a m n [Hn Hm].
+
+  assert (Hm_nat : exists km : nat, m = - Z.of_nat km).
+  { exists (Z.to_nat (-m)). rewrite Z2Nat.id by lia. ring. }
+
+  assert (Hn_nat : exists kn : nat, n = Z.of_nat kn).
+  { exists (Z.to_nat n). symmetry. apply Z2Nat.id. lia. }
+
+  destruct Hm_nat as [km Hkm].
+  destruct Hn_nat as [kn Hkn].
+  subst m n.
+
+  destruct (Nat.le_gt_cases km kn) as [Hle | Hlt].
+  - (* Case 1: km <= kn, よって m + n >= 0 *)
+    replace (- Z.of_nat km + Z.of_nat kn) with (Z.of_nat (kn - km))
+      by (rewrite Nat2Z.inj_sub by lia; ring).
+    rewrite gpow_of_nat, gpow_neg_of_nat, gpow_of_nat.
+    (* 目標: gpow_nat G a (kn - km) = op G (gpow_nat G (inv G a) km) (gpow_nat G a kn) *)
+    replace kn with (km + (kn - km))%nat at 2 by lia.
+    rewrite gpow_nat_add, assoc, (gpow_nat_inv_eq G a km), inv_left, id_left.
+    reflexivity.
+  - (* Case 2: kn < km, よって m + n < 0 *)
+    replace (- Z.of_nat km + Z.of_nat kn) with (- Z.of_nat (km - kn))
+      by (rewrite Nat2Z.inj_sub by lia; ring).
+    rewrite gpow_neg_of_nat, gpow_neg_of_nat, gpow_of_nat.
+    (* 目標: gpow_nat G (inv G a) (km - kn) = op G (gpow_nat G (inv G a) km) (gpow_nat G a kn) *)
+    replace km with ((km - kn) + kn)%nat at 2 by lia.
+    rewrite gpow_nat_add, <- assoc, (gpow_nat_inv_eq G a kn), inv_left, id_right.
+    reflexivity.
+Qed.
+
+Lemma gpow_add : forall (G : Group) (a : carrier G) (m n : Z),
+  gpow G a (m + n) = op G (gpow G a m) (gpow G a n).
+Proof.
+  intros G a m n.
+  destruct (Z.lt_ge_cases m 0) as [Hm | Hm], (Z.lt_ge_cases n 0) as [Hn | Hn].
+  - (* m < 0, n < 0 *)
+    apply gpow_add_neg_neg. lia.
+  - (* m < 0, n >= 0 *)
+    apply gpow_add_neg_pos. lia.
+  - (* m >= 0, n < 0 *)
+    apply gpow_add_pos_neg. lia.
+  - (* m >= 0, n >= 0 *)
+    apply gpow_add_pos_pos. lia.
+Qed.
+
+
+(** 逆元の逆元は元自身: inv(inv(a)) = a  *)
+Lemma inv_inv : forall (G : Group) (a : carrier G), inv G (inv G a) = a.
+Proof.
+  intros G a.
+  rewrite <- (id_right G (inv G (inv G a))).
+  rewrite <- (inv_left G a).
+  rewrite assoc.
+  rewrite inv_left.
+  apply id_left.
 Qed.
 
 (** 単位元の冪: e^n = e  *)

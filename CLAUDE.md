@@ -49,10 +49,12 @@ Built in layers, bottom-up:
 
 3. **Concrete instances**: `Z_add_group` and `Z_cyclic_group` instantiate the abstract structures for integers under addition.
 
-4. **Key admitted theorems** (not yet proven):
+4. **Additional utility lemmas**: `gpow_nat_e`, `gpow_nat_mul`, `gpow_mul`, `gpow_of_nat`, `gpow_neg_of_nat`, `inv_unique_r`.
+
+5. **Key admitted theorems** (not yet proven):
    - `generator_order`: g^m = e in an order-m cyclic group
    - `subgroup_of_cyclic`: every subgroup of a cyclic group is cyclic with order dividing the original
-   - `gpow_add` (integer exponent addition)
+   - `gpow_add`: the combined integer exponent addition lemma — all four sign-case sub-lemmas are proven (`gpow_add_pos_pos`, `gpow_add_neg_neg`, `gpow_add_pos_neg`, `gpow_add_neg_pos`); only the wrapper that dispatches on signs remains admitted
 
 ### `galois_theory.v` — Placeholder (empty)
 
