@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rocq compile:*)",
+      "Bash(rocq -v)",
+      "Bash(rocq repl:*)",
+      "Bash(rocq config:*)",
+      "Bash(jobs)",
+      "Bash(rocqc -where)",
+      "Bash(coqc -where)",
+      "Bash(opam list:*)",
+      "Bash(rocq --version)",
+      "WebFetch(domain:rocq-prover.org)",
+      "Bash(rocq query:*)"
+    ]
+  }
+}
