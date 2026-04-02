@@ -15,6 +15,7 @@ cd docker && ./build.sh       # Build image
 cd docker && ./up_docker.sh   # Start container
 cd docker && ./exec_zsh.sh    # Attach shell
 cd docker && ./down_docker.sh # Stop container
+cd docker && ./rebuild.sh     # Rebuild and restart
 ```
 
 ## Compilation
@@ -43,6 +44,8 @@ Built in layers, bottom-up:
    - `GroupIsomorphism` / `GroupIsomorphic` (≅ notation): homomorphism + bijection
    - `GroupOrder`: finite group size via bijection to `Fin.t n`
    - `Subgroup`: predicate-based subgroup definition with closure requirements
+   - `subgroup_group`: lifts a `Subgroup G H` into a full `Group` using sigma types
+   - Proven utility lemmas: `gpow_nat_add`, `gpow_mul`, `gpow_nat_inv_eq`, `gpow_nat_comm`, `inv_inv`, `inv_op`, `inv_e`
 
 3. **Concrete instances**: `Z_add_group` and `Z_cyclic_group` instantiate the abstract structures for integers under addition.
 
@@ -57,6 +60,15 @@ Future home of field extensions, automorphism groups, and the fundamental theore
 
 ## Rocq Conventions in This Codebase
 
+- All docstrings and inline comments are written in Japanese.
 - Sigma types (`{x : T | P x}`) are used for subgroup carriers; `sig_eq` handles equality via proof irrelevance.
-- The `omega` tactic handles linear arithmetic over integers/naturals throughout.
+- The `omega` / `lia` tactic handles linear arithmetic over integers/naturals throughout.
 - `Admitted` is used intentionally to mark theorems planned for future proof — do not remove admissions without completing the proof.
+- Concrete group instances (`Z_add_group`, `Z_cyclic_group`, `subgroup_group`) use `Defined` (not `Qed`) so they are computationally transparent and can be reduced by `Eval compute`.
+- Each definition or theorem is preceded by a Japanese comment block explaining the mathematical concept and the proof strategy.
+
+## External Resources
+
+- Rocq Standard Library
+  - <https://rocq-prover.org/doc/V9.1.0/refman-stdlib/index.html>
+  - <https://rocq-prover.org/doc/V9.1.0/stdlib/index.html>
