@@ -4,38 +4,59 @@ ARG USERNAME=user
 ARG UID=1000
 ARG GID=1000
 
-RUN apt-get -y update && \
-    apt-get -y upgrade && \
-    apt-get -y install build-essential zsh git curl libncurses5-dev opam libgmp-dev pkg-config
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN if getent group ${GID} >/dev/null; then \
-        GROUPNAME=$(getent group ${GID} | cut -d: -f1); \
-    else \
-        groupadd -g ${GID} ${USERNAME}; \
-        GROUPNAME=${USERNAME}; \
-    fi && \
-    if getent passwd ${UID} >/dev/null; then \
-        EXISTING_USER=$(getent passwd ${UID} | cut -d: -f1); \
-        usermod -s /bin/zsh ${EXISTING_USER}; \
-        mkdir -p /home/${EXISTING_USER}; \
-    else \
-        useradd -m -s /bin/zsh -u ${UID} -g ${GID} ${USERNAME}; \
-        EXISTING_USER=${USERNAME}; \
-    fi && \
-    echo "Container user: ${EXISTING_USER}"
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get install -y \
+      build-essential \
+      zsh \
+      git \
+      curl \
+      libncurses5-dev \
+      opam \
+      libgmp-dev \
+      pkg-config \
+      ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN set -eux; \
+    OLD_USER_BY_UID="$(getent passwd "${UID}" | cut -d: -f1 || true)"; \
+    OLD_GROUP_BY_GID="$(getent group "${GID}" | cut -d: -f1 || true)"; \
+    OLD_USER_BY_NAME="$(getent passwd "${USERNAME}" | cut -d: -f1 || true)"; \
+    OLD_GROUP_BY_NAME="$(getent group "${USERNAME}" | cut -d: -f1 || true)"; \
+    \
+    if [ -n "${OLD_USER_BY_UID}" ]; then \
+        userdel -r "${OLD_USER_BY_UID}" || userdel "${OLD_USER_BY_UID}" || true; \
+    fi; \
+    \
+    if [ -n "${OLD_USER_BY_NAME}" ] && [ "${OLD_USER_BY_NAME}" != "${OLD_USER_BY_UID}" ]; then \
+        userdel -r "${OLD_USER_BY_NAME}" || userdel "${OLD_USER_BY_NAME}" || true; \
+    fi; \
+    \
+    if [ -n "${OLD_GROUP_BY_GID}" ]; then \
+        groupdel "${OLD_GROUP_BY_GID}" || true; \
+    fi; \
+    \
+    if [ -n "${OLD_GROUP_BY_NAME}" ] && [ "${OLD_GROUP_BY_NAME}" != "${OLD_GROUP_BY_GID}" ]; then \
+        groupdel "${OLD_GROUP_BY_NAME}" || true; \
+    fi; \
+    \
+    groupadd -g "${GID}" "${USERNAME}"; \
+    useradd -m -d "/home/${USERNAME}" -s /bin/zsh -u "${UID}" -g "${GID}" "${USERNAME}"; \
+    mkdir -p "/home/${USERNAME}"; \
+    chown -R "${UID}:${GID}" "/home/${USERNAME}"
 
 COPY zshrc /tmp/.zshrc
+COPY zshenv /tmp/.zshenv
 
-RUN TARGET_USER=$(getent passwd ${UID} | cut -d: -f1) && \
-    TARGET_HOME=$(getent passwd ${UID} | cut -d: -f6) && \
-    cp /tmp/.zshrc ${TARGET_HOME}/.zshrc && \
-    chown ${UID}:${GID} ${TARGET_HOME}/.zshrc
+RUN cp /tmp/.zshrc "/home/${USERNAME}/.zshrc" && \
+    cp /tmp/.zshenv "/home/${USERNAME}/.zshenv" && \
+    chown "${UID}:${GID}" "/home/${USERNAME}/.zshrc" "/home/${USERNAME}/.zshenv"
 
-# RUN bash -c "sh <(curl -fsSL https://opam.ocaml.org/install.sh)"
-
-USER ${TARGET_USER}
-WORKDIR ${TARGET_HOME}
-ENV HOME=${TARGET_HOME}
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+ENV HOME=/home/${USERNAME}
 
 RUN whoami && id && echo "HOME=$HOME"
 
