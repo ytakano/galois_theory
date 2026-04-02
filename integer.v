@@ -734,7 +734,7 @@ Proof.
 Defined.
 
 (** 巡回群の部分群定理:
-    位数 m > 0 の巡回群 C の任意の部分群 H に対して,
+    位数 m  の巡回群 C の任意の部分群 H に対して,
       (1) H は巡回群 (ある gen ∈ H が存在し H の全元が gen の冪で表せる),
       (2) H の位数 k は m の約数 (k | m).
 
@@ -765,7 +765,6 @@ Defined.
 Theorem subgroup_of_cyclic :
   forall (C : CyclicGroup) (m : nat) (H : Subgroup C),
   GroupOrder C m ->
-  (0 < m)%nat ->
   (* (1) H は巡回群 *)
   (exists gen : carrier C,
      subgroup_pred C H gen /\
