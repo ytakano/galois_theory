@@ -17,7 +17,8 @@ RUN apt-get update && \
       opam \
       libgmp-dev \
       pkg-config \
-      ca-certificates && \
+      ca-certificates \
+      npm && \
     rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
@@ -60,7 +61,7 @@ ENV HOME=/home/${USERNAME}
 
 RUN whoami && id && echo "HOME=$HOME"
 
-RUN opam init --disable-sandboxing --yes --auto-setup && \
+RUN opam init --yes --auto-setup && \
     eval $(opam env)
 
 RUN opam repo add rocq-released https://rocq-prover.org/opam/released && \
@@ -68,5 +69,7 @@ RUN opam repo add rocq-released https://rocq-prover.org/opam/released && \
     opam install -y rocq-prover rocq-stdlib vsrocq-language-server
 
 RUN curl -fsSL https://claude.ai/install.sh | bash
+
+RUN echo "[[ ! -r '${HOME}/.opam/opam-init/init.zsh' ]] || source '${HOME}/.opam/opam-init/init.zsh' > /dev/null 2> /dev/null" >> .zshenv
 
 CMD ["/bin/zsh"]
