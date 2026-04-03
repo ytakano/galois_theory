@@ -81,6 +81,8 @@ Claude Codeで証明を進める際、一つずつ補題を証明していきま
 
 Planモードでは、同じようなことを行うので、もしかしたら、このスキルは必要ない可能性もあります。
 
+このスキルでは、補題を証明する度に、`補題名_progress.md`というファイルに、証明の進捗や方針を記録することを推奨しています。しかし、Claude CodeもCopilotも、この指示を無視し、このファイルを作成してくれませんでした。
+
 ## 推論に不要なファイルやディレクトリの明示化
 
 証明する際に必要ないファイルやディレクトリを明示的に記載することにしました。これにより、証明に集中できるようになり、トークンも節約できると考えました。推論に不要なファイルは、[settings.local.json](.claude/settings.local.json)の`deny`セクションに記載しています。
@@ -101,3 +103,9 @@ Before responding to any request, first assess the required reasoning depth:
 Always make your reasoning depth assessment explicit before responding:
 > "This is a [simple/moderate/complex] task because ..."
 ```
+
+## Claude Codeを諦めCopilotを利用
+
+Claude Codeを利用していると、しょっちゅうトークン制限に到達してしまい、思うように作業ができませんでした。そこで、Copilotを利用することにしました。Copilotでも、Claude Codeと同様に、スキル、Planモードなどを利用することができます。Copilotは、Claude Codeよりもトークン制限が緩いようで、証明のためのスキルも問題なく利用できました。
+
+`subgroup_of_cyclic`は、Copilotを利用して証明しました。Copilotでも、Claude Codeと同様に証明が可能なことがわかりました。
