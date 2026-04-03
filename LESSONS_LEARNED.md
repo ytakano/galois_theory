@@ -73,6 +73,14 @@ Claude Codeで証明を進める際、一つずつ補題を証明していきま
 
 まずはじめに、スキルの下書きを日本語で作成しました。[ROCQ_JP.md](lessons_learned/skills/ROCQ_JP.md)にあります。その後、Claudeに内容のブラッシュアップと英語化を行ってもらいました。
 
+しかし、Claud CodeをPlanモードで利用すると、このスキルを呼び出すことができないことがわかりました。そこで、Planモードであっても、このスキルを呼び出すように、[CLAUDE.md](CLAUDE.md)のProof Workflowのセクションに、以下のように追記するよう指示しました。
+
+```markdown
+**IMPORTANT**: Always invoke the `/rocq-prover` skill **before writing any Rocq code**, even after Plan mode. Do not implement proofs directly without going through the skill.
+```
+
+Planモードでは、同じようなことを行うので、もしかしたら、このスキルは必要ない可能性もあります。
+
 ## 推論に不要なファイルやディレクトリの明示化
 
 証明する際に必要ないファイルやディレクトリを明示的に記載することにしました。これにより、証明に集中できるようになり、トークンも節約できると考えました。推論に不要なファイルは、[settings.local.json](.claude/settings.local.json)の`deny`セクションに記載しています。
