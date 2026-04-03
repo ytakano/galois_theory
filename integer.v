@@ -1751,3 +1751,316 @@ Proof.
   rewrite Z2Nat.id by lia.
   apply Z.mod_small. exact Hx.
 Defined.
+
+
+(** ===================================================================== *)
+(** 中国剰余定理 (Chinese Remainder Theorem)                               *)
+(** 互いに素な p, q と 0<=a<p, 0<=b<q に対して、n mod p = a かつ         *)
+(** n mod q = b となる n in [0, p*q) が唯一存在することを示す。           *)
+(** ===================================================================== *)
+
+(** 補題: Nat.gcd p q = 1 ならば Bezout 係数が存在する。
+    Z.gcd と Nat.gcd の橋渡しを Z.to_nat で行い、
+    Nat.gcd_greatest を用いて Z.gcd = 1 を示す。 *)
+
+(** 補助: (Z.of_nat g | Z.of_nat p) ならば Nat.divide g p。 *)
+Lemma Z_of_nat_divide_aux : forall (g p : nat),
+  (0 < g)%nat -> (Z.of_nat g | Z.of_nat p) -> Nat.divide g p.
+Proof.
+  intros g p Hg [k Hk].
+  assert (Hk_nn : 0 <= k) by (pose proof (Nat2Z.is_nonneg p); nia).
+  exists (Z.to_nat k).
+  apply Nat2Z.inj.
+  rewrite Nat2Z.inj_mul, Z2Nat.id by exact Hk_nn.
+  lia.
+Qed.
+
+Lemma nat_coprime_bezout : forall (p q : nat),
+  Nat.gcd p q = 1%nat ->
+  exists x y : Z, Z.of_nat p * x + Z.of_nat q * y = 1.
+Proof.
+  intros p q Hgcd.
+  assert (HZgcd_div : (Z.gcd (Z.of_nat p) (Z.of_nat q) | 1)).
+  {
+    pose proof (Z.gcd_divide_l (Z.of_nat p) (Z.of_nat q)) as Hdp.
+    pose proof (Z.gcd_divide_r (Z.of_nat p) (Z.of_nat q)) as Hdq.
+    pose proof (Z.gcd_nonneg (Z.of_nat p) (Z.of_nat q)) as Hnn.
+    set (G := Z.gcd (Z.of_nat p) (Z.of_nat q)) in *.
+    set (g := Z.to_nat G).
+    assert (HgZ : G = Z.of_nat g).
+    { unfold g. rewrite Z2Nat.id; [reflexivity | exact Hnn]. }
+    assert (Hgpos : (0 < g)%nat).
+    {
+      unfold g. apply Nat2Z.inj_lt. rewrite Z2Nat.id by exact Hnn. simpl.
+      destruct (Z.eq_dec G 0) as [HG0 | HG_ne].
+      - exfalso.
+        assert (Z.of_nat p = 0) by (apply Z.divide_0_l; rewrite <- HG0; exact Hdp).
+        assert (Z.of_nat q = 0) by (apply Z.divide_0_l; rewrite <- HG0; exact Hdq).
+        assert (p = 0%nat) by lia. assert (q = 0%nat) by lia. subst.
+        simpl in Hgcd. discriminate.
+      - lia.
+    }
+    assert (Hgp : Nat.divide g p).
+    { apply Z_of_nat_divide_aux; [exact Hgpos | rewrite <- HgZ; exact Hdp]. }
+    assert (Hgq : Nat.divide g q).
+    { apply Z_of_nat_divide_aux; [exact Hgpos | rewrite <- HgZ; exact Hdq]. }
+    assert (Hg1 : Nat.divide g 1%nat).
+    { rewrite <- Hgcd. apply Nat.gcd_greatest; assumption. }
+    assert (Hgeq : g = 1%nat) by (apply Nat.divide_1_r; exact Hg1).
+    rewrite HgZ, Hgeq. simpl. apply Z.divide_refl.
+  }
+  apply linear_diophantine. exact HZgcd_div.
+Qed.
+
+(** 補題: n mod m = a ならば n ≡ a (mod m)。
+    Z.modulo から cong 定義への橋渡し補題。 *)
+Lemma cong_of_mod : forall (m : nat) (n a : Z),
+  (0 < m)%nat ->
+  Z.modulo n (Z.of_nat m) = a ->
+  cong m n a.
+Proof.
+  intros m n a Hm Hmod.
+  unfold cong.
+  subst a.
+  exists (Z.div n (Z.of_nat m)).
+  assert (Hm' : Z.of_nat m <> 0) by lia.
+  pose proof (Z.div_mod n (Z.of_nat m) Hm') as H.
+  lia.
+Qed.
+
+(** 補題: 0 <= a < m かつ n ≡ a (mod m) ならば n mod m = a。
+    cong 定義から Z.modulo への橋渡し補題。 *)
+Lemma mod_of_cong : forall (m : nat) (n a : Z),
+  (0 < m)%nat ->
+  0 <= a < Z.of_nat m ->
+  cong m n a ->
+  Z.modulo n (Z.of_nat m) = a.
+Proof.
+  intros m n a Hm Ha Hcong.
+  unfold cong in Hcong.
+  destruct Hcong as [k Hk].
+  assert (Hn : n = Z.of_nat m * k + a) by lia.
+  subst n.
+  replace (Z.of_nat m * k + a) with (a + k * Z.of_nat m) by ring.
+  rewrite Z.mod_add by lia.
+  apply Z.mod_small. lia.
+Qed.
+
+(** 補題: 同一範囲に属する合同な整数は等しい。 *)
+Lemma cong_unique_in_range : forall (m : nat) (a b : Z),
+  (0 < m)%nat ->
+  0 <= a < Z.of_nat m ->
+  0 <= b < Z.of_nat m ->
+  cong m a b ->
+  a = b.
+Proof.
+  intros m a b Hm Ha Hb Hcong.
+  unfold cong in Hcong.
+  destruct Hcong as [k Hk].
+  assert (Hbd : -(Z.of_nat m) < a - b < Z.of_nat m) by lia.
+  rewrite Hk in Hbd.
+  assert (Hmpos : (0 : Z) < Z.of_nat m) by lia.
+  assert (k = 0) by nia.
+  lia.
+Qed.
+
+(** 補題: 合同関係の推移性。 *)
+Lemma cong_trans : forall (m : nat) (a b c : Z),
+  cong m a b -> cong m b c -> cong m a c.
+Proof.
+  intros m a b c H1 H2.
+  unfold cong in *.
+  replace (a - c) with ((a - b) + (b - c)) by ring.
+  apply Z.divide_add_r; assumption.
+Qed.
+
+(** 補題: gcd(p,q) = 1 かつ p | a かつ q | a ならば p*q | a。 *)
+Lemma coprime_divide_mul : forall (p q : nat) (a : Z),
+  Nat.gcd p q = 1%nat ->
+  (Z.of_nat p | a) ->
+  (Z.of_nat q | a) ->
+  (Z.of_nat p * Z.of_nat q | a).
+Proof.
+  intros p q a Hgcd [i Hi] [j Hj].
+  destruct (nat_coprime_bezout p q Hgcd) as [x [y Hxy]].
+  exists (i * y + j * x).
+  (* p*q*(i*y+j*x) = (p*i)*(q*y) + (q*j)*(p*x) = a*(q*y) + a*(p*x) = a*(p*x+q*y) = a *)
+  assert (H1 : Z.of_nat p * i = a). { lia. }
+  assert (H2 : Z.of_nat q * j = a). { lia. }
+  assert (H3 : Z.of_nat p * Z.of_nat q * (i * y + j * x) =
+               (Z.of_nat p * i) * (Z.of_nat q * y) + (Z.of_nat q * j) * (Z.of_nat p * x)).
+  { ring. }
+  rewrite H1, H2 in H3.
+  assert (H4 : a * (Z.of_nat q * y) + a * (Z.of_nat p * x) = a).
+  { rewrite <- Z.mul_add_distr_l.
+    replace (Z.of_nat q * y + Z.of_nat p * x) with 1.
+    - ring.
+    - lia. }
+  lia.
+Qed.
+
+(** 補題: n mod (p*q) は n と mod p および mod q において合同。 *)
+Lemma crt_mod_pq : forall (p q : nat) (n : Z),
+  (0 < p)%nat ->
+  (0 < q)%nat ->
+  cong p (Z.modulo n (Z.of_nat p * Z.of_nat q)) n /\
+  cong q (Z.modulo n (Z.of_nat p * Z.of_nat q)) n.
+Proof.
+  intros p q n Hp Hq.
+  assert (Hpq : Z.of_nat p * Z.of_nat q <> 0) by lia.
+  assert (Hdivmod : n = (Z.of_nat p * Z.of_nat q) *
+                    (Z.div n (Z.of_nat p * Z.of_nat q)) +
+                    Z.modulo n (Z.of_nat p * Z.of_nat q)).
+  { apply Z.div_mod. lia. }
+  unfold cong.
+  split.
+  - exists (-(Z.of_nat q * (Z.div n (Z.of_nat p * Z.of_nat q)))).
+    lia.
+  - exists (-(Z.of_nat p * (Z.div n (Z.of_nat p * Z.of_nat q)))).
+    lia.
+Qed.
+
+(** 補題: Bezout 係数から構成した候補解が両方の合同式を満たす。 *)
+Lemma crt_solution_cong : forall (p q : nat) (a b x y : Z),
+  (0 < p)%nat ->
+  (0 < q)%nat ->
+  Z.of_nat p * x + Z.of_nat q * y = 1 ->
+  let n0 := a * Z.of_nat q * y + b * Z.of_nat p * x in
+  cong p n0 a /\ cong q n0 b.
+Proof.
+  intros p q a b x y Hp Hq Hxy.
+  unfold cong.
+  split.
+  - (* n0 - a = Z.of_nat p * (x*(b-a)) *)
+    exists (x * (b - a)).
+    assert (Haqy : a * Z.of_nat q * y = a - a * Z.of_nat p * x).
+    { assert (Hqy : Z.of_nat q * y = 1 - Z.of_nat p * x). { lia. }
+      assert (Hassoc : a * Z.of_nat q * y = a * (Z.of_nat q * y)). { ring. }
+      rewrite Hassoc, Hqy. ring. }
+    lia.
+  - (* n0 - b = Z.of_nat q * (y*(a-b)) *)
+    exists (y * (a - b)).
+    assert (Hbpx : b * Z.of_nat p * x = b - b * Z.of_nat q * y).
+    { assert (Hpx : Z.of_nat p * x = 1 - Z.of_nat q * y). { lia. }
+      assert (Hassoc : b * Z.of_nat p * x = b * (Z.of_nat p * x)). { ring. }
+      rewrite Hassoc, Hpx. ring. }
+    lia.
+Qed.
+
+(** 補題: 中国剰余定理の存在性。互いに素な p, q と 0<=a<p, 0<=b<q に対して、
+    n mod p = a かつ n mod q = b となる n が [0,p*q) に存在する。 *)
+Lemma crt_exists : forall (p q : nat) (a b : Z),
+  Nat.gcd p q = 1%nat ->
+  (0 < p)%nat ->
+  (0 < q)%nat ->
+  0 <= a < Z.of_nat p ->
+  0 <= b < Z.of_nat q ->
+  exists n : Z,
+    0 <= n < Z.of_nat p * Z.of_nat q /\
+    Z.modulo n (Z.of_nat p) = a /\
+    Z.modulo n (Z.of_nat q) = b.
+Proof.
+  intros p q a b Hgcd Hp Hq Ha Hb.
+  (* Bezout 係数を取得: p*x + q*y = 1 *)
+  destruct (nat_coprime_bezout p q Hgcd) as [x [y Hxy]].
+  (* 候補解を構成 *)
+  set (n0 := a * Z.of_nat q * y + b * Z.of_nat p * x).
+  set (n := Z.modulo n0 (Z.of_nat p * Z.of_nat q)).
+  exists n.
+  assert (Hpq_pos : (0 < Z.of_nat p * Z.of_nat q)%Z).
+  { lia. }
+  (* n \in [0, p*q) *)
+  assert (Hbound : 0 <= n < Z.of_nat p * Z.of_nat q).
+  { unfold n. apply Z.mod_pos_bound. lia. }
+  split. { exact Hbound. }
+  (* n0 は cong p n0 a かつ cong q n0 b を満たす *)
+  destruct (crt_solution_cong p q a b x y Hp Hq Hxy) as [Hcp Hcq].
+  (* n は n0 と mod p および mod q において合同 *)
+  destruct (crt_mod_pq p q n0 Hp Hq) as [Hmp Hmq].
+  (* cong p n a および cong q n b *)
+  assert (Hconp : cong p n a).
+  { apply cong_trans with (b := n0). exact Hmp. exact Hcp. }
+  assert (Hconq : cong q n b).
+  { apply cong_trans with (b := n0). exact Hmq. exact Hcq. }
+  split.
+  - (* n mod p = a *)
+    apply mod_of_cong. exact Hp. split; lia. exact Hconp.
+  - (* n mod q = b *)
+    apply mod_of_cong. exact Hq. split; lia. exact Hconq.
+Qed.
+
+(** 補題: 中国剰余定理の一意性。[0,p*q) の範囲内で条件を満たす解は唯一。 *)
+Lemma crt_unique : forall (p q : nat) (n1 n2 : Z),
+  Nat.gcd p q = 1%nat ->
+  (0 < p)%nat ->
+  (0 < q)%nat ->
+  0 <= n1 < Z.of_nat p * Z.of_nat q ->
+  0 <= n2 < Z.of_nat p * Z.of_nat q ->
+  cong p n1 n2 ->
+  cong q n1 n2 ->
+  n1 = n2.
+Proof.
+  intros p q n1 n2 Hgcd Hp Hq Hn1 Hn2 Hcp Hcq.
+  (* p | (n1 - n2) かつ q | (n1 - n2) なので p*q | (n1 - n2) *)
+  assert (Hdivp : (Z.of_nat p | n1 - n2)).
+  { exact Hcp. }
+  assert (Hdivq : (Z.of_nat q | n1 - n2)).
+  { exact Hcq. }
+  assert (Hdivpq : (Z.of_nat p * Z.of_nat q | n1 - n2)).
+  { apply coprime_divide_mul. exact Hgcd. exact Hdivp. exact Hdivq. }
+  (* |n1 - n2| < p*q なので n1 - n2 = 0 *)
+  destruct Hdivpq as [k Hk].
+  assert (Hrange : -(Z.of_nat p * Z.of_nat q) < n1 - n2 < Z.of_nat p * Z.of_nat q).
+  { lia. }
+  assert (Hk0 : k = 0).
+  { rewrite Hk in Hrange.
+    destruct (Z.eq_dec k 0) as [Heq | Hneq].
+    - exact Heq.
+    - exfalso.
+      destruct (Z.lt_ge_cases 0 k) as [Hpos | Hneg].
+      + assert (k >= 1) by lia. nia.
+      + assert (k <= -1) by lia. nia. }
+  subst k. lia.
+Qed.
+
+(** 定理: 中国剰余定理 (Chinese Remainder Theorem)。
+    p, q を互いに素な自然数、a, b を 0<=a<p, 0<=b<q を満たす整数とすると、
+    n mod p = a かつ n mod q = b を満たす n が [0,p*q) に唯一存在する。 *)
+Theorem chinese_remainder : forall (p q : nat) (a b : Z),
+  Nat.gcd p q = 1%nat ->
+  (0 < p)%nat ->
+  (0 < q)%nat ->
+  0 <= a < Z.of_nat p ->
+  0 <= b < Z.of_nat q ->
+  exists! n : Z,
+    0 <= n < Z.of_nat p * Z.of_nat q /\
+    Z.modulo n (Z.of_nat p) = a /\
+    Z.modulo n (Z.of_nat q) = b.
+Proof.
+  intros p q a b Hgcd Hp Hq Ha Hb.
+  (* 存在性 *)
+  destruct (crt_exists p q a b Hgcd Hp Hq Ha Hb) as [n [Hbound [Hmodp Hmodq]]].
+  exists n.
+  split.
+  - exact (conj Hbound (conj Hmodp Hmodq)).
+  - (* 一意性 *)
+    intros n' [Hbound' [Hmodp' Hmodq']].
+    apply crt_unique with (p := p) (q := q).
+    + exact Hgcd.
+    + exact Hp.
+    + exact Hq.
+    + exact Hbound.
+    + exact Hbound'.
+    + (* cong p n n': n mod p = a = n' mod p *)
+      unfold cong.
+      assert (Hn := cong_of_mod p n a Hp Hmodp).
+      assert (Hn' := cong_of_mod p n' a Hp Hmodp').
+      destruct Hn as [k1 Hk1]. destruct Hn' as [k2 Hk2].
+      exists (k1 - k2). lia.
+    + (* cong q n n' *)
+      unfold cong.
+      assert (Hn := cong_of_mod q n b Hq Hmodq).
+      assert (Hn' := cong_of_mod q n' b Hq Hmodq').
+      destruct Hn as [k1 Hk1]. destruct Hn' as [k2 Hk2].
+      exists (k1 - k2). lia.
+Qed.

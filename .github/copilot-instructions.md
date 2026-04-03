@@ -52,6 +52,16 @@ Use `/clear` between sub-lemma proofs to manage context limits. The progress fil
 - **Linear arithmetic** is handled by `omega`/`lia` throughout.
 - **Reasoning depth** — Before responding, assess complexity: *simple* (direct response), *moderate* (brief think-through), *complex* (break into sub-problems). State the assessment explicitly.
 
+## Reasoning Policy
+
+Before responding to any request, assess the required reasoning depth and state it explicitly:
+
+- **Simple** (e.g., factual lookup, single-file edit): Respond directly.
+- **Moderate** (e.g., multi-file refactor, debugging): Think through the approach briefly before acting.
+- **Complex** (e.g., architecture design, algorithm design, proof): Use extended reasoning — break into sub-problems, consider trade-offs, then proceed step by step.
+
+> "This is a [simple/moderate/complex] task because ..."
+
 ## External References
 
 - Rocq Standard Library: https://rocq-prover.org/doc/V9.1.0/refman-stdlib/index.html

@@ -71,6 +71,7 @@ N. `<name>` (main goal)
    ```
    - If compilation succeeds, record the completed proof in `progress/<name>_progress.md`.
    - If compilation fails, diagnose the error, revise the proof, and retry.
+   - If other lemmas are needed, add them to the plan in `progress/<name>_plan.md`, update `progress/<name>_progress.md`, and return to Step 2.
 5. Update `progress/<name>_progress.md` with the result and remaining TODOs.
 6. Repeat from step 3 until all lemmas are proved, then proceed to Step 3.
 
@@ -117,6 +118,12 @@ rocq compile <filename>
 A proof is considered complete only when there are **no compilation errors**. If errors occur, treat them as evidence of an incorrect or incomplete proof and revise accordingly.
 
 ---
+
+## Proof Knowledge Base
+
+As you prove lemmas and theorems, build a knowledge base of proven results that can be reused in future proofs. This will help you avoid redundant work and speed up the proving process over time. Maintain the knowledge base in a separate file: `./proof_knowledge_base.md`.
+
+Read the knowledge base before starting new proofs.
 
 ## Notes
 
