@@ -333,6 +333,7 @@ Eval compute in square Z_cyclic_group 3.
     =========================================================== *)
 
 From Stdlib Require Import Logic.ProofIrrelevance.
+From Stdlib Require Import Logic.ClassicalEpsilon.
 
 (** gpow_nat の加法性:
     g^(m+n) = g^m * g^n  (自然数冪)
@@ -1113,6 +1114,437 @@ Proof.
   - intros a. apply sig_eq. simpl. apply inv_right.
 Defined.
 
+(** 自然数冪が部分群に属す *)
+Lemma gpow_nat_in_subgroup :
+  forall (G : Group) (H : Subgroup G) (x : carrier G),
+    subgroup_pred G H x ->
+    forall n : nat, subgroup_pred G H (gpow_nat G x n).
+Proof.
+  intros G H x Hx n.
+  induction n as [|k IH].
+  - simpl. apply contains_e.
+  - simpl. apply closed_op; [exact Hx | exact IH].
+Qed.
+
+(** 整数冪が部分群に属す *)
+Lemma gpow_in_subgroup :
+  forall (G : Group) (H : Subgroup G) (x : carrier G),
+    subgroup_pred G H x ->
+    forall n : Z, subgroup_pred G H (gpow G x n).
+Proof.
+  intros G H x Hx n.
+  destruct n as [|p|p].
+  - simpl. apply contains_e.
+  - simpl. apply gpow_nat_in_subgroup. exact Hx.
+  - simpl. apply gpow_nat_in_subgroup. apply closed_inv. exact Hx.
+Qed.
+
+(** 群の位数は正 *)
+Lemma group_order_pos :
+  forall (G : Group) (m : nat),
+    GroupOrder G m -> (0 < m)%nat.
+Proof.
+  intros G m [f [Hinj Hsurj]].
+  destruct m as [|m'].
+  - exfalso. apply (Fin.case0 (fun _ => False)). exact (f (e G)).
+  - lia.
+Qed.
+
+(** 整列原理 *)
+Lemma well_ordering_nat :
+  forall (P : nat -> Prop),
+    (exists n, P n) ->
+    exists d, P d /\ forall k, (k < d)%nat -> ~ P k.
+Proof.
+  intros P Hex.
+  assert (key : forall n, P n ->
+    exists d, (d <= n)%nat /\ P d /\ forall k, (k < d)%nat -> ~ P k).
+  { induction n as [n IH] using lt_wf_ind.
+    intros Hn.
+    destruct (classic (exists k, (k < n)%nat /\ P k)) as [[k [Hk HPk]] | Hno].
+    - destruct (IH k Hk HPk) as [d [Hd1 [Hd2 Hd3]]].
+      exists d. split. lia. split; assumption.
+    - exists n. split. lia. split.
+      + exact Hn.
+      + intros k Hk HPk. apply Hno. exists k. split; assumption. }
+  destruct Hex as [n Hn].
+  destruct (key n Hn) as [d [_ [HPd Hmin]]].
+  exists d. split; assumption.
+Qed.
+
+(** 生成元の自然数冪が e ならば m | k *)
+Lemma generator_period_divides_nat :
+  forall (C : CyclicGroup) (m k : nat),
+    GroupOrder C m ->
+    gpow C (generator C) (Z.of_nat k) = e C ->
+    Nat.divide m k.
+Proof.
+  intros C m k Hord Hgk.
+  assert (Hm_pos : (0 < m)%nat) by (apply group_order_pos with (G := C); exact Hord).
+  set (q := (k / m)%nat).
+  set (r := (k mod m)%nat).
+  assert (Hdivmod : (k = q * m + r)%nat).
+  { unfold q, r. pose proof (Nat.div_mod k m ltac:(lia)). lia. }
+  assert (Hr_lt : (r < m)%nat).
+  { unfold r. apply Nat.mod_upper_bound. lia. }
+  assert (Hgr : gpow C (generator C) (Z.of_nat r) = e C).
+  {
+    apply (op_cancel_l C (gpow C (generator C) (Z.of_nat (q * m)))).
+    rewrite id_right.
+    rewrite <- gpow_add.
+    replace (Z.of_nat (q * m) + Z.of_nat r) with (Z.of_nat k)
+      by (rewrite <- Nat2Z.inj_add; f_equal; lia).
+    rewrite Hgk.
+    symmetry.
+    apply gpow_period_multiple.
+    apply generator_order. exact Hord.
+  }
+  destruct (Nat.eq_dec r 0) as [Hr0 | Hr_ne].
+  - subst r. exists q. lia.
+  - exfalso.
+    assert (Hrpos : (0 < r)%nat) by lia.
+    assert (Hm_le_r : (m <= r)%nat).
+    { apply cyclic_group_order_le_period with (C := C) (m := m) (d := r).
+      exact Hord. exact Hrpos. exact Hgr. }
+    lia.
+Qed.
+
+(** 最小周期の存在 *)
+Lemma min_period_in_subgroup :
+  forall (C : CyclicGroup) (m : nat) (H : Subgroup C),
+    GroupOrder C m ->
+    exists d : nat,
+      (0 < d)%nat /\
+      subgroup_pred C H (gpow C (generator C) (Z.of_nat d)) /\
+      forall k : nat,
+        (0 < k)%nat ->
+        subgroup_pred C H (gpow C (generator C) (Z.of_nat k)) ->
+        (d <= k)%nat.
+Proof.
+  intros C m H Hord.
+  set (P := fun n => (0 < n)%nat /\ subgroup_pred C H (gpow C (generator C) (Z.of_nat n))).
+  assert (HPm : P m).
+  {
+    unfold P. split.
+    - apply group_order_pos with (G := C). exact Hord.
+    - rewrite generator_order by exact Hord.
+      apply contains_e.
+  }
+  destruct (well_ordering_nat P (ex_intro _ m HPm)) as [d [[Hd_pos Hd_in] Hd_min]].
+  exists d. split. exact Hd_pos. split. exact Hd_in.
+  intros k Hk_pos Hk_in.
+  destruct (Nat.lt_ge_cases k d) as [Hlt | Hge].
+  - exfalso. apply (Hd_min k Hlt). unfold P. split; assumption.
+  - exact Hge.
+Qed.
+
+(** 部分群の元は g^d の整数冪 *)
+Lemma subgroup_element_is_power_of_d :
+  forall (C : CyclicGroup) (m : nat) (H : Subgroup C) (d : nat),
+    GroupOrder C m ->
+    (0 < d)%nat ->
+    subgroup_pred C H (gpow C (generator C) (Z.of_nat d)) ->
+    (forall k : nat, (0 < k)%nat ->
+      subgroup_pred C H (gpow C (generator C) (Z.of_nat k)) ->
+      (d <= k)%nat) ->
+    forall x : carrier C,
+      subgroup_pred C H x ->
+      exists n : Z, gpow C (gpow C (generator C) (Z.of_nat d)) n = x.
+Proof.
+  intros C m H d Hord Hd_pos Hd_in Hd_min x Hx.
+  destruct (cyclic_property C x) as [z Hz].
+  set (q := z / Z.of_nat d).
+  set (r_Z := z mod Z.of_nat d).
+  assert (Hdiv : z = Z.of_nat d * q + r_Z).
+  { unfold q, r_Z. apply Z.div_mod. lia. }
+  assert (Hr_bound : 0 <= r_Z < Z.of_nat d).
+  { unfold r_Z. apply Z.mod_pos_bound. lia. }
+  assert (Hr_in_H : subgroup_pred C H (gpow C (generator C) r_Z)).
+  {
+    assert (Heq : gpow C (generator C) r_Z =
+                  op C (gpow C (generator C) z)
+                        (gpow C (gpow C (generator C) (Z.of_nat d)) (-q))).
+    {
+      rewrite <- gpow_mul.
+      rewrite <- gpow_add.
+      f_equal. lia.
+    }
+    rewrite Heq.
+    apply closed_op.
+    - rewrite Hz. exact Hx.
+    - apply gpow_in_subgroup. exact Hd_in.
+  }
+  assert (Hr_eq_0 : r_Z = 0).
+  {
+    destruct (Z.eq_dec r_Z 0) as [H0 | Hne].
+    - exact H0.
+    - exfalso.
+      set (r := Z.to_nat r_Z).
+      assert (Hr_pos : (0 < r)%nat).
+      { unfold r. apply Nat2Z.inj_lt. rewrite Z2Nat.id by lia. simpl. lia. }
+      assert (Hr_lt_d : (r < d)%nat).
+      { unfold r. apply Nat2Z.inj_lt. rewrite Z2Nat.id by lia. lia. }
+      assert (Hr_in_nat : subgroup_pred C H (gpow C (generator C) (Z.of_nat r))).
+      { unfold r. rewrite Z2Nat.id by lia. exact Hr_in_H. }
+      assert (Hd_le_r : (d <= r)%nat) by (apply Hd_min; assumption).
+      lia.
+  }
+  exists q.
+  rewrite <- gpow_mul.
+  rewrite <- Hz.
+  f_equal.
+  rewrite Hdiv. rewrite Hr_eq_0.
+  lia.
+Qed.
+
+(** 最小周期は m を割り切る *)
+Lemma min_period_divides_group_order :
+  forall (C : CyclicGroup) (m : nat) (H : Subgroup C) (d : nat),
+    GroupOrder C m ->
+    (0 < d)%nat ->
+    subgroup_pred C H (gpow C (generator C) (Z.of_nat d)) ->
+    (forall k : nat, (0 < k)%nat ->
+      subgroup_pred C H (gpow C (generator C) (Z.of_nat k)) ->
+      (d <= k)%nat) ->
+    Nat.divide d m.
+Proof.
+  intros C m H d Hord Hd_pos Hd_in Hd_min.
+  assert (Hm_pos : (0 < m)%nat) by (apply group_order_pos with (G := C); exact Hord).
+  assert (Hm_in : subgroup_pred C H (gpow C (generator C) (Z.of_nat m))).
+  { rewrite generator_order by exact Hord. apply contains_e. }
+  set (q := (m / d)%nat).
+  set (r := (m mod d)%nat).
+  assert (Hdivmod : (m = q * d + r)%nat).
+  { unfold q, r. pose proof (Nat.div_mod m d ltac:(lia)). lia. }
+  assert (Hr_lt : (r < d)%nat).
+  { unfold r. apply Nat.mod_upper_bound. lia. }
+  assert (Hr_in : subgroup_pred C H (gpow C (generator C) (Z.of_nat r))).
+  {
+    replace (Z.of_nat r) with (Z.of_nat m - Z.of_nat (q * d)).
+    2: { rewrite Nat2Z.inj_mul. lia. }
+    replace (Z.of_nat m - Z.of_nat (q * d)) with
+            (Z.of_nat m + (- (Z.of_nat d * Z.of_nat q))) by
+      (rewrite Nat2Z.inj_mul; ring).
+    rewrite gpow_add.
+    apply closed_op.
+    - exact Hm_in.
+    - replace (- (Z.of_nat d * Z.of_nat q)) with (Z.of_nat d * (- Z.of_nat q)) by ring.
+      rewrite gpow_mul.
+      apply gpow_in_subgroup. exact Hd_in.
+  }
+  destruct (Nat.eq_dec r 0) as [Hr0 | Hr_ne].
+  - subst r. exists q. lia.
+  - exfalso.
+    assert (Hrpos : (0 < r)%nat) by lia.
+    assert (Hd_le_r : (d <= r)%nat) by (apply Hd_min; assumption).
+    lia.
+Qed.
+
+(** m/d > 0 *)
+Lemma m_div_d_pos :
+  forall (m d : nat),
+    (0 < m)%nat ->
+    (0 < d)%nat ->
+    Nat.divide d m ->
+    (0 < m / d)%nat.
+Proof.
+  intros m d Hm Hd [q Hq].
+  subst m.
+  rewrite Nat.div_mul by lia.
+  lia.
+Qed.
+
+(** Fin変換補題: Fin.to_nat (Fin.of_nat_lt H) = r *)
+Lemma to_nat_of_nat_lt : forall (r n : nat) (H : (r < n)%nat),
+  proj1_sig (Fin.to_nat (Fin.of_nat_lt H)) = r.
+Proof.
+  intros r n. revert r. induction n as [|n' IHn]; intros r H.
+  - exact (match Nat.nlt_0_r r H with end).
+  - destruct r as [|r'].
+    + simpl. reflexivity.
+    + simpl.
+      set (H' := proj2 (Nat.succ_lt_mono r' n') H).
+      set (v := Fin.to_nat (Fin.of_nat_lt H')).
+      assert (Hrv : proj1_sig v = r') by apply IHn.
+      unfold v in *.
+      destruct (Fin.to_nat (Fin.of_nat_lt H')) as [i Hi].
+      simpl in *. f_equal. exact Hrv.
+Qed.
+
+(** g^(d*i) と g^(d*j) は異なる (i < j < m/d のとき) *)
+Lemma powers_of_gd_distinct :
+  forall (C : CyclicGroup) (m d i j : nat),
+    GroupOrder C m ->
+    (0 < d)%nat ->
+    Nat.divide d m ->
+    (i < j)%nat ->
+    (j < m / d)%nat ->
+    gpow C (generator C) (Z.of_nat (d * i)) <>
+    gpow C (generator C) (Z.of_nat (d * j)).
+Proof.
+  intros C m d i j Hord Hd_pos Hdiv Hij Hj_lt Heq.
+  assert (Hperiod : gpow C (generator C) (Z.of_nat (d * j - d * i)) = e C).
+  {
+    apply equal_powers_imply_period with (i := (d * i)%nat) (j := (d * j)%nat).
+    - nia.
+    - exact Heq.
+  }
+  replace (d * j - d * i)%nat with (d * (j - i))%nat in Hperiod by nia.
+  assert (Hpos : (0 < d * (j - i))%nat) by nia.
+  assert (Hlt_m : (d * (j - i) < m)%nat).
+  {
+    destruct Hdiv as [q Hq]. subst m.
+    rewrite Nat.div_mul in Hj_lt by lia.
+    nia.
+  }
+  assert (Hm_le : (m <= d * (j - i))%nat).
+  { apply cyclic_group_order_le_period with (C := C) (m := m) (d := (d * (j - i))%nat).
+    exact Hord. exact Hpos. exact Hperiod. }
+  lia.
+Qed.
+
+(** H の各元は g^(d*r) の形 (r < m/d) *)
+Lemma every_subgroup_element_is_small_power :
+  forall (C : CyclicGroup) (m d : nat) (H : Subgroup C),
+    GroupOrder C m ->
+    (0 < d)%nat ->
+    Nat.divide d m ->
+    subgroup_pred C H (gpow C (generator C) (Z.of_nat d)) ->
+    (forall k : nat, (0 < k)%nat ->
+      subgroup_pred C H (gpow C (generator C) (Z.of_nat k)) ->
+      (d <= k)%nat) ->
+    forall x : carrier C,
+      subgroup_pred C H x ->
+      exists r : nat,
+        (r < m / d)%nat /\
+        x = gpow C (generator C) (Z.of_nat (d * r)).
+Proof.
+  intros C m d H Hord Hd_pos Hdiv Hd_in Hd_min x Hx.
+  set (md := (m / d)%nat).
+  assert (Hmd_pos : (0 < md)%nat).
+  { apply m_div_d_pos.
+    - apply group_order_pos with (G := C). exact Hord.
+    - exact Hd_pos.
+    - exact Hdiv. }
+  assert (Hmd_eq : (d * md)%nat = m).
+  { unfold md. destruct Hdiv as [q Hq]. subst m. rewrite Nat.div_mul by lia. lia. }
+  destruct (subgroup_element_is_power_of_d C m H d Hord Hd_pos Hd_in Hd_min x Hx)
+    as [n Hn].
+  (* (g^d)^n = x, i.e., g^(d*n) = x *)
+  assert (Hgdn : gpow C (generator C) (Z.of_nat d * n) = x).
+  { rewrite gpow_mul. exact Hn. }
+  (* Euclidean division of n by md *)
+  set (q_n := n / Z.of_nat md).
+  set (r_n := n mod Z.of_nat md).
+  assert (Hn_div : n = Z.of_nat md * q_n + r_n).
+  { unfold q_n, r_n. apply Z.div_mod. lia. }
+  assert (Hr_n_bound : 0 <= r_n < Z.of_nat md).
+  { unfold r_n. apply Z.mod_pos_bound. lia. }
+  set (r := Z.to_nat r_n).
+  exists r.
+  split.
+  - unfold r, md. apply Nat2Z.inj_lt. rewrite Z2Nat.id by lia. lia.
+  - rewrite <- Hgdn.
+    assert (Hdr : Z.of_nat (d * r) = Z.of_nat d * r_n).
+    { unfold r. rewrite Nat2Z.inj_mul. rewrite Z2Nat.id by lia. ring. }
+    rewrite Hdr.
+    rewrite Hn_div.
+    rewrite Z.mul_add_distr_l.
+    rewrite gpow_add.
+    assert (Hperiod_part : gpow C (generator C) (Z.of_nat d * (Z.of_nat md * q_n)) = e C).
+    {
+      replace (Z.of_nat d * (Z.of_nat md * q_n)) with (Z.of_nat (d * md) * q_n).
+      2: { rewrite Nat2Z.inj_mul. ring. }
+      rewrite Hmd_eq.
+      rewrite gpow_mul.
+      rewrite generator_order by exact Hord.
+      apply gpow_e.
+    }
+    rewrite Hperiod_part.
+    apply id_left.
+Qed.
+
+(** 部分群の位数は m/d *)
+Lemma subgroup_group_order :
+  forall (C : CyclicGroup) (m d : nat) (H : Subgroup C),
+    GroupOrder C m ->
+    (0 < d)%nat ->
+    Nat.divide d m ->
+    subgroup_pred C H (gpow C (generator C) (Z.of_nat d)) ->
+    (forall k : nat, (0 < k)%nat ->
+      subgroup_pred C H (gpow C (generator C) (Z.of_nat k)) ->
+      (d <= k)%nat) ->
+    GroupOrder (subgroup_group C H) (m / d).
+Proof.
+  intros C m d H Hord Hd_pos Hdiv Hd_in Hd_min.
+  set (md := (m / d)%nat).
+  assert (Hmd_pos : (0 < md)%nat).
+  { apply m_div_d_pos.
+    - apply group_order_pos with (G := C). exact Hord.
+    - exact Hd_pos.
+    - exact Hdiv. }
+  assert (Hmd_eq : (d * md)%nat = m).
+  { unfold md. destruct Hdiv as [q Hq]. subst m. rewrite Nat.div_mul by lia. lia. }
+  unshelve eexists.
+  - intro xH.
+    destruct xH as [x Hx].
+    destruct (constructive_indefinite_description
+      (fun r => (r < md)%nat /\ x = gpow C (generator C) (Z.of_nat (d * r)))
+      (every_subgroup_element_is_small_power C m d H Hord Hd_pos Hdiv Hd_in Hd_min x Hx))
+      as [r [Hr_lt _]].
+    exact (Fin.of_nat_lt Hr_lt).
+  - split.
+    + (* Injectivity *)
+      intros [x1 Hx1] [x2 Hx2] Hfeq.
+      apply sig_eq. simpl.
+      destruct (constructive_indefinite_description
+        (fun r => (r < md)%nat /\ x1 = gpow C (generator C) (Z.of_nat (d * r)))
+        (every_subgroup_element_is_small_power C m d H Hord Hd_pos Hdiv Hd_in Hd_min x1 Hx1))
+        as [r1 [Hr1_lt Hr1_eq]].
+      destruct (constructive_indefinite_description
+        (fun r => (r < md)%nat /\ x2 = gpow C (generator C) (Z.of_nat (d * r)))
+        (every_subgroup_element_is_small_power C m d H Hord Hd_pos Hdiv Hd_in Hd_min x2 Hx2))
+        as [r2 [Hr2_lt Hr2_eq]].
+      assert (Hr_eq : r1 = r2).
+      {
+        assert (H1 : proj1_sig (Fin.to_nat (Fin.of_nat_lt Hr1_lt)) = r1) by apply to_nat_of_nat_lt.
+        assert (H2 : proj1_sig (Fin.to_nat (Fin.of_nat_lt Hr2_lt)) = r2) by apply to_nat_of_nat_lt.
+        rewrite <- H1, <- H2. f_equal. f_equal. exact Hfeq.
+      }
+      rewrite Hr1_eq, Hr2_eq, Hr_eq. reflexivity.
+    + (* Surjectivity *)
+      intro i.
+      set (r := proj1_sig (Fin.to_nat i)).
+      set (Hr_lt := proj2_sig (Fin.to_nat i)).
+      assert (Hdr_in_H : subgroup_pred C H (gpow C (generator C) (Z.of_nat (d * r)))).
+      {
+        replace (Z.of_nat (d * r)) with (Z.of_nat d * Z.of_nat r) by (rewrite Nat2Z.inj_mul; ring).
+        rewrite gpow_mul.
+        apply gpow_in_subgroup. exact Hd_in.
+      }
+      exists (exist _ (gpow C (generator C) (Z.of_nat (d * r))) Hdr_in_H).
+      simpl.
+      destruct (constructive_indefinite_description
+        (fun r' => (r' < md)%nat /\ gpow C (generator C) (Z.of_nat (d * r)) = gpow C (generator C) (Z.of_nat (d * r')))
+        (every_subgroup_element_is_small_power C m d H Hord Hd_pos Hdiv Hd_in Hd_min
+           (gpow C (generator C) (Z.of_nat (d * r))) Hdr_in_H))
+        as [r' [Hr'_lt Hr'_eq]].
+      assert (Hr'_eq_r : r' = r).
+      {
+        destruct (Nat.lt_trichotomy r r') as [Hlt | [Heq | Hgt]].
+        - exfalso. apply (powers_of_gd_distinct C m d r r' Hord Hd_pos Hdiv Hlt Hr'_lt).
+          exact Hr'_eq.
+        - exact (eq_sym Heq).
+        - exfalso. apply (powers_of_gd_distinct C m d r' r Hord Hd_pos Hdiv Hgt Hr_lt).
+          exact (eq_sym Hr'_eq).
+      }
+      subst r'.
+      apply Fin.to_nat_inj.
+      rewrite to_nat_of_nat_lt.
+      unfold r.
+      reflexivity.
+Qed.
+
 (** 巡回群の部分群定理:
     位数 m  の巡回群 C の任意の部分群 H に対して,
       (1) H は巡回群 (ある gen ∈ H が存在し H の全元が gen の冪で表せる),
@@ -1157,4 +1589,27 @@ Theorem subgroup_of_cyclic :
      Nat.divide k m /\
      GroupOrder (subgroup_group C H) k).
 Proof.
-Admitted.
+  intros C m H Hord.
+  destruct (min_period_in_subgroup C m H Hord) as [d [Hd_pos [Hd_in Hd_min]]].
+  assert (Hdiv : Nat.divide d m).
+  { apply min_period_divides_group_order with (H := H); assumption. }
+  split.
+  - exists (gpow C (generator C) (Z.of_nat d)).
+    split.
+    + exact Hd_in.
+    + intros x Hx.
+      apply subgroup_element_is_power_of_d with (m := m) (H := H); assumption.
+  - exists (m / d)%nat.
+    split.
+    + apply m_div_d_pos.
+      * apply group_order_pos with (G := C). exact Hord.
+      * exact Hd_pos.
+      * exact Hdiv.
+    + split.
+      * destruct Hdiv as [q Hq].
+        exists d.
+        subst m.
+        rewrite Nat.div_mul by lia.
+        lia.
+      * apply subgroup_group_order with (m := m); assumption.
+Qed.
