@@ -1640,3 +1640,114 @@ Defined.
 
 (** 直積群のノーテーション *)
 Notation "G ×ₒ H" := (group_product G H) (at level 40, left associativity).
+
+(** ===========================================================
+    剰余類群 Z/nZ
+    =========================================================== *)
+
+(** 剰余類群 Z/nZ (Residue Class Group Z/nZ):
+    n を正の自然数とするとき、整数 Z を n の倍数からなる加法的部分群 nZ で
+    割った商群 Z/nZ を定義する。
+
+    台集合として剰余類の代表元の集合 {x : Z | 0 ≤ x < n} を用いる。
+
+      演算 : [a] + [b] := [(a + b) mod n]
+      単位元 : [0]
+      逆元  : [a]^{-1} := [(-a) mod n]
+
+    証明の方針:
+      各群公理を Z の加法と mod の性質から導く。
+      - 結合律: Zplus_mod_idemp_l と Zplus_mod_idemp_r を使い、
+                両辺を (a + b + c) mod n に変形する。
+      - 単位元: Z.mod_small を使い、0 ≤ a < n の代表元は mod で変化しないことを使う。
+      - 逆元: Zplus_mod_idemp_l/r と Z.add_opp_diag_l/r から 0 mod n = 0 を導く。  *)
+
+Definition znz_group (n : nat) (Hn : (0 < n)%nat) : Group.
+Proof.
+  assert (HN : 0 < Z.of_nat n) by lia.
+  refine {|
+    carrier := { x : Z | 0 <= x < Z.of_nat n };
+    op      := fun a b =>
+                 exist _ ((proj1_sig a + proj1_sig b) mod Z.of_nat n)
+                         (Z.mod_pos_bound _ (Z.of_nat n) HN);
+    e       := exist _ 0 (conj (Z.le_refl 0) HN);
+    inv     := fun a =>
+                 exist _ ((- proj1_sig a) mod Z.of_nat n)
+                         (Z.mod_pos_bound _ (Z.of_nat n) HN)
+  |}.
+  - (* 結合律: ((a + b) mod n + c) mod n = (a + (b + c) mod n) mod n *)
+    intros [a Ha] [b Hb] [c Hc]. apply sig_eq. simpl.
+    rewrite Zplus_mod_idemp_l, Zplus_mod_idemp_r, Z.add_assoc. reflexivity.
+  - (* 左単位元: (0 + a) mod n = a, simpl で 0 + a が a に簡約される *)
+    intros [a Ha]. apply sig_eq. simpl.
+    apply Z.mod_small. exact Ha.
+  - (* 右単位元: (a + 0) mod n = a *)
+    intros [a Ha]. apply sig_eq. simpl.
+    rewrite Z.add_0_r. apply Z.mod_small. exact Ha.
+  - (* 左逆元: ((-a) mod n + a) mod n = 0 *)
+    intros [a Ha]. apply sig_eq. simpl.
+    rewrite Zplus_mod_idemp_l, Z.add_opp_diag_l. apply Zmod_0_l.
+  - (* 右逆元: (a + (-a) mod n) mod n = 0 *)
+    intros [a Ha]. apply sig_eq. simpl.
+    rewrite Zplus_mod_idemp_r, Z.add_opp_diag_r. apply Zmod_0_l.
+Defined.
+
+(** Z/nZ の生成元の自然数冪の値:
+    生成元 [1 mod n] を k 回加算すると Z.of_nat k mod n に等しい。
+
+    証明の方針: k に関する帰納法。
+      - k = 0: gpow_nat の定義より単位元 [0]。Z.of_nat 0 mod n = 0 mod n = 0。
+      - k + 1: 帰納仮定より (1 mod n + Z.of_nat k mod n) mod n を
+               Zplus_mod_idemp_l/r を使って (1 + Z.of_nat k) mod n に変形し、
+               Nat2Z.inj_succ から Z.of_nat (S k) mod n に等しいことを示す。  *)
+
+Lemma znz_gpow_nat_val : forall (n : nat) (Hn : (0 < n)%nat)
+    (Hgen : 0 <= 1 mod Z.of_nat n < Z.of_nat n) (k : nat),
+  proj1_sig (gpow_nat (znz_group n Hn)
+    (exist _ (1 mod Z.of_nat n) Hgen) k)
+  = Z.of_nat k mod Z.of_nat n.
+Proof.
+  intros n Hn Hgen k.
+  induction k as [|k' IH].
+  - (* k = 0: gpow_nat gen 0 = e、単位元の値は 0 *)
+    simpl. symmetry. apply Zmod_0_l.
+  - (* k + 1: Nat2Z.inj_succ を先に適用して Z.of_nat (S k') を展開してから simpl *)
+    rewrite Nat2Z.inj_succ.
+    simpl. rewrite IH.
+    rewrite Zplus_mod_idemp_r, Zplus_mod_idemp_l.
+    f_equal. ring.
+Qed.
+
+(** Z/nZ は巡回群 (Z/nZ is a Cyclic Group):
+    生成元は [1 mod n]:
+      - n = 1 のとき: 1 mod 1 = 0 なので生成元は [0]（唯一の元）
+      - n ≥ 2 のとき: 生成元は [1]
+
+    任意の元 [x] (0 ≤ x < n) は生成元の x 回の加算として得られる:
+      gpow gen (Z.of_nat x) = [x]
+
+    証明の方針:
+      [x] に対して k = Z.of_nat (Z.to_nat x) を選び、
+      gpow_of_nat と znz_gpow_nat_val を組み合わせて
+        proj1_sig (gpow gen k) = Z.of_nat (Z.to_nat x) mod n = x
+      を示す。最後に Z.mod_small (0 ≤ x < n) を適用する。  *)
+
+Definition znz_cyclic_group (n : nat) (Hn : (0 < n)%nat) : CyclicGroup.
+Proof.
+  assert (HN : 0 < Z.of_nat n) by lia.
+  assert (Hgen : 0 <= 1 mod Z.of_nat n < Z.of_nat n).
+  { apply Z.mod_pos_bound. exact HN. }
+  refine {|
+    cyclic_group := znz_group n Hn;
+    generator    := exist _ (1 mod Z.of_nat n) Hgen
+  |}.
+  (* 巡回性: 任意の元が生成元の冪として表される *)
+  intros [x Hx].
+  exists (Z.of_nat (Z.to_nat x)).
+  apply sig_eq.
+  rewrite gpow_of_nat.
+  rewrite znz_gpow_nat_val.
+  simpl.
+  rewrite Z2Nat.id by lia.
+  apply Z.mod_small. exact Hx.
+Defined.

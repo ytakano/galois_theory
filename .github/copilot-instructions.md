@@ -23,11 +23,19 @@ All current work lives in `integer.v`, organized in layers:
 3. **Concrete instances** — `Z_add_group`, `Z_cyclic_group` (integers under addition)
 4. `galois_theory.v` — placeholder for field extensions and the Galois correspondence
 
-`progress/` holds proof planning and tracking files (see Proof Workflow below). Root-level `generator_order.md` and `generator_order_progress.md` are legacy files — ignore them.
+`progress/` holds proof planning and tracking files (see Proof Workflow below). Root-level `generator_order.md` and `generator_order_progress.md` are legacy files — ignore them. The `lessons_learned/` and `docker/` directories are out of scope for proof work — do not read them.
+
+### Proof status
+
+**Admitted (not yet proven):**
+- `subgroup_of_cyclic` — every subgroup of a cyclic group is cyclic with order dividing the original; plan at `progress/subgroup_of_cyclic_plan.md`
+
+**Recently proven:**
+- `generator_order` — g^m = e in an order-m cyclic group (2026-04-03); proven via `pigeonhole_Fin`, `pigeonhole_powers`, `gpow_reduce_mod`, `cyclic_group_order_le_period`; see `progress/generator_order_progress.md`
 
 ## Proof Workflow
 
-**Always invoke the `/rocq-prover` skill before writing any Rocq code.** The skill is defined in `.github/skills/ROCQ.md` and automates the three-step workflow below.
+**Always invoke the `/rocq-prover` skill before writing any Rocq code.** The skill is defined in `.github/skills/ROCQ.md` (for Copilot) / `.claude/skills/ROCQ.md` (for Claude) and automates the three-step workflow below.
 
 1. **Plan** — Create `progress/<theorem>_plan.md` decomposing the goal into sub-lemmas and recording strategy before writing any Rocq.
 2. **Sub-lemmas** — Prove one sub-lemma at a time; update `progress/<theorem>_progress.md` after each. Use `Admitted` for unproven steps to keep the file compiling.
