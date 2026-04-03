@@ -108,4 +108,4 @@ Always make your reasoning depth assessment explicit before responding:
 
 Claude Codeを利用していると、しょっちゅうトークン制限に到達してしまい、思うように作業ができませんでした。そこで、Copilotを利用することにしました。Copilotでも、Claude Codeと同様に、スキル、Planモードなどを利用することができます。Copilotは、Claude Codeよりもトークン制限が緩いようで、証明のためのスキルも問題なく利用できました。
 
-`subgroup_of_cyclic`は、Copilotを利用して証明しました。Copilotでも、Claude Codeと同様に証明が可能なことがわかりました。
+`subgroup_of_cyclic`は、Copilotを利用して証明しました。Copilotでも、Claude Codeと同様に証明が可能なことがわかりました。Copilotの設定は、[.github](.github/)以下のディレクトリに置く必要があり、スキルもこのディレクトリに置く必要があります。

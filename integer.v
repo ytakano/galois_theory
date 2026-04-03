@@ -1613,3 +1613,30 @@ Proof.
         lia.
       * apply subgroup_group_order with (m := m); assumption.
 Qed.
+
+(** 群の直積 (Direct Product of Groups):
+    群 G と群 H の直積 G × H を定義する。
+    台集合は G の台集合と H の台集合の直積型 (carrier G * carrier H) であり、
+    演算・単位元・逆元はそれぞれ成分ごとに定義する:
+      - 演算:  (g1, h1) * (g2, h2) := (op G g1 g2, op H h1 h2)
+      - 単位元: (e G, e H)
+      - 逆元:  (g, h)^{-1} := (inv G g, inv H h)
+    各群公理は G と H の対応する公理を成分ごとに適用することで得られる。
+    計算透明性を保つため Defined を使用する。  *)
+Definition group_product (G H : Group) : Group.
+Proof.
+  refine {|
+    carrier := carrier G * carrier H;
+    op      := fun p q => (op G (fst p) (fst q), op H (snd p) (snd q));
+    e       := (e G, e H);
+    inv     := fun p => (inv G (fst p), inv H (snd p))
+  |}.
+  - intros [g1 h1] [g2 h2] [g3 h3]. simpl. f_equal; apply assoc.
+  - intros [g h]. simpl. f_equal; apply id_left.
+  - intros [g h]. simpl. f_equal; apply id_right.
+  - intros [g h]. simpl. f_equal; apply inv_left.
+  - intros [g h]. simpl. f_equal; apply inv_right.
+Defined.
+
+(** 直積群のノーテーション *)
+Notation "G ×ₒ H" := (group_product G H) (at level 40, left associativity).

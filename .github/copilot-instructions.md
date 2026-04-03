@@ -27,7 +27,7 @@ All current work lives in `integer.v`, organized in layers:
 
 ## Proof Workflow
 
-Always follow the three-step workflow for any new proof:
+**Always invoke the `/rocq-prover` skill before writing any Rocq code.** The skill is defined in `.github/skills/ROCQ.md` and automates the three-step workflow below.
 
 1. **Plan** — Create `progress/<theorem>_plan.md` decomposing the goal into sub-lemmas and recording strategy before writing any Rocq.
 2. **Sub-lemmas** — Prove one sub-lemma at a time; update `progress/<theorem>_progress.md` after each. Use `Admitted` for unproven steps to keep the file compiling.
