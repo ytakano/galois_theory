@@ -33,19 +33,39 @@ Built in layers, bottom-up:
    - `GroupOrder`: finite group size via bijection to `Fin.t n`
    - `Subgroup`: predicate-based subgroup definition with closure requirements
    - `subgroup_group`: lifts a `Subgroup G H` into a full `Group` using sigma types
-   - Proven utility lemmas: `gpow_nat_add`, `gpow_mul`, `gpow_nat_inv_eq`, `gpow_nat_comm`, `inv_inv`, `inv_op`, `inv_e`
+   - Proven utility lemmas: `gpow_nat_add`, `gpow_mul`, `gpow_nat_inv_eq`, `gpow_nat_comm`, `inv_inv`, `inv_op`, `inv_e`, `op_cancel_l`, `equal_powers_imply_period`, `gpow_period_multiple`
 
 3. **Concrete instances**: `Z_add_group` and `Z_cyclic_group` instantiate the abstract structures for integers under addition.
 
 4. **Additional utility lemmas**: `gpow_nat_e`, `gpow_nat_mul`, `gpow_mul`, `gpow_of_nat`, `gpow_neg_of_nat`, `inv_unique_r`.
 
 5. **Key admitted theorems** (not yet proven):
-   - `generator_order`: g^m = e in an order-m cyclic group
+   - `generator_order`: g^m = e in an order-m cyclic group — sub-lemmas `op_cancel_l`, `equal_powers_imply_period`, `gpow_period_multiple` are proven; remaining: `pigeonhole_Fin`, `pigeonhole_powers`, `cyclic_group_order_le_period`. See `progress/generator_order_progress.md` for detailed proof plan.
    - `subgroup_of_cyclic`: every subgroup of a cyclic group is cyclic with order dividing the original
 
 ### `galois_theory.v` — Placeholder (empty)
 
 Future home of field extensions, automorphism groups, and the fundamental theorem of Galois theory.
+
+### Supporting files
+
+- `progress/` — canonical directory for proof planning and progress tracking:
+  - `progress/<theorem>_plan.md` — proof strategy and sub-lemma proposals
+  - `progress/<theorem>_progress.md` — completed sub-lemmas and remaining TODOs
+- `generator_order.md`, `generator_order_progress.md` (root) — legacy files, superseded by `progress/` versions; ignore these.
+- `lessons_learned/`, `docker/` — excluded from Claude's context (denied in `.claude/settings.local.json`); do not attempt to read.
+
+## Proof Workflow
+
+Use the `/rocq-prover` skill (`.claude/skills/ROCQ.md`) when proving theorems. The skill automates the three-step workflow:
+
+1. **Plan** (`progress/<theorem>_plan.md`): Decompose the theorem into sub-lemmas and record the proof strategy before writing any Rocq.
+2. **Sub-lemmas** (`progress/<theorem>_progress.md`): Prove one sub-lemma at a time; update the progress file after each. Use `Admitted` for not-yet-proven steps to keep the file compiling.
+3. **Assemble**: Once all sub-lemmas are proven, prove the top-level theorem and record completion.
+
+Verify each step with `rocq compile integer.v` (no compilation errors = proof accepted).
+
+**Token management**: Use `/clear` between sub-lemma proofs to avoid hitting context limits. The progress file persists state across sessions.
 
 ## Rocq Conventions in This Codebase
 
@@ -72,3 +92,4 @@ Always make your reasoning depth assessment explicit before responding:
 - Rocq Standard Library
   - <https://rocq-prover.org/doc/V9.1.0/refman-stdlib/index.html>
   - <https://rocq-prover.org/doc/V9.1.0/stdlib/index.html>
+

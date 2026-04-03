@@ -18,5 +18,10 @@
       "Bash(coqc --version)",
       "Bash(grep -v \"^Warning\\\\|^\\\\[deprecated\\\\|^\\\\[warn\\\\|Use Z\\\\.\\\\|Use instead\\\\|see$\\\\|theories/Vectors\")"
     ]
-  }
+  },
+  "deny": [
+    "Read(LESSONS_LEARNED.md)",
+    "Read(lessons_learned/*)",
+    "Read(docker/*)"
+  ]
 }
