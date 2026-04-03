@@ -45,9 +45,23 @@ Lemma equal_powers_imply_period :
 
 ---
 
-## TODO (推奨実装順)
+## 完了 (2026-04-03 追加分)
 
-### Step 2: `pigeonhole_Fin` (有限性の中核)
+### `fin_all` 関連補題 ✅
+- `fin_all_length`, `fin_all_complete`, `fin_all_NoDup`
+
+### `not_NoDup_has_dup` ✅
+### `Fin_injective_le` ✅
+### `pigeonhole_Fin` ✅
+### `pigeonhole_powers` ✅
+### `gpow_reduce_mod` ✅
+### `cyclic_group_order_le_period` ✅
+### `group_order_bijection` ✅
+### `generator_order` ✅ **証明完了**
+
+---
+
+## (旧) TODO (すべて完了)
 
 ```coq
 Lemma pigeonhole_Fin :

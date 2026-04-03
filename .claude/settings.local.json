@@ -16,7 +16,8 @@
       "Bash(git:*)",
       "Bash(ocamlfind list:*)",
       "Bash(coqc --version)",
-      "Bash(grep -v \"^Warning\\\\|^\\\\[deprecated\\\\|^\\\\[warn\\\\|Use Z\\\\.\\\\|Use instead\\\\|see$\\\\|theories/Vectors\")"
+      "Bash(grep -v \"^Warning\\\\|^\\\\[deprecated\\\\|^\\\\[warn\\\\|Use Z\\\\.\\\\|Use instead\\\\|see$\\\\|theories/Vectors\")",
+      "Bash(awk:*)"
     ]
   },
   "deny": [

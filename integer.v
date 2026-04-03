@@ -238,6 +238,9 @@ Notation "G1 ≅ G2" := (GroupIsomorphic G1 G2)
     言い換えると、G の元をちょうど n 個の添字で過不足なく番号づけできることである。  *)
 
 From Stdlib Require Import Vectors.Fin.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import Classical.
+Import ListNotations.
 
 Definition GroupOrder (G : Group) (n : nat) : Prop :=
   exists f : carrier G -> Fin.t n,
@@ -759,6 +762,288 @@ Proof.
   apply gpow_e.
 Qed.
 
+(** ===========================================================
+    pigeonhole_Fin の証明のための補助定理群
+    =========================================================== *)
+
+(** Fin.t m の全要素をリストにする関数.
+
+    fin_all 0 = []
+    fin_all (S m) = F1 :: map FS (fin_all m)
+    長さ = m, 重複なし, すべての要素を含む.  *)
+Fixpoint fin_all (m : nat) : list (Fin.t m) :=
+  match m with
+  | O    => []
+  | S m' => Fin.F1 :: List.map Fin.FS (fin_all m')
+  end.
+
+(** fin_all の長さは m に等しい.  *)
+Lemma fin_all_length : forall m : nat,
+  length (fin_all m) = m.
+Proof.
+  induction m as [| m' IH]; simpl.
+  - reflexivity.
+  - rewrite List.map_length. rewrite IH. reflexivity.
+Qed.
+
+(** fin_all m はすべての Fin.t m の要素を含む.  *)
+Lemma fin_all_complete : forall (m : nat) (x : Fin.t m),
+  List.In x (fin_all m).
+Proof.
+  intros m x.
+  induction x as [m' | m' x' IHx].
+  - simpl. left. reflexivity.
+  - simpl. right. apply List.in_map. exact IHx.
+Qed.
+
+(** fin_all m は重複なし (NoDup).
+
+    証明: F1 は map FS (...) に含まれない (FS の像は F1 を含まない).
+    map FS は FS が単射なので NoDup を保つ (NoDup_map_NoDup_ForallPairs).  *)
+Lemma fin_all_NoDup : forall m : nat,
+  List.NoDup (fin_all m).
+Proof.
+  induction m as [| m' IH]; simpl.
+  - constructor.
+  - apply List.NoDup_cons.
+    + intro Hin.
+      apply List.in_map_iff in Hin.
+      destruct Hin as [y [Heq _]].
+      discriminate Heq.
+    + apply List.NoDup_map_NoDup_ForallPairs.
+      * intros a b _ _ H. exact (Fin.FS_inj a b H).
+      * exact IH.
+Qed.
+
+(** NoDup でないリストには重複するインデックスが存在する.
+
+    証明: リストに対する帰納法.
+    先頭要素 h が tail に含まれる場合は位置 0 と S k を返す.
+    h が tail にない場合は tail 自体が NoDup でなく, IH を適用.  *)
+Lemma not_NoDup_has_dup : forall (A : Type) (l : list A),
+  ~ List.NoDup l ->
+  exists i j : nat,
+    (i < j)%nat /\ (j < length l)%nat /\
+    List.nth_error l i = List.nth_error l j.
+Proof.
+  intros A l.
+  induction l as [| h t IH]; intro Hnd.
+  - exfalso. apply Hnd. constructor.
+  - destruct (classic (List.In h t)) as [Hin | Hnotin].
+    + apply List.In_nth_error in Hin.
+      destruct Hin as [k Hk].
+      exists 0%nat, (S k).
+      split. { lia. }
+      split.
+      * simpl. apply Nat.lt_succ_r.
+        apply List.nth_error_Some. rewrite Hk. discriminate.
+      * simpl. rewrite Hk. reflexivity.
+    + assert (Hnd_t : ~ List.NoDup t).
+      { intro Ht. apply Hnd. constructor; assumption. }
+      destruct (IH Hnd_t) as [i [j [Hij [Hjlen Heq]]]].
+      exists (S i), (S j).
+      split. { lia. }
+      split. { simpl. lia. }
+      simpl. exact Heq.
+Qed.
+
+(** 単射 Fin.t m -> Fin.t d が存在するなら m ≤ d.
+
+    証明: fin_all m (長さ m, NoDup) の像 map phi (fin_all m) は
+    NoDup (phi が単射) かつ fin_all d に含まれる.
+    List.NoDup_incl_length より length m ≤ length d.  *)
+Lemma Fin_injective_le : forall (m d : nat) (phi : Fin.t m -> Fin.t d),
+  (forall i j : Fin.t m, phi i = phi j -> i = j) ->
+  (m <= d)%nat.
+Proof.
+  intros m d phi Hinj.
+  assert (Hnd : List.NoDup (List.map phi (fin_all m))).
+  { apply List.NoDup_map_NoDup_ForallPairs.
+    - intros a b _ _ H. exact (Hinj a b H).
+    - apply fin_all_NoDup. }
+  assert (Hincl : List.incl (List.map phi (fin_all m)) (fin_all d)).
+  { intros x _. apply fin_all_complete. }
+  pose proof (List.NoDup_incl_length Hnd Hincl) as Hle.
+  rewrite List.map_length, fin_all_length, fin_all_length in Hle.
+  exact Hle.
+Qed.
+
+(** 鳩ノ巣原理 (有限版): h 0,...,h m は Fin.t m の m+1 個の値なので重複がある.
+
+    証明:
+    pow_seq := map h (seq 0 (S m)) は長さ m+1 のリスト.
+    もし NoDup なら fin_all m (長さ m) への incl が成立し m+1 ≤ m で矛盾.
+    よって NoDup でなく, not_NoDup_has_dup で重複インデックス i < j が得られる.
+    nth_error_seq と nth_error_map で h i = h j を導く.  *)
+Lemma pigeonhole_Fin : forall (m : nat) (h : nat -> Fin.t m),
+  exists i j : nat, (i < j)%nat /\ (j <= m)%nat /\ h i = h j.
+Proof.
+  intros m h.
+  set (pow_seq := List.map h (List.seq 0 (S m))).
+  (* pow_seq の長さは m+1 *)
+  assert (Hlen : length pow_seq = S m).
+  { unfold pow_seq. rewrite List.map_length, List.length_seq. reflexivity. }
+  (* pow_seq の nth_error k = Some (h k) for k <= m *)
+  assert (Hnth : forall k, (k <= m)%nat ->
+    List.nth_error pow_seq k = Some (h k)).
+  { intros k Hk.
+    unfold pow_seq.
+    rewrite List.nth_error_map.
+    rewrite List.nth_error_seq.
+    assert (Hlt : Nat.ltb k (S m) = true).
+    { apply Nat.ltb_lt. lia. }
+    rewrite Hlt. simpl. reflexivity. }
+  (* pow_seq が NoDup なら長さ ≤ m, 矛盾 *)
+  destruct (classic (List.NoDup pow_seq)) as [Hnd | Hnotnd].
+  - exfalso.
+    pose proof (List.NoDup_incl_length Hnd
+      (fun x _ => fin_all_complete m x)) as Hle.
+    (* Hle : length pow_seq <= length (fin_all m) *)
+    rewrite fin_all_length in Hle.
+    rewrite Hlen in Hle. lia.
+  - (* NoDup でないので重複インデックスが存在する *)
+    destruct (not_NoDup_has_dup _ pow_seq Hnotnd) as [i [j [Hij [Hjlen Heq]]]].
+    exists i, j.
+    split. { exact Hij. }
+    (* j <= m を導く: j < length pow_seq = S m なので j <= m *)
+    assert (Hjm : (j <= m)%nat).
+    { rewrite Hlen in Hjlen. lia. }
+    split. { exact Hjm. }
+    (* h i = h j を導く: nth_error pow_seq k = Some (h k) *)
+    assert (Him : (i <= m)%nat) by lia.
+    rewrite Hnth in Heq by exact Him.
+    rewrite Hnth in Heq by exact Hjm.
+    injection Heq. intro H. exact H.
+Qed.
+
+(** 鳩ノ巣原理 (群の冪版): 単射 f で位数 m の群を Fin.t m に写すとき,
+    g^0,...,g^m の中に重複がある.
+
+    証明: h k := f (g^k) とおくと h : nat -> Fin.t m.
+    pigeonhole_Fin で i < j ≤ m, h i = h j を得る.
+    f の単射性から g^i = g^j.  *)
+Lemma pigeonhole_powers : forall (C : CyclicGroup) (m : nat)
+    (f : carrier C -> Fin.t m),
+    (forall x y : carrier C, f x = f y -> x = y) ->
+    exists i j : nat,
+      (i < j)%nat /\ (j <= m)%nat /\
+      gpow C (generator C) (Z.of_nat i) = gpow C (generator C) (Z.of_nat j).
+Proof.
+  intros C m f Hinj.
+  set (h := fun k => f (gpow C (generator C) (Z.of_nat k))).
+  destruct (pigeonhole_Fin m h) as [i [j [Hij [Hjm Heqh]]]].
+  exists i, j.
+  split. { exact Hij. }
+  split. { exact Hjm. }
+  apply Hinj. exact Heqh.
+Qed.
+
+(** 整数冪を自然数余りに落とす補題.
+
+    g^d = e ならば任意の x について x = g^r (r < d, r : nat) と表せる.
+
+    証明:
+    cyclic_property より x = g^z (z : Z).
+    z = (z / d) * d + (z mod d).
+    g^z = g^((z/d)*d + (z mod d))
+        = g^((z/d)*d) * g^(z mod d)     [gpow_add]
+        = (g^d)^(z/d) * g^(z mod d)     [gpow_mul]
+        = e^(z/d) * g^(z mod d)          [g^d = e]
+        = e * g^(z mod d)                [gpow_e]
+        = g^(z mod d)                    [id_left]
+    Z.mod_pos_bound より 0 ≤ z mod d < d.
+    r := Z.to_nat (z mod d) とすると r < d かつ x = g^(Z.of_nat r).  *)
+Lemma gpow_reduce_mod :
+  forall (C : CyclicGroup) (d : nat),
+    (0 < d)%nat ->
+    gpow C (generator C) (Z.of_nat d) = e C ->
+    forall x : carrier C,
+      exists r : nat, (r < d)%nat /\
+        x = gpow C (generator C) (Z.of_nat r).
+Proof.
+  intros C d Hd_pos Hperiod x.
+  destruct (cyclic_property C x) as [z Hz].
+  (* z = (z/d)*d + (z mod d) *)
+  set (q := z / Z.of_nat d).
+  set (r_Z := z mod Z.of_nat d).
+  assert (Hdiv : z = Z.of_nat d * q + r_Z).
+  { unfold q, r_Z. rewrite <- Z.div_mod. reflexivity. lia. }
+  assert (Hrbound : 0 <= r_Z < Z.of_nat d).
+  { unfold r_Z. apply Z.mod_pos_bound. lia. }
+  set (r := Z.to_nat r_Z).
+  exists r.
+  split.
+  - (* r < d *)
+    unfold r. apply Nat2Z.inj_lt. rewrite Z2Nat.id by lia. lia.
+  - (* x = g^r *)
+    rewrite <- Hz.
+    rewrite Hdiv.
+    rewrite gpow_add.
+    (* g^(d*q) * g^r_Z *)
+    replace (Z.of_nat d * q) with (Z.of_nat d * q) by reflexivity.
+    rewrite gpow_mul.
+    rewrite Hperiod.
+    rewrite gpow_e.
+    rewrite id_left.
+    (* g^r_Z = g^(Z.of_nat r) *)
+    unfold r. rewrite Z2Nat.id by lia. reflexivity.
+Qed.
+
+(** 群の位数は周期以下: g^d = e ならば m ≤ d.
+
+    証明:
+    gpow_reduce_mod より 全元は g^0,...,g^(d-1) で表せる.
+    リスト L := map (fun r => f(g^r)) (seq 0 d) は長さ d.
+    fin_all m ⊆ L (各 i : Fin.t m に対して f の全射性と gpow_reduce_mod より).
+    NoDup_incl_length で m ≤ d.  *)
+Lemma cyclic_group_order_le_period :
+  forall (C : CyclicGroup) (m d : nat),
+    GroupOrder C m ->
+    (0 < d)%nat ->
+    gpow C (generator C) (Z.of_nat d) = e C ->
+    (m <= d)%nat.
+Proof.
+  intros C m d Hord Hd_pos Hperiod.
+  destruct Hord as [f [Hinj Hsurj]].
+  (* L := [f(g^0); f(g^1); ...; f(g^(d-1))], 長さ d *)
+  set (L := List.map (fun r => f (gpow C (generator C) (Z.of_nat r))) (List.seq 0 d)).
+  assert (HLlen : length L = d).
+  { unfold L. rewrite List.map_length, List.length_seq. reflexivity. }
+  (* fin_all m ⊆ L *)
+  assert (Hincl : List.incl (fin_all m) L).
+  { intros i _.
+    (* f の全射性より: exists x, f x = i *)
+    destruct (Hsurj i) as [x Hfx].
+    (* gpow_reduce_mod より: exists r < d, x = g^r *)
+    destruct (gpow_reduce_mod C d Hd_pos Hperiod x) as [r [Hr Hrx]].
+    (* i = f x = f(g^r) ∈ L *)
+    unfold L.
+    apply List.in_map_iff.
+    exists r. split.
+    - rewrite <- Hrx. exact Hfx.
+    - apply List.in_seq. lia. }
+  (* NoDup_incl_length で m ≤ d *)
+  pose proof (List.NoDup_incl_length (fin_all_NoDup m) Hincl) as Hle.
+  rewrite fin_all_length, HLlen in Hle.
+  exact Hle.
+Qed.
+
+(** ===========================================================
+    GroupOrder から全単射を取り出す補題 (unpack 用).
+    =========================================================== *)
+
+(** GroupOrder G n の定義は「carrier G → Fin.t n の全単射が存在する」なので,
+    単純に destruct して成分を返す.  *)
+Lemma group_order_bijection : forall (G : Group) (n : nat),
+  GroupOrder G n ->
+  exists f : carrier G -> Fin.t n,
+    (forall x y : carrier G, f x = f y -> x = y) /\
+    (forall i : Fin.t n, exists x : carrier G, f x = i).
+Proof.
+  intros G n [f [Hinj Hsurj]].
+  exists f. split; assumption.
+Qed.
+
 (** 生成元の位数: 位数 m の巡回群 C の生成元 g に対して g^m = e.
 
     証明方針:
@@ -770,7 +1055,29 @@ Lemma generator_order : forall (C : CyclicGroup) (m : nat),
   GroupOrder C m ->
   gpow C (generator C) (Z.of_nat m) = e C.
 Proof.
-Admitted.
+  intros C m Hord.
+  (* 全単射 f : carrier C → Fin.t m を取り出す *)
+  destruct (group_order_bijection C m Hord) as [f [Hinj Hsurj]].
+  (* 鳩ノ巣: g^0,...,g^m の中に重複 i < j ≤ m, g^i = g^j *)
+  destruct (pigeonhole_powers C m f Hinj) as [i [j [Hij_lt [Hj_le Heqpow]]]].
+  (* 周期 d := j - i が 0 < d ≤ m かつ g^d = e *)
+  set (d := (j - i)%nat).
+  assert (Hd_pos  : (0 < d)%nat) by (unfold d; lia).
+  assert (Hd_le_m : (d <= m)%nat) by (unfold d; lia).
+  assert (Hd_period : gpow C (generator C) (Z.of_nat d) = e C).
+  { unfold d. apply equal_powers_imply_period with (i := i) (j := j).
+    - exact Hij_lt.
+    - exact Heqpow. }
+  (* 巡回性より m ≤ d *)
+  assert (Hm_le_d : (m <= d)%nat).
+  { apply cyclic_group_order_le_period with (C := C) (m := m) (d := d).
+    - exact Hord.
+    - exact Hd_pos.
+    - exact Hd_period. }
+  (* d = m なので g^m = e *)
+  assert (Hd_eq_m : d = m) by lia.
+  rewrite Hd_eq_m in Hd_period. exact Hd_period.
+Qed.
 
 (** シグマ型の等号 (proof_irrelevance を使用):
     命題 P が一意であるとき,

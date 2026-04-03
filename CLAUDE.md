@@ -40,8 +40,10 @@ Built in layers, bottom-up:
 4. **Additional utility lemmas**: `gpow_nat_e`, `gpow_nat_mul`, `gpow_mul`, `gpow_of_nat`, `gpow_neg_of_nat`, `inv_unique_r`.
 
 5. **Key admitted theorems** (not yet proven):
-   - `generator_order`: g^m = e in an order-m cyclic group — sub-lemmas `op_cancel_l`, `equal_powers_imply_period`, `gpow_period_multiple` are proven; remaining: `pigeonhole_Fin`, `pigeonhole_powers`, `cyclic_group_order_le_period`. See `progress/generator_order_progress.md` for detailed proof plan.
    - `subgroup_of_cyclic`: every subgroup of a cyclic group is cyclic with order dividing the original
+
+6. **Proven theorems** (previously admitted, now complete):
+   - `generator_order`: g^m = e in an order-m cyclic group — proven 2026-04-03 via `pigeonhole_Fin`, `pigeonhole_powers`, `gpow_reduce_mod`, `cyclic_group_order_le_period`. See `progress/generator_order_progress.md`.
 
 ### `galois_theory.v` — Placeholder (empty)
 
@@ -56,6 +58,8 @@ Future home of field extensions, automorphism groups, and the fundamental theore
 - `lessons_learned/`, `docker/` — excluded from Claude's context (denied in `.claude/settings.local.json`); do not attempt to read.
 
 ## Proof Workflow
+
+**IMPORTANT**: Always invoke the `/rocq-prover` skill **before writing any Rocq code**, even after Plan mode. Do not implement proofs directly without going through the skill.
 
 Use the `/rocq-prover` skill (`.claude/skills/ROCQ.md`) when proving theorems. The skill automates the three-step workflow:
 
