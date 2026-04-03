@@ -6,18 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Coq/Rocq formalization of Galois Theory. The project is building up from foundational number theory and group theory (in `integer.v`) toward a full formalization of Galois theory (planned in `galois_theory.v`). Described as a Claude Code experiment to explore AI capabilities in advanced formal mathematics.
 
-## Development Environment
-
-The project is containerized. Docker scripts are in `docker/`:
-
-```bash
-cd docker && ./build.sh       # Build image
-cd docker && ./up_docker.sh   # Start container
-cd docker && ./exec_zsh.sh    # Attach shell
-cd docker && ./down_docker.sh # Stop container
-cd docker && ./rebuild.sh     # Rebuild and restart
-```
-
 ## Compilation
 
 ```bash
@@ -54,7 +42,6 @@ Built in layers, bottom-up:
 5. **Key admitted theorems** (not yet proven):
    - `generator_order`: g^m = e in an order-m cyclic group
    - `subgroup_of_cyclic`: every subgroup of a cyclic group is cyclic with order dividing the original
-   - `gpow_add`: the combined integer exponent addition lemma — all four sign-case sub-lemmas are proven (`gpow_add_pos_pos`, `gpow_add_neg_neg`, `gpow_add_pos_neg`, `gpow_add_neg_pos`); only the wrapper that dispatches on signs remains admitted
 
 ### `galois_theory.v` — Placeholder (empty)
 
@@ -68,6 +55,17 @@ Future home of field extensions, automorphism groups, and the fundamental theore
 - `Admitted` is used intentionally to mark theorems planned for future proof — do not remove admissions without completing the proof.
 - Concrete group instances (`Z_add_group`, `Z_cyclic_group`, `subgroup_group`) use `Defined` (not `Qed`) so they are computationally transparent and can be reduced by `Eval compute`.
 - Each definition or theorem is preceded by a Japanese comment block explaining the mathematical concept and the proof strategy.
+
+## Reasoning Policy
+
+Before responding to any request, first assess the required reasoning depth:
+
+- **Simple** (e.g., factual lookup, single-file edit): Respond directly.
+- **Moderate** (e.g., multi-file refactor, debugging): Think through the approach briefly before acting.
+- **Complex** (e.g., architecture design, algorithm design, proof): Use extended reasoning — break the problem into sub-problems, consider trade-offs, then proceed step by step.
+
+Always make your reasoning depth assessment explicit before responding:
+> "This is a [simple/moderate/complex] task because ..."
 
 ## External Resources
 

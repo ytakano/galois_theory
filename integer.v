@@ -638,6 +638,22 @@ Proof.
   - simpl. rewrite IH. apply id_left.
 Qed.
 
+(** 整数冪における単位元: e^n = e (整数 n に対して)
+
+    証明: n の符号による場合分け。
+    n = 0  : 定義より e G.
+    n > 0  : gpow_nat_e を適用。
+    n < 0  : inv(e) = e を使って gpow_nat_e を適用。  *)
+Lemma gpow_e : forall (G : Group) (n : Z),
+  gpow G (e G) n = e G.
+Proof.
+  intros G n.
+  destruct n as [|p|p]; simpl.
+  - reflexivity.
+  - apply gpow_nat_e.
+  - rewrite inv_e. apply gpow_nat_e.
+Qed.
+
 (** 自然数冪の乗法性: a^(m*n) = (a^m)^n
 
     証明: n に関する帰納法。
@@ -684,6 +700,63 @@ Proof.
     rewrite <- (gpow_nat_inv_eq G (inv G a) (Pos.to_nat p)).
     rewrite inv_inv.
     apply gpow_nat_mul.
+Qed.
+
+(** ===========================================================
+    generator_order の証明のための補題群
+    =========================================================== *)
+
+(** 左消去則: x * y = x * z → y = z
+
+    証明: 両辺の左から inv(x) を掛け,
+    結合律・左逆元・左単位元を順に適用する.  *)
+Lemma op_cancel_l : forall (G : Group) (x y z : carrier G),
+  op G x y = op G x z -> y = z.
+Proof.
+  intros G x y z H.
+  assert (key : op G (inv G x) (op G x y) = op G (inv G x) (op G x z))
+    by (rewrite H; reflexivity).
+  rewrite assoc, inv_left, id_left in key.
+  rewrite assoc, inv_left, id_left in key.
+  exact key.
+Qed.
+
+(** 等しい冪から周期を導く: i < j かつ g^i = g^j ならば g^(j-i) = e.
+
+    証明: g^(j-i) = e を示すため, 両辺の左から g^i を掛ける.
+      左辺: g^i * g^(j-i) = g^(i+(j-i)) = g^j = g^i  (仮定より)
+      右辺: g^i * e = g^i
+    よって op_cancel_l により g^(j-i) = e.  *)
+Lemma equal_powers_imply_period :
+  forall (G : Group) (a : carrier G) (i j : nat),
+    (i < j)%nat ->
+    gpow G a (Z.of_nat i) = gpow G a (Z.of_nat j) ->
+    gpow G a (Z.of_nat (j - i)) = e G.
+Proof.
+  intros G a i j Hij Heq.
+  apply (op_cancel_l G (gpow G a (Z.of_nat i))).
+  rewrite id_right.
+  rewrite <- gpow_add.
+  replace (Z.of_nat i + Z.of_nat (j - i)) with (Z.of_nat j)
+    by (rewrite Nat2Z.inj_sub by lia; ring).
+  symmetry. exact Heq.
+Qed.
+
+(** 周期の倍数は単位元: g^d = e ならば g^(q*d) = e
+
+    証明: Z.of_nat (q * d) = Z.of_nat d * Z.of_nat q と変形し,
+    gpow_mul で g^(d*q) = (g^d)^q に変換する.
+    仮定 g^d = e を代入すると e^q = e (gpow_e) となる.  *)
+Lemma gpow_period_multiple :
+  forall (G : Group) (a : carrier G) (d q : nat),
+    gpow G a (Z.of_nat d) = e G ->
+    gpow G a (Z.of_nat (q * d)) = e G.
+Proof.
+  intros G a d q Hd.
+  replace (Z.of_nat (q * d)) with (Z.of_nat d * Z.of_nat q)
+    by (rewrite Nat2Z.inj_mul; ring).
+  rewrite gpow_mul, Hd.
+  apply gpow_e.
 Qed.
 
 (** 生成元の位数: 位数 m の巡回群 C の生成元 g に対して g^m = e.

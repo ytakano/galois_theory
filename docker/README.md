@@ -1,20 +1,31 @@
-# Use Docker
+# How to Use This Docker Setup
 
-Build and execute.
+## Build
 
 ```text
-(host)$ docker compose build
-(host)$ docker compose up -d
+(host)$ sh build.sh
 ```
 
-Attach.
+## Rebuild
 
 ```text
-(host)$ docker exec -it  docker-awkernel-image-1 /bin/zsh
+(host)$ sh rebuild.sh
 ```
 
-Compile.
+## Start the container
 
 ```text
-(docker)$ make aarch64 BSP=aarch64_virt
+(host)$ sh up_docker.sh
+```
+
+## Attach to the container
+
+```text
+(host)$ sh exec_zsh.sh
+```
+
+## Stop the container
+
+```text
+(host)$ sh down_docker.sh
 ```
