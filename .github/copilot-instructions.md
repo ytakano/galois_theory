@@ -41,12 +41,15 @@ All current work lives in `integer.v`, organized in layers:
 2. **Sub-lemmas** — Prove one sub-lemma at a time; update `progress/<theorem>_progress.md` after each. Use `Admitted` for unproven steps to keep the file compiling.
 3. **Assemble** — Once all sub-lemmas compile, prove the top-level theorem and mark it complete.
 
+If a lemma repeatedly fails, classify the cause (proof-script issue, missing dependency, or wrong/too-strong statement). After 2-3 failed attempts with the same strategy, revise `progress/<theorem>_plan.md` instead of blind retries. For likely false or out-of-scope statements, document the diagnosis in `progress/<theorem>_progress.md` and remove or replace them in the plan.
+
 Use `/clear` between sub-lemma proofs to manage context limits. The progress files persist state across sessions.
 
 ## Key Conventions
 
 - **All comments and docstrings are written in Japanese.** Every definition and theorem is preceded by a Japanese comment block explaining the mathematical concept and proof strategy.
 - **`Admitted` is intentional.** It marks theorems planned for future proof. Do not remove an `Admitted` without completing the proof.
+- **`Admitted` is temporary for unfinished but plausible goals.** Do not keep permanently false statements as `Admitted`; mark them with diagnostics and treat as blocked/abandoned in progress tracking.
 - **Concrete instances use `Defined`, not `Qed`**, to remain computationally transparent for `Eval compute` reduction (`Z_add_group`, `Z_cyclic_group`, `subgroup_group`).
 - **Subgroup carriers use sigma types** (`{x : T | P x}`); `sig_eq` handles equality via proof irrelevance.
 - **Linear arithmetic** is handled by `omega`/`lia` throughout.

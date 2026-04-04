@@ -67,6 +67,8 @@ Use the `/rocq-prover` skill (`.claude/skills/ROCQ.md`) when proving theorems. T
 2. **Sub-lemmas** (`progress/<theorem>_progress.md`): Prove one sub-lemma at a time; update the progress file after each. Use `Admitted` for not-yet-proven steps to keep the file compiling.
 3. **Assemble**: Once all sub-lemmas are proven, prove the top-level theorem and record completion.
 
+If a sub-lemma repeatedly fails, classify the cause (script/tactic issue, missing intermediate lemma, or wrong/too-strong statement). After 2-3 failed attempts with the same strategy, revise the plan instead of retrying unchanged. For likely false or out-of-scope statements, record diagnostics in `progress/<theorem>_progress.md` and remove/replace them in `progress/<theorem>_plan.md`.
+
 Verify each step with `rocq compile integer.v` (no compilation errors = proof accepted).
 
 **Token management**: Use `/clear` between sub-lemma proofs to avoid hitting context limits. The progress file persists state across sessions.
@@ -77,6 +79,7 @@ Verify each step with `rocq compile integer.v` (no compilation errors = proof ac
 - Sigma types (`{x : T | P x}`) are used for subgroup carriers; `sig_eq` handles equality via proof irrelevance.
 - The `omega` / `lia` tactic handles linear arithmetic over integers/naturals throughout.
 - `Admitted` is used intentionally to mark theorems planned for future proof — do not remove admissions without completing the proof.
+- `Admitted` is temporary for unfinished but plausible goals. Do not keep permanently false statements as `Admitted`; document diagnosis and treat them as blocked/abandoned in progress tracking.
 - Concrete group instances (`Z_add_group`, `Z_cyclic_group`, `subgroup_group`) use `Defined` (not `Qed`) so they are computationally transparent and can be reduced by `Eval compute`.
 - Each definition or theorem is preceded by a Japanese comment block explaining the mathematical concept and the proof strategy.
 

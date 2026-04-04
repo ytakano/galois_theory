@@ -61,6 +61,8 @@ N. `<name>` (main goal)
 
 ### Step 2: Prove — Work Through Lemmas One at a Time
 
+> **BLOCKING REQUIREMENT**: After completing or abandoning each lemma attempt — whether compilation succeeds or fails — you **MUST** update `progress/<name>_progress.md` **before** moving on to the next lemma. Skipping this update is a workflow violation and must not occur under any circumstances.
+
 1. Read `progress/<name>_plan.md` to review the strategy and lemma list.
    - If the file does not exist, return to Step 1.
 2. Read `progress/<name>_progress.md` if it exists, to check what has already been proved and what TODOs remain.
@@ -69,15 +71,27 @@ N. `<name>` (main goal)
    ```
    rocq compile <filename>
    ```
-   - If compilation succeeds, record the completed proof in `progress/<name>_progress.md`.
-   - If compilation fails, diagnose the error, revise the proof, and retry.
-   - If other lemmas are needed, add them to the plan in `progress/<name>_plan.md`, update `progress/<name>_progress.md`, and return to Step 2.
-5. Update `progress/<name>_progress.md` with the result and remaining TODOs.
-6. Repeat from step 3 until all lemmas are proved, then proceed to Step 3.
+   - If compilation fails, classify the failure before retrying:
+     - **Syntax/Tactic failure**: revise proof script and retry.
+     - **Missing dependency**: add required lemmas to `progress/<name>_plan.md` and prove them first.
+     - **Potentially false statement / insufficient assumptions**: escalate to plan revision (see "Handling Failed and Unprovable Statements").
+   - Do not repeat the same strategy indefinitely. If the same approach fails after 2-3 attempts, revise the plan instead of continuing blind retries.
+5. **MANDATORY — Update `progress/<name>_progress.md` immediately**, regardless of whether compilation succeeded or failed:
+   - On success: add the completed lemma under `## Completed Lemmas` with its proof code, and remove it from `## TODO`.
+   - On failure / `Admitted`: record status and diagnosis under `## Proof Attempts & Diagnostics`, then update `## TODO`.
+6. **Verify the update**: read back `progress/<name>_progress.md` to confirm the file reflects the latest state.
+7. **CHECKPOINT**: Confirm that `progress/<name>_progress.md` is up to date before selecting the next lemma. Do not proceed to the next lemma until this checkpoint passes.
+8. Repeat from step 3 until all lemmas are proved, then proceed to Step 3.
 
 **`<name>_progress.md` template:**
 ~~~markdown
 # Proof Progress: <Theorem/Lemma Name>
+
+## Status Overview
+- Overall: [In Progress | Blocked | Complete | Abandoned]
+- Complete Lemmas: <n>/<m>
+- Unproven (`Admitted`): <list or none>
+- Failed/Abandoned Items: <list or none>
 
 ## Completed Lemmas
 ### `lemma_1`
@@ -85,6 +99,14 @@ N. `<name>` (main goal)
 ```coq
 <proof code>
 ```
+
+## Proof Attempts & Diagnostics
+### `lemma_2` — Status: [Blocked | Admitted | Abandoned]
+
+- Attempt 1 (<YYYY-MM-DD>):
+   - Error: <rocq error or concise failure description>
+   - Diagnosis: <root cause>
+   - Next action: <retry with change / add lemma / revise plan>
 
 ## TODO
 - [ ] `lemma_2`
@@ -119,6 +141,41 @@ A proof is considered complete only when there are **no compilation errors**. If
 
 ---
 
+## Handling Failed and Unprovable Statements
+
+Not every attempted statement is true or derivable from the current assumptions. When repeated failures suggest this, use the workflow below.
+
+### 1) Classify the Failure
+
+- **Implementation issue**: tactics, term construction, or local script mistakes.
+- **Dependency issue**: missing intermediate lemmas or missing reusable facts.
+- **Statement issue**: the statement is false, too strong, or missing assumptions.
+
+### 2) Escalate After Bounded Retries
+
+- After 2-3 failed attempts using the same strategy, stop and revise the plan.
+- Update `progress/<name>_progress.md` immediately with diagnosis before switching tasks.
+
+### 3) If the Statement Appears False or Unprovable
+
+1. Record the reason in `progress/<name>_progress.md` under `## Proof Attempts & Diagnostics`.
+2. Update `progress/<name>_plan.md` to either:
+   - replace the statement with a corrected one, or
+   - add the missing assumptions explicitly, or
+   - remove the statement from the active proof path if it is outside scope.
+3. Keep the workflow explicit:
+   - Use `Admitted` only as a temporary marker for potentially true but unfinished goals.
+   - Do **not** keep permanently false statements as `Admitted` placeholders.
+
+### 4) Final Goal States
+
+- **Complete**: all required lemmas and the main goal compile without `Admitted`.
+- **In Progress**: work is active and remaining gaps are tracked.
+- **Blocked**: currently stuck, with diagnostics and next action recorded.
+- **Abandoned**: goal removed from active scope because it is false in the current formalization context or requires assumptions outside the accepted context; reason must be documented in plan/progress files.
+
+---
+
 ## Proof Knowledge Base
 
 As you prove lemmas and theorems, build a knowledge base of proven results that can be reused in future proofs. This will help you avoid redundant work and speed up the proving process over time. Maintain the knowledge base in a separate file: `./proof_knowledge_base.md`.
@@ -130,3 +187,4 @@ Read the knowledge base before starting new proofs.
 - Although this skill uses "theorem" and "lemma" throughout, the same workflow applies to **any provable Rocq/Coq construct**: definitions, propositions, instances, etc.
 - Name your progress files after the specific construct being proved (e.g., `progress/myDef_plan.md` for a definition named `myDef`).
 - Keep each `_plan.md` and `_progress.md` pair focused on a single named goal to avoid confusion across related proofs.
+- For abandoned goals, leave a short rationale in both plan/progress files so future sessions do not retry the same invalid path.
