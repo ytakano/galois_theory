@@ -209,3 +209,33 @@
   - `cong p a b` の証明: `apply Z.mod_divide. * lia. * rewrite Zminus_mod, Hi, Z.sub_diag. apply Zmod_0_l.` パターンが有効。
   - 全射性で `crt_exists_3` の境界型 `Z.of_nat p * Z.of_nat q * Z.of_nat r` を `znz_group` のキャリア境界 `Z.of_nat (p*q*r)` に変換するには `Nat2Z.inj_mul` を使う。
 - **Date**: 2026-04-04
+
+---
+
+### `znz_units_group` (既約剰余類群)
+- **Type**: Definition (Group)
+- **Statement**:
+  ```coq
+  Definition znz_units_group (n : nat) (Hn : (1 < n)%nat) : Group.
+  (* carrier: {x : Z | 0 <= x < Z.of_nat n /\ Z.gcd x (Z.of_nat n) = 1} *)
+  (* op: [a] * [b] = [a*b mod n] *)
+  ```
+- **Proof Strategy**: 補助補題を順に証明し、最後に `refine {| ... |}` で群公理を埋める。
+  1. `znz_gcd_one`: `Zis_gcd_gcd` + constructor で直接 Zis_gcd を構成
+  2. `znz_gcd_mod_eq`: `Z.gcd_mod` (Rocq 9.1 形式) + `Z.gcd_comm`
+  3. `znz_gcd_mul_coprime`: `rel_prime`, `rel_prime_mult`, `Zis_gcd_gcd`, `Zis_gcd_sym`
+  4. `znz_coprime_bezout_inv`: `linear_diophantine` でベズー係数取得、`ring_simplify + lia` で合同証明
+  5. `znz_units_inv_val`/`znz_units_inv_prop`: `epsilon` + `epsilon_spec` で逆元構成
+  6. `znz_units_group`: `refine` + 各群公理
+- **Key Tactics**: `Zis_gcd_gcd`, `Zgcd_is_gcd`, `Zis_gcd_sym`, `rel_prime_mult`, `rel_prime_sym`, `epsilon`, `epsilon_spec`, `Z.mod_add`, `Z.mod_small`, `Z.divide_add_r`, `Z.divide_mul_l`, `ring_simplify`, `lia`, `cbn [proj1_sig]`
+- **Dependencies**: `linear_diophantine`, `znz_gcd_one`, `znz_gcd_mod_eq`, `znz_gcd_mul_coprime`, `znz_coprime_bezout_inv`, `sig_eq`, `Z.mod_pos_bound`, `Z.mod_small`, `Zmult_mod_idemp_l/r`, `Z.mul_assoc`
+- **Notes**:
+  - ⚠️ `Z.gcd_mod` の形式: Rocq 9.1 では `Z.gcd (a mod b) b = Z.gcd b a` (引数順注意)。正しい使い方: `rewrite Z.gcd_mod by lia; apply Z.gcd_comm`。
+  - ⚠️ `linarith` は利用不可。`lia` で代替。
+  - ⚠️ `assert (H : n | m)` の `|` は括弧必須: `assert (H : (n | m))`。
+  - ⚠️ `cong_of_mod` / `mod_of_cong` / `cong_trans` は CRT セクション以降に定義。これより前では使えない。直接 `ring_simplify + lia` または `Z.mod_add + Z.mod_small` で代替。
+  - ⚠️ `apply sig_eq; simpl` の後 `1 * a` が match 式に展開される場合は `cbn [proj1_sig]` を使い、`rewrite Z.mul_1_l` で `1 * a` を `a` に戻す。
+  - ⚠️ `ltac:(lia)` を `refine` 内の term 位置で使うと conjunction ゴールに失敗することがある。事前に `assert` で証明しておくこと。
+  - 逆元の存在証明: `epsilon_spec (inhabits 0%Z) P znz_coprime_bezout_inv` パターン。逆元公理: `unfold cong; destruct; Z.mod_add by lia; Z.mod_small`。
+  - `rel_prime a n` への変換: `unfold rel_prime; apply Zis_gcd_sym; rewrite <- Ha; apply Zgcd_is_gcd` が定石。
+- **Date**: 2026-04-04

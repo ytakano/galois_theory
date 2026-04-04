@@ -1754,6 +1754,201 @@ Defined.
 
 
 (** ===================================================================== *)
+(** 既約剰余類群 (Reduced Residue Class Group) (Z/nZ)*                    *)
+(** n と互いに素な元 [x] ∈ Z/nZ の全体が乗算 [a]*[b] = [a*b mod n] に    *)
+(** 関して群をなす。                                                       *)
+(** ===================================================================== *)
+
+(** 補題: Z.gcd 1 n = 1 (1 は任意の n と互いに素)
+    証明の方針: Zis_gcd 1 n 1 を直接構成する。
+      - 1 | 1, 1 | n は trivial。
+      - 任意の公約数 d: d | 1 そのものを返せば よい。  *)
+Lemma znz_gcd_one : forall (n : nat),
+  Z.gcd 1 (Z.of_nat n) = 1.
+Proof.
+  intros n.
+  apply Zis_gcd_gcd. lia.
+  constructor.
+  - apply Z.divide_1_l.
+  - apply Z.divide_1_l.
+  - intros d Hd1 _. exact Hd1.
+Qed.
+
+(** 補題: gcd(a mod n, n) = gcd(a, n)  (mod を取っても gcd は不変)
+    証明の方針: Z.gcd_mod (Z.gcd a n = Z.gcd n (a mod n)) と
+                Z.gcd_comm を組み合わせる。  *)
+Lemma znz_gcd_mod_eq : forall (n : nat) (Hn : (0 < n)%nat) (a : Z),
+  Z.gcd (a mod Z.of_nat n) (Z.of_nat n) = Z.gcd a (Z.of_nat n).
+Proof.
+  intros n Hn a.
+  (* Z.gcd_mod : Z.gcd (a mod b) b = Z.gcd b a *)
+  rewrite Z.gcd_mod by lia.
+  apply Z.gcd_comm.
+Qed.
+
+(** 補題: gcd(a,n) = 1 かつ gcd(b,n) = 1 ならば gcd(a*b, n) = 1  (乗算の閉包性)
+    証明の方針: rel_prime に変換し rel_prime_mult を適用する。  *)
+Lemma znz_gcd_mul_coprime : forall (n : nat) (a b : Z),
+  Z.gcd a (Z.of_nat n) = 1 ->
+  Z.gcd b (Z.of_nat n) = 1 ->
+  Z.gcd (a * b) (Z.of_nat n) = 1.
+Proof.
+  intros n a b Ha Hb.
+  assert (Hra : rel_prime (Z.of_nat n) a).
+  { unfold rel_prime. apply Zis_gcd_sym. rewrite <- Ha. apply Zgcd_is_gcd. }
+  assert (Hrb : rel_prime (Z.of_nat n) b).
+  { unfold rel_prime. apply Zis_gcd_sym. rewrite <- Hb. apply Zgcd_is_gcd. }
+  assert (Hr : rel_prime (Z.of_nat n) (a * b)).
+  { apply rel_prime_mult; assumption. }
+  apply Zis_gcd_gcd. lia.
+  apply Zis_gcd_sym. exact Hr.
+Qed.
+
+(** 補題: gcd(a, n) = 1 ならば乗算逆元が [0, n) に存在し、それも n と互いに素
+    証明の方針:
+      linear_diophantine で a*u + n*v = 1 となる u, v を取り出し、
+      逆元候補を b := u mod n とする。
+      1. 0 <= b < n: Z.mod_pos_bound より。
+      2. a * b ≡ 1 (mod n): a*(u mod n) ≡ a*u ≡ 1 (mod n) を cong_trans で示す。
+      3. gcd(b, n) = 1: d | u かつ d | n ならば d | a*u + n*v = 1 を示す。  *)
+Lemma znz_coprime_bezout_inv : forall (n : nat) (Hn : (1 < n)%nat) (a : Z),
+  0 <= a < Z.of_nat n ->
+  Z.gcd a (Z.of_nat n) = 1 ->
+  exists b : Z,
+    0 <= b < Z.of_nat n /\
+    cong n (a * b) 1 /\
+    Z.gcd b (Z.of_nat n) = 1.
+Proof.
+  intros n Hn a Ha Hgcd.
+  assert (HN : 0 < Z.of_nat n) by lia.
+  (* linear_diophantine で a*u + n*v = 1 となるベズー係数を取り出す *)
+  assert (Hbez : exists u v : Z, a * u + Z.of_nat n * v = 1).
+  { apply linear_diophantine. rewrite Hgcd. apply Z.divide_refl. }
+  destruct Hbez as [u [v Huv]].
+  exists (u mod Z.of_nat n).
+  split. { apply Z.mod_pos_bound. lia. }
+  split.
+  - (* a * (u mod n) ≡ 1 (mod n): a*(u mod n) = a*u - a*(u/n)*n ≡ 1 (mod n) *)
+    unfold cong.
+    exists (-(v + a * (u / Z.of_nat n))).
+    pose proof (Z.div_mod u (Z.of_nat n) ltac:(lia)) as Hdiv.
+    (* u mod n = u - n * (u/n) から代入し ring_simplify と lia で示す *)
+    assert (Hmod : u mod Z.of_nat n = u - Z.of_nat n * (u / Z.of_nat n)) by lia.
+    rewrite Hmod.
+    ring_simplify.
+    lia.
+  - (* gcd(u mod n, n) = 1: u も n と互いに素であることを示す *)
+    rewrite znz_gcd_mod_eq by lia.
+    (* gcd(u, n) = 1 を Zis_gcd の定義から直接示す *)
+    apply Zis_gcd_gcd. lia.
+    apply Zis_gcd_sym.
+    constructor.
+    + apply Z.divide_1_l.
+    + apply Z.divide_1_l.
+    + (* d | n かつ d | u ならば d | 1: d | a*u + n*v = 1 を利用 *)
+      intros d Hdn Hdu.
+      assert (Hd_au : (d | a * u)).
+      { replace (a * u) with (u * a) by ring. apply Z.divide_mul_l. exact Hdu. }
+      assert (Hd_nv : (d | Z.of_nat n * v)).
+      { apply Z.divide_mul_l. exact Hdn. }
+      assert (Hd1 : (d | a * u + Z.of_nat n * v)).
+      { apply Z.divide_add_r; assumption. }
+      rewrite Huv in Hd1. exact Hd1.
+Qed.
+
+(** 既約剰余類群の逆元の値を epsilon で定義する。
+    epsilon は Classical_Epsilon の存在原理を使い、
+    性質を満たす b を一意的に取り出す。  *)
+Definition znz_units_inv_val (n : nat) (Hn : (1 < n)%nat)
+    (a : {x : Z | 0 <= x < Z.of_nat n /\ Z.gcd x (Z.of_nat n) = 1}) : Z :=
+  epsilon (inhabits 0%Z)
+    (fun b => 0 <= b < Z.of_nat n /\ cong n (proj1_sig a * b) 1 /\ Z.gcd b (Z.of_nat n) = 1).
+
+(** 逆元の性質: znz_units_inv_val は実際に逆元の条件を満たす。
+    証明の方針: epsilon_spec に存在証明 znz_coprime_bezout_inv を渡す。  *)
+Lemma znz_units_inv_prop : forall (n : nat) (Hn : (1 < n)%nat)
+    (a : {x : Z | 0 <= x < Z.of_nat n /\ Z.gcd x (Z.of_nat n) = 1}),
+  let b := znz_units_inv_val n Hn a in
+  0 <= b < Z.of_nat n /\
+  cong n (proj1_sig a * b) 1 /\
+  Z.gcd b (Z.of_nat n) = 1.
+Proof.
+  intros n Hn a.
+  unfold znz_units_inv_val.
+  apply epsilon_spec.
+  exact (znz_coprime_bezout_inv n Hn (proj1_sig a)
+           (proj1 (proj2_sig a)) (proj2 (proj2_sig a))).
+Qed.
+
+(** 既約剰余類群 (Z/nZ)* の定義:
+    台集合: {x : Z | 0 <= x < n /\ Z.gcd x n = 1}
+    演算:   [a] * [b] := [(a * b) mod n]
+    単位元: [1]
+    逆元:   znz_units_inv_val (epsilon による構成)
+
+    証明の方針:
+      - op の carrier 条件: mod_pos_bound と znz_gcd_mod_eq + znz_gcd_mul_coprime。
+      - 結合律: Zmult_mod_idemp_l/r と Z.mul_assoc。
+      - 単位元: Z.mul_1_l/r と Z.mod_small。
+      - 逆元公理: znz_units_inv_prop から cong を取り出し mod_of_cong で変換。  *)
+Definition znz_units_group (n : nat) (Hn : (1 < n)%nat) : Group.
+Proof.
+  assert (HN : 0 < Z.of_nat n) by lia.
+  assert (Hn_pos : (0 < n)%nat) by lia.
+  (* 単位元 1 の carrier 条件を事前に証明 *)
+  assert (H1n : (0 : Z) <= 1 < Z.of_nat n) by lia.
+  refine {|
+    carrier := {x : Z | 0 <= x < Z.of_nat n /\ Z.gcd x (Z.of_nat n) = 1};
+    op := fun a b =>
+      exist _ ((proj1_sig a * proj1_sig b) mod Z.of_nat n)
+        (conj (Z.mod_pos_bound _ _ HN)
+              (eq_trans (znz_gcd_mod_eq n Hn_pos (proj1_sig a * proj1_sig b))
+                        (znz_gcd_mul_coprime n (proj1_sig a) (proj1_sig b)
+                           (proj2 (proj2_sig a)) (proj2 (proj2_sig b)))));
+    e := exist _ 1 (conj H1n (znz_gcd_one n));
+    inv := fun a =>
+      exist _ (znz_units_inv_val n Hn a)
+        (conj (proj1 (znz_units_inv_prop n Hn a))
+              (proj2 (proj2 (znz_units_inv_prop n Hn a))))
+  |}.
+  - (* 結合律: (a*b mod n) * c mod n = a * (b*c mod n) mod n *)
+    intros [a Ha] [b Hb] [c Hc]. apply sig_eq. simpl.
+    rewrite Zmult_mod_idemp_r, Zmult_mod_idemp_l, Z.mul_assoc. reflexivity.
+  - (* 左単位元: 1 * a mod n = a *)
+    intros [a Ha]. apply sig_eq.
+    cbn [proj1_sig].
+    rewrite Z.mul_1_l. apply Z.mod_small. exact (proj1 Ha).
+  - (* 右単位元: a * 1 mod n = a *)
+    intros [a Ha]. apply sig_eq.
+    cbn [proj1_sig].
+    rewrite Z.mul_1_r. apply Z.mod_small. exact (proj1 Ha).
+  - (* 左逆元: b * a mod n = 1 (b は a の乗法逆元) *)
+    intros a. apply sig_eq. simpl.
+    pose proof (znz_units_inv_prop n Hn a) as Hb.
+    destruct Hb as [_ [Hcong _]].
+    rewrite Z.mul_comm.
+    (* Hcong : cong n (proj1_sig a * znz_units_inv_val n Hn a) 1 *)
+    (* = Z.of_nat n | proj1_sig a * b - 1 *)
+    (* Goal: proj1_sig a * b mod Z.of_nat n = 1 *)
+    unfold cong in Hcong. destruct Hcong as [k Hk].
+    assert (Heq : proj1_sig a * znz_units_inv_val n Hn a = Z.of_nat n * k + 1) by lia.
+    rewrite Heq.
+    replace (Z.of_nat n * k + 1) with (1 + k * Z.of_nat n) by ring.
+    rewrite Z.mod_add by lia.
+    apply Z.mod_small. lia.
+  - (* 右逆元: a * b mod n = 1 *)
+    intros a. apply sig_eq. simpl.
+    pose proof (znz_units_inv_prop n Hn a) as Hb.
+    destruct Hb as [_ [Hcong _]].
+    unfold cong in Hcong. destruct Hcong as [k Hk].
+    assert (Heq : proj1_sig a * znz_units_inv_val n Hn a = Z.of_nat n * k + 1) by lia.
+    rewrite Heq.
+    replace (Z.of_nat n * k + 1) with (1 + k * Z.of_nat n) by ring.
+    rewrite Z.mod_add by lia.
+    apply Z.mod_small. lia.
+Defined.
+
+(** ===================================================================== *)
 (** 中国剰余定理 (Chinese Remainder Theorem)                               *)
 (** 互いに素な p, q と 0<=a<p, 0<=b<q に対して、n mod p = a かつ         *)
 (** n mod q = b となる n in [0, p*q) が唯一存在することを示す。           *)
