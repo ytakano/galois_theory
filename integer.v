@@ -3037,3 +3037,703 @@ Proof.
       * apply sig_eq. simpl. exact Hnq.
     + apply sig_eq. simpl. exact Hnr.
 Qed.
+
+(** ===========================================================
+    オイラー関数 (Euler's Totient Function)
+    =========================================================== *)
+
+(** オイラー関数 (Euler's Totient Function):
+
+    euler_phi n と定義する。
+
+    この値は乗法群 (Z/nZ)^* の位数と一致する。
+
+    定義: euler_phi n = |{k ∈ {0,...,n-1} | gcd(k, n) = 1}|  *)
+
+Require Import Stdlib.Lists.List.
+Import ListNotations.
+
+Definition euler_phi (n : nat) : nat :=
+  List.length (List.filter
+    (fun k => Z.eqb (Z.gcd (Z.of_nat k) (Z.of_nat n)) 1)
+    (List.seq 0 n)).
+
+(** GroupOrder の一意性:
+    群 G の位数が m かつ n であれば m = n。
+    証明の方針:
+      GroupOrder G m より全単射 f : G → Fin.t m が存在する。
+      GroupOrder G n より全単射 g : G → Fin.t n が存在する。
+      f の逆関数を使って Fin.t n → G → Fin.t m の単射を構成し、
+      Fin_injective_le で n ≤ m、逆方向でも m ≤ n を得る。  *)
+
+Lemma group_order_unique : forall (G : Group) (m n : nat),
+  GroupOrder G m -> GroupOrder G n -> m = n.
+Proof.
+  intros G m n [f [Hfinj Hfsurj]] [g [Hginj Hgsurj]].
+  (* epsilon で右逆写像を構成する *)
+  set (xf := fun (i : Fin.t m) =>
+    epsilon (inhabits (e G)) (fun x => f x = i)).
+  assert (Hxf : forall i : Fin.t m, f (xf i) = i).
+  { intro i. apply epsilon_spec. exact (Hfsurj i). }
+  set (xg := fun (i : Fin.t n) =>
+    epsilon (inhabits (e G)) (fun x => g x = i)).
+  assert (Hxg : forall i : Fin.t n, g (xg i) = i).
+  { intro i. apply epsilon_spec. exact (Hgsurj i). }
+  apply Nat.le_antisymm.
+  - (* m ≤ n: φ := i ↦ g(xf(i)) は Fin.t m → Fin.t n の単射 *)
+    apply Fin_injective_le with (phi := fun i => g (xf i)).
+    intros i j Heq.
+    assert (Hxeq : xf i = xf j) by (apply Hginj; exact Heq).
+    assert (Hfeq : f (xf i) = f (xf j)) by (apply f_equal; exact Hxeq).
+    rewrite (Hxf i), (Hxf j) in Hfeq. exact Hfeq.
+  - (* n ≤ m: φ := i ↦ f(xg(i)) は Fin.t n → Fin.t m の単射 *)
+    apply Fin_injective_le with (phi := fun i => f (xg i)).
+    intros i j Heq.
+    assert (Hxeq : xg i = xg j) by (apply Hfinj; exact Heq).
+    assert (Hgeq : g (xg i) = g (xg j)) by (apply f_equal; exact Hxeq).
+    rewrite (Hxg i), (Hxg j) in Hgeq. exact Hgeq.
+Qed.
+
+(** GroupOrder の同型不変性:
+    G ≅ H かつ GroupOrder G m ならば GroupOrder H m。
+    証明の方針:
+      G ≅ H より同型写像 φ : G → H が存在する (全単射)。
+      GroupOrder G m より全単射 f : G → Fin.t m が存在する。
+      合成 f ∘ φ^{-1} : H → Fin.t m が全単射になる。
+      実装: φ の全射性から写像 ψ : H → G (φ(ψ(h)) = h) を構成し、
+      f ∘ ψ を全単射とする。  *)
+
+Lemma group_order_iso : forall (G H : Group) (m : nat),
+  G ≅ H -> GroupOrder G m -> GroupOrder H m.
+Proof.
+  intros G H m [phi [Hhom [Hinj Hsurj]]] [f [Hfinj Hfsurj]].
+  (* epsilon で φ の右逆 ψ を構成する: φ(ψ(h)) = h *)
+  set (psi := fun (h : carrier H) =>
+    epsilon (inhabits (e G)) (fun x => phi x = h)).
+  assert (Hphi_psi : forall h, phi (psi h) = h).
+  { intro h. apply epsilon_spec. exact (Hsurj h). }
+  assert (Hpsi_phi : forall x, psi (phi x) = x).
+  { intro x. apply Hinj. exact (Hphi_psi (phi x)). }
+  (* f ∘ ψ : H → Fin.t m *)
+  exists (fun h => f (psi h)).
+  split.
+  - (* 単射性: f(ψ(h1)) = f(ψ(h2)) → h1 = h2 *)
+    intros h1 h2 Heq.
+    assert (Hpsi : psi h1 = psi h2) by (apply Hfinj; exact Heq).
+    assert (Hph : phi (psi h1) = phi (psi h2)) by (apply f_equal; exact Hpsi).
+    rewrite (Hphi_psi h1), (Hphi_psi h2) in Hph. exact Hph.
+  - (* 全射性: 任意の i : Fin.t m に対し φ(x) を返す *)
+    intro i.
+    destruct (Hfsurj i) as [x Hx].
+    exists (phi x).
+    rewrite Hpsi_phi. exact Hx.
+Qed.
+
+(** 直積群の位数:
+    GroupOrder G m かつ GroupOrder H n ならば GroupOrder (G ×ₒ H) (m * n)。
+    証明の方針:
+      f : G → Fin.t m, g : H → Fin.t n の全単射から
+      (x, y) ↦ Fin.of_nat_lt (i * n + j < m * n) を構成する。
+      ただし i = proj1_sig (Fin.to_nat (f x)), j = proj1_sig (Fin.to_nat (g y))。
+      単射性: i1*n+j1 = i2*n+j2 かつ 0 ≤ j < n から i1 = i2, j1 = j2。
+      全射性: Fin.t (m*n) の任意の k から商 k/n と余り k mod n を取り出す。  *)
+
+Lemma product_index_lt : forall (i j m n : nat),
+  (i < m)%nat -> (j < n)%nat -> (i * n + j < m * n)%nat.
+Proof. intros. nia. Qed.
+
+Lemma product_index_unique : forall (i1 j1 i2 j2 n : nat),
+  (j1 < n)%nat -> (j2 < n)%nat ->
+  (i1 * n + j1 = i2 * n + j2)%nat ->
+  i1 = i2 /\ j1 = j2.
+Proof.
+  intros i1 j1 i2 j2 n Hj1 Hj2 Heq.
+  assert (Hi : i1 = i2).
+  { destruct (Nat.lt_trichotomy i1 i2) as [H|[H|H]].
+    - exfalso. nia.
+    - exact H.
+    - exfalso. nia. }
+  split. exact Hi. lia.
+Qed.
+
+Lemma group_order_product : forall (G H : Group) (m n : nat),
+  GroupOrder G m -> GroupOrder H n ->
+  GroupOrder (G ×ₒ H) (m * n).
+Proof.
+  intros G H m n [f [Hfinj Hfsurj]] [g [Hginj Hgsurj]].
+  (* 写像の定義: (x, y) ↦ Fin.of_nat_lt で i*n+j をエンコード
+     ただし i = proj1_sig (Fin.to_nat (f x)), j = proj1_sig (Fin.to_nat (g y)) *)
+  set (h := fun (p : carrier G * carrier H) =>
+    let i  := proj1_sig (Fin.to_nat (f (fst p))) in
+    let j  := proj1_sig (Fin.to_nat (g (snd p))) in
+    let Hi := proj2_sig (Fin.to_nat (f (fst p))) in
+    let Hj := proj2_sig (Fin.to_nat (g (snd p))) in
+    Fin.of_nat_lt (product_index_lt i j m n Hi Hj)).
+  exists h.
+  split.
+  - (* 単射性: h (x1,y1) = h (x2,y2) → (x1,y1) = (x2,y2) *)
+    intros [x1 y1] [x2 y2] Heq.
+    unfold h in Heq. simpl in Heq.
+    pose proof (f_equal (fun x => proj1_sig (Fin.to_nat x)) Heq) as Hval.
+    cbv beta in Hval.
+    set (i1 := proj1_sig (Fin.to_nat (f x1))).
+    set (j1 := proj1_sig (Fin.to_nat (g y1))).
+    set (i2 := proj1_sig (Fin.to_nat (f x2))).
+    set (j2 := proj1_sig (Fin.to_nat (g y2))).
+    set (Hi1 := proj2_sig (Fin.to_nat (f x1))).
+    set (Hj1 := proj2_sig (Fin.to_nat (g y1))).
+    set (Hi2 := proj2_sig (Fin.to_nat (f x2))).
+    set (Hj2 := proj2_sig (Fin.to_nat (g y2))).
+    assert (A1 : proj1_sig (Fin.to_nat
+      (Fin.of_nat_lt (product_index_lt i1 j1 m n Hi1 Hj1))) = (i1*n+j1)%nat)
+      by apply to_nat_of_nat_lt.
+    assert (A2 : proj1_sig (Fin.to_nat
+      (Fin.of_nat_lt (product_index_lt i2 j2 m n Hi2 Hj2))) = (i2*n+j2)%nat)
+      by apply to_nat_of_nat_lt.
+    assert (Hval2 : (i1*n+j1 = i2*n+j2)%nat).
+    { exact (eq_trans (eq_sym A1) (eq_trans Hval A2)). }
+    destruct (product_index_unique i1 j1 i2 j2 n Hj1 Hj2 Hval2) as [Hi_eq Hj_eq].
+    simpl. f_equal.
+    + apply Hfinj. apply Fin.to_nat_inj. exact Hi_eq.
+    + apply Hginj. apply Fin.to_nat_inj. exact Hj_eq.
+  - (* 全射性: 任意の k : Fin.t (m*n) に対し (x,y) を構成する *)
+    intro k.
+    set (kv := proj1_sig (Fin.to_nat k)).
+    assert (Hk : (kv < m * n)%nat) by exact (proj2_sig (Fin.to_nat k)).
+    assert (Hn_pos : (0 < n)%nat).
+    { destruct n as [| n'].
+      - simpl in Hk. lia.
+      - lia. }
+    set (i := (kv / n)%nat).
+    set (j := (kv mod n)%nat).
+    assert (Hi_lt : (i < m)%nat).
+    { unfold i. apply Nat.div_lt_upper_bound. lia. lia. }
+    assert (Hj_lt : (j < n)%nat) by (unfold j; apply Nat.mod_upper_bound; lia).
+    destruct (Hfsurj (Fin.of_nat_lt Hi_lt)) as [x Hx].
+    destruct (Hgsurj (Fin.of_nat_lt Hj_lt)) as [y Hy].
+    exists (x, y).
+    unfold h. simpl.
+    apply Fin.to_nat_inj.
+    rewrite to_nat_of_nat_lt.
+    (* proj1_sig (to_nat (f x)) = i、proj1_sig (to_nat (g y)) = j を示す *)
+    assert (Hfx : proj1_sig (Fin.to_nat (f x)) = i).
+    { rewrite Hx. apply to_nat_of_nat_lt. }
+    assert (Hgy : proj1_sig (Fin.to_nat (g y)) = j).
+    { rewrite Hy. apply to_nat_of_nat_lt. }
+    rewrite Hfx, Hgy.
+    unfold i, j, kv.
+    rewrite Nat.mul_comm. symmetry. apply Nat.div_mod. lia.
+Qed.
+
+(** euler_phi と znz_units_group の位数の接続:
+    n > 1 のとき GroupOrder (znz_units_group n Hn) (euler_phi n) が成立する。
+
+    証明の方針:
+      L := filter (fun k => gcd(k,n) = 1) (seq 0 n) とすると euler_phi n = |L| 。
+      キャリア x = (z, proof) に対し k := Z.to_nat z は L にEcho
+      epsilon で k の L 内インデックス pos を取り出し、
+      f x := Fin.of_nat_lt (pos < |L|) を全単射として示す。
+        単射性: NoDup L から異なる k  pos を持つ。は異な
+        全射性: 各 i に対し L の i 番目の要素から carrier 要素を構成する。  *)
+
+Lemma filter_seq_NoDup : forall (n : nat) (p : nat -> bool),
+  List.NoDup (List.filter p (List.seq 0 n)).
+Proof.
+  intros n p.
+  apply List.NoDup_filter.
+  apply List.seq_NoDup.
+Qed.
+
+Lemma filter_seq_elem_bound : forall (n k : nat) (p : nat -> bool),
+  List.In k (List.filter p (List.seq 0 n)) -> (k < n)%nat.
+Proof.
+  intros n k p Hk.
+  apply List.filter_In in Hk.
+  destruct Hk as [Hseq _].
+  apply List.in_seq in Hseq. lia.
+Qed.
+
+Lemma euler_phi_group_order : forall (n : nat) (Hn : (1 < n)%nat),
+  GroupOrder (znz_units_group n Hn) (euler_phi n).
+Proof.
+  intros n Hn.
+  set (L := List.filter
+    (fun k => Z.eqb (Z.gcd (Z.of_nat k) (Z.of_nat n)) 1)
+    (List.seq 0 n)).
+  assert (HL_nd : List.NoDup L) by (apply filter_seq_NoDup).
+  (* キャリア要素の nat 表現が L に属することを示す *)
+  assert (Hcarrier_in_L : forall (x : carrier (znz_units_group n Hn)),
+    List.In (Z.to_nat (proj1_sig x)) L).
+  { intro x.
+    destruct x as [z [[Hlo Hhi] Hgcd]]. simpl.
+    apply List.filter_In.
+    split.
+    - apply List.in_seq. simpl.
+      split. { lia. }
+      apply (Nat2Z.inj_lt (Z.to_nat z) n).
+      rewrite Z2Nat.id by lia. exact Hhi.
+    - apply Z.eqb_eq.
+      rewrite Z2Nat.id by lia.
+      exact Hgcd. }
+  (* epsilon でインデックスを取り出す関数を定義 *)
+  set (pos := fun (x : carrier (znz_units_group n Hn)) =>
+    epsilon (inhabits 0%nat)
+      (fun p => (p < List.length L)%nat /\
+                List.nth p L 0%nat = Z.to_nat (proj1_sig x))).
+  assert (Hpos_spec : forall x : carrier (znz_units_group n Hn),
+    (pos x < List.length L)%nat /\
+    List.nth (pos x) L 0%nat = Z.to_nat (proj1_sig x)).
+  { intro x.
+    apply epsilon_spec.
+    destruct (List.In_nth L (Z.to_nat (proj1_sig x)) 0%nat
+                (Hcarrier_in_L x)) as [p [Hp_lt Hp_eq]].
+    exact (ex_intro _ p (conj Hp_lt Hp_eq)). }
+  (* f x := Fin.of_nat_lt (pos x < |L|) を全単射として示す *)
+  exists (fun x => Fin.of_nat_lt (proj1 (Hpos_spec x))).
+  split.
+  - (* 単射性: f x = f y → x = y *)
+    intros x y Heq.
+    apply sig_eq. simpl.
+    pose proof (f_equal (fun i => proj1_sig (Fin.to_nat i)) Heq) as Hval.
+    cbv beta in Hval.
+    rewrite !to_nat_of_nat_lt in Hval.
+    (* Hval : pos x = pos y *)
+    destruct (Hpos_spec x) as [Hpos_lt_x Hx].
+    destruct (Hpos_spec y) as [Hpos_lt_y Hy].
+    assert (Hk : Z.to_nat (proj1_sig x) = Z.to_nat (proj1_sig y)).
+    { rewrite <- Hx, <- Hy, Hval. reflexivity. }
+    assert (Hrange_x : 0 <= proj1_sig x) by (exact (proj1 (proj1 (proj2_sig x)))).
+    assert (Hrange_y : 0 <= proj1_sig y) by (exact (proj1 (proj1 (proj2_sig y)))).
+    apply Z2Nat.inj. exact Hrange_x. exact Hrange_y. exact Hk.
+  - (* 全射性: 各 i に対し carrier 要素を構成する *)
+    intro i.
+    set (p := proj1_sig (Fin.to_nat i)).
+    assert (Hp_lt : (p < List.length L)%nat) by exact (proj2_sig (Fin.to_nat i)).
+    set (k := List.nth p L 0%nat).
+    assert (Hk_in_L : List.In k L).
+    { unfold k. apply List.nth_In. exact Hp_lt. }
+    apply List.filter_In in Hk_in_L.
+    destruct Hk_in_L as [Hk_seq Hk_eqb].
+    apply List.in_seq in Hk_seq.
+    apply Z.eqb_eq in Hk_eqb.
+    assert (Hk_lt : (k < n)%nat) by lia.
+    assert (Hk_range : 0 <= Z.of_nat k < Z.of_nat n).
+    { split. lia. apply Nat2Z.inj_lt. exact Hk_lt. }
+    (* carrier 要素 x0 = exist (Z.of_nat k) (...) を構成する *)
+    set (x0cond := conj Hk_range Hk_eqb
+      : 0 <= Z.of_nat k < Z.of_nat n /\ Z.gcd (Z.of_nat k) (Z.of_nat n) = 1).
+    exists (exist _ (Z.of_nat k) x0cond : carrier (znz_units_group n Hn)).
+    (* f x0 = i を示す *)
+    simpl.
+    apply Fin.to_nat_inj.
+    rewrite to_nat_of_nat_lt.
+    (* pos x0 = p = proj1_sig (Fin.to_nat i) を示す *)
+    destruct (Hpos_spec (exist _ (Z.of_nat k) x0cond))
+      as [Hpos_lt Hpos_eq].
+    simpl in Hpos_eq.
+    rewrite Nat2Z.id in Hpos_eq.
+    (* Hpos_eq : List.nth (pos x0) L 0 = k *)
+    (* p = proj1_sig (Fin.to_nat i) *)
+    (* Show: pos x0 = p using NoDup *)
+    apply (proj1 (List.NoDup_nth L 0%nat) HL_nd (pos _) p Hpos_lt Hp_lt).
+    rewrite Hpos_eq. unfold k. reflexivity.
+Qed.
+
+(** 補助補題 (2変数版): gcd(a, p*q) = 1 ならば gcd(a mod p, p) = 1。 *)
+Lemma znz_units_coprime_mod2_l : forall (p q : nat) (Hp : (0 < p)%nat) (a : Z),
+  Z.gcd a (Z.of_nat (p * q)) = 1 ->
+  Z.gcd (a mod Z.of_nat p) (Z.of_nat p) = 1.
+Proof.
+  intros p q Hp a H.
+  rewrite znz_gcd_mod_eq by exact Hp.
+  apply (znz_units_gcd_dvd p q). exact H.
+Qed.
+
+(** 補助補題 (2変数版): gcd(a, p*q) = 1 ならば gcd(a mod q, q) = 1。 *)
+Lemma znz_units_coprime_mod2_m : forall (p q : nat) (Hq : (0 < q)%nat) (a : Z),
+  Z.gcd a (Z.of_nat (p * q)) = 1 ->
+  Z.gcd (a mod Z.of_nat q) (Z.of_nat q) = 1.
+Proof.
+  intros p q Hq a H.
+  rewrite znz_gcd_mod_eq by exact Hq.
+  apply (znz_units_gcd_dvd q p).
+  rewrite Nat.mul_comm. exact H.
+Qed.
+
+(** 補助補題 (2変数版): (a mod (p*q)) mod p = a mod p。 *)
+Lemma znz_mod_mod2_l : forall (p q : nat) (a : Z),
+  (0 < p)%nat ->
+  (a mod Z.of_nat (p * q)) mod Z.of_nat p = a mod Z.of_nat p.
+Proof.
+  intros p q a Hp.
+  apply Z.mod_mod_divide.
+  rewrite Nat2Z.inj_mul.
+  exists (Z.of_nat q). ring.
+Qed.
+
+(** 補助補題 (2変数版): (a mod (p*q)) mod q = a mod q。 *)
+Lemma znz_mod_mod2_m : forall (p q : nat) (a : Z),
+  (0 < q)%nat ->
+  (a mod Z.of_nat (p * q)) mod Z.of_nat q = a mod Z.of_nat q.
+Proof.
+  intros p q a Hq.
+  apply Z.mod_mod_divide.
+  rewrite Nat2Z.inj_mul.
+  exists (Z.of_nat p). ring.
+Qed.
+
+(** 2変数版の既約剰余類群分解定理:
+    p, q が互いに素のとき、(Z/(pq)Z)^* ≅ (Z/pZ)^* × (Z/qZ)^*。
+
+    写像: φ([a]) = ([a mod p], [a mod q])
+
+    証明の方針:
+    - 写像の定義: znz_units_coprime_mod2_l/m で gcd 条件を示す。
+    - 準同型性: znz_mod_mod2_l/m + Z.mul_mod で乗算の mod 分配則を適用。
+    - 単射: crt_unique で a = b を導き sig_eq で等号を得る。
+    - 全射性: crt_exists で逆像を構成し、znz_units_gcd_mul で gcd 条件を示す。 *)
+Lemma znz_units_decomp2 :
+  forall (p q : nat) (Hp : (1 < p)%nat) (Hq : (1 < q)%nat)
+    (Hpq : (1 < p * q)%nat),
+    Nat.gcd p q = 1%nat ->
+    znz_units_group (p * q) Hpq ≅ znz_units_group p Hp ×ₒ znz_units_group q Hq.
+Proof.
+  intros p q Hp Hq Hpq Hgcd.
+  assert (HP : (0 < p)%nat) by lia.
+  assert (HQ : (0 < q)%nat) by lia.
+  assert (HP' : 0 < Z.of_nat p) by lia.
+  assert (HQ' : 0 < Z.of_nat q) by lia.
+  (* 写像 φ の定義 *)
+  set (phi := fun (a : carrier (znz_units_group (p * q) Hpq)) =>
+    ( exist (fun x => 0 <= x < Z.of_nat p /\ Z.gcd x (Z.of_nat p) = 1)
+            (proj1_sig a mod Z.of_nat p)
+            (conj (Z.mod_pos_bound (proj1_sig a) (Z.of_nat p) HP')
+                  (znz_units_coprime_mod2_l p q HP (proj1_sig a)
+                     (proj2 (proj2_sig a))))
+    , exist (fun x => 0 <= x < Z.of_nat q /\ Z.gcd x (Z.of_nat q) = 1)
+            (proj1_sig a mod Z.of_nat q)
+            (conj (Z.mod_pos_bound (proj1_sig a) (Z.of_nat q) HQ')
+                  (znz_units_coprime_mod2_m p q HQ (proj1_sig a)
+                     (proj2 (proj2_sig a))))
+    ) : carrier (znz_units_group p Hp ×ₒ znz_units_group q Hq)).
+  exists phi.
+  unfold IsIsomorphism. split; [| split].
+
+  (* ====== 準同型性 ====== *)
+  - intros [a Ha] [b Hb].
+    unfold phi. simpl.
+    f_equal.
+    + apply sig_eq. simpl.
+      rewrite znz_mod_mod2_l by exact HP. apply Z.mul_mod. lia.
+    + apply sig_eq. simpl.
+      rewrite znz_mod_mod2_m by exact HQ. apply Z.mul_mod. lia.
+
+  (* ====== 単射性 ====== *)
+  - intros [a Ha] [b Hb] Heq.
+    apply sig_eq. simpl.
+    unfold phi in Heq. simpl in Heq.
+    injection Heq as H1 H2.
+    assert (Hmul : Z.of_nat (p * q) = Z.of_nat p * Z.of_nat q).
+    { rewrite Nat2Z.inj_mul. ring. }
+    assert (Ha' : 0 <= a < Z.of_nat p * Z.of_nat q).
+    { rewrite <- Hmul. exact (proj1 Ha). }
+    assert (Hb' : 0 <= b < Z.of_nat p * Z.of_nat q).
+    { rewrite <- Hmul. exact (proj1 Hb). }
+    apply crt_unique with (p := p) (q := q).
+    + exact Hgcd.
+    + exact HP.
+    + exact HQ.
+    + exact Ha'.
+    + exact Hb'.
+    + unfold cong. apply Z.mod_divide. lia.
+      rewrite Zminus_mod, H1, Z.sub_diag. apply Zmod_0_l.
+    + unfold cong. apply Z.mod_divide. lia.
+      rewrite Zminus_mod, H2, Z.sub_diag. apply Zmod_0_l.
+
+  (* ====== 全射性 ====== *)
+  - intros [[x Hx] [y Hy]].
+    destruct (crt_exists p q x y Hgcd HP HQ (proj1 Hx) (proj1 Hy))
+      as [n [Hn [Hnp Hnq]]].
+    assert (Hn_range : 0 <= n < Z.of_nat (p * q)).
+    { rewrite Nat2Z.inj_mul. exact Hn. }
+    assert (Hgp : Z.gcd n (Z.of_nat p) = 1).
+    { rewrite <- znz_gcd_mod_eq by exact HP.
+      rewrite Hnp. exact (proj2 Hx). }
+    assert (Hgq : Z.gcd n (Z.of_nat q) = 1).
+    { rewrite <- znz_gcd_mod_eq by exact HQ.
+      rewrite Hnq. exact (proj2 Hy). }
+    assert (Hgpq : Z.gcd n (Z.of_nat (p * q)) = 1).
+    { apply znz_units_gcd_mul; assumption. }
+    exists (exist _ n (conj Hn_range Hgpq)).
+    unfold phi. simpl.
+    f_equal.
+    + apply sig_eq. simpl. exact Hnp.
+    + apply sig_eq. simpl. exact Hnq.
+Qed.
+
+(** オイラー関数の乗法性:
+    p, q が互いに素のとき phi(p*q) = phi(p) * phi(q)。
+
+    証明の方針:
+    1. znz_units_decomp2 で (Z/pqZ)^* ≅ (Z/pZ)^* ×ₒ (Z/qZ)^*
+    2. euler_phi_group_order で GroupOrder (units (Z/pqZ)) (euler_phi (p*q)) など
+    3. group_order_iso + group_order_product で等式を得る
+    4. group_order_unique で一意性から phi(p*q) = phi(p) * phi(q) *)
+Lemma euler_phi_mul :
+  forall (p q : nat) (Hp : (1 < p)%nat) (Hq : (1 < q)%nat),
+    Nat.gcd p q = 1%nat ->
+    euler_phi (p * q) = (euler_phi p * euler_phi q)%nat.
+Proof.
+  intros p q Hp Hq Hgcd.
+  assert (Hpq : (1 < p * q)%nat) by nia.
+  (* GroupOrder (units pqZ) (euler_phi (p*q)) *)
+  assert (Hord_pq : GroupOrder (znz_units_group (p * q) Hpq) (euler_phi (p * q))).
+  { apply euler_phi_group_order. }
+  (* GroupOrder (units pZ) (euler_phi p) *)
+  assert (Hord_p : GroupOrder (znz_units_group p Hp) (euler_phi p)).
+  { apply euler_phi_group_order. }
+  (* GroupOrder (units qZ) (euler_phi q) *)
+  assert (Hord_q : GroupOrder (znz_units_group q Hq) (euler_phi q)).
+  { apply euler_phi_group_order. }
+  (* GroupOrder (units pZ ×ₒ units qZ) (euler_phi p * euler_phi q) *)
+  assert (Hord_prod : GroupOrder (znz_units_group p Hp ×ₒ znz_units_group q Hq)
+                                  (euler_phi p * euler_phi q)).
+  { apply group_order_product; assumption. }
+  (* units pqZ ≅ units pZ ×ₒ units qZ *)
+  assert (Hiso : znz_units_group (p * q) Hpq ≅
+                   znz_units_group p Hp ×ₒ znz_units_group q Hq).
+  { apply znz_units_decomp2; assumption. }
+  (* GroupOrder (units pZ ×ₒ units qZ) (euler_phi (p*q)):
+     group_order_iso の方向は G ≅ H → GroupOrder G m → GroupOrder H m なので
+     Hiso (units pqZ ≅ units pZ × units qZ) と Hord_pq を使う *)
+  assert (Hord_prod2 : GroupOrder (znz_units_group p Hp ×ₒ znz_units_group q Hq)
+                                   (euler_phi (p * q))).
+  { apply (group_order_iso (znz_units_group (p * q) Hpq)); assumption. }
+  (* 一意性で等式を得る *)
+  apply (group_order_unique (znz_units_group p Hp ×ₒ znz_units_group q Hq)); assumption.
+Qed.
+
+(** 補助補題: 素数 p のとき gcd(k, p^e) = 1 ↔ p ∤ k。
+    前向き: p|k なら p | gcd(k, p^e) | 1 となり矛盾 (prime_ge_2)。
+    後向き: ¬(p|k) なら prime_rel_prime で rel_prime p k を得て、
+            coprime_pow_r で rel_prime k (p^e) を導く。 *)
+Lemma prime_pow_coprime_iff :
+  forall (p e k : nat),
+    prime (Z.of_nat p) ->
+    (1 <= e)%nat ->
+    (Z.gcd (Z.of_nat k) (Z.of_nat (p ^ e)) = 1 <->
+     (k mod p <> 0)%nat).
+Proof.
+  intros p e k Hprime He.
+  assert (Hp2 : (2 <= Z.of_nat p)) by (apply prime_ge_2; exact Hprime).
+  assert (Hp_pos : (0 < p)%nat) by lia.
+  rewrite Nat2Z.inj_pow.
+  split.
+  - (* 前向き: gcd = 1 → p ∤ k *)
+    intros Hgcd Hmod.
+    (* k mod p = 0 → p | k *)
+    assert (Hpk : (Z.of_nat p | Z.of_nat k)).
+    { apply Z.mod_divide. lia.
+      rewrite <- Nat2Z.inj_mod, Hmod. simpl. reflexivity. }
+    (* p | p^e (e ≥ 1 なので) *)
+    assert (Hppe : (Z.of_nat p | Z.of_nat p ^ Z.of_nat e)).
+    { replace (Z.of_nat p ^ Z.of_nat e)
+        with (Z.of_nat p * Z.of_nat p ^ (Z.of_nat e - 1)).
+      - apply Z.divide_factor_l.
+      - rewrite <- Z.pow_succ_r by lia. f_equal. lia. }
+    (* p | gcd(k, p^e) *)
+    assert (Hpdvd : (Z.of_nat p | Z.gcd (Z.of_nat k) (Z.of_nat p ^ Z.of_nat e))).
+    { apply Z.gcd_greatest. exact Hpk. exact Hppe. }
+    (* gcd(k, p^e) = 1 と矛盾: p | 1 かつ p ≥ 2 *)
+    rewrite Hgcd in Hpdvd.
+    assert (Hle : Z.of_nat p <= 1) by (apply Z.divide_pos_le; [lia | exact Hpdvd]).
+    lia.
+  - (* 後向き: p ∤ k → gcd = 1 *)
+    intros Hmod.
+    (* k mod p ≠ 0 → ¬(p | k) in Z *)
+    assert (Hpk : ~ (Z.of_nat p | Z.of_nat k)).
+    { intro Hdvd.
+      apply Hmod.
+      apply Nat2Z.inj.
+      rewrite Nat2Z.inj_mod.
+      apply Z.mod_divide in Hdvd; [| lia].
+      rewrite Hdvd. simpl. reflexivity. }
+    (* prime_rel_prime: ¬(p|k) → rel_prime p k *)
+    assert (Hrel : rel_prime (Z.of_nat p) (Z.of_nat k)).
+    { apply prime_rel_prime; assumption. }
+    (* rel_prime p k → rel_prime k p → rel_prime k (p^e) *)
+    assert (Hrel2 : rel_prime (Z.of_nat k) (Z.of_nat p)).
+    { apply rel_prime_sym. exact Hrel. }
+    (* Z.gcd k p = 1 → Z.gcd k (p^e) = 1 using coprime_pow_r *)
+    unfold rel_prime in Hrel2.
+    assert (Hgcd_one : Z.gcd (Z.of_nat k) (Z.of_nat p) = 1).
+    { apply Zis_gcd_gcd. lia. exact Hrel2. }
+    (* coprime k p → coprime k (p^e) *)
+    apply Z.coprime_pow_r. lia. exact Hgcd_one.
+Qed.
+
+(** 補助補題: [0, p*m) 中の p の倍数の個数は m である。
+    証明は帰納法: seq 0 (p*(m+1)) = seq 0 (p*m) ++ seq (p*m) p の分割を使い、
+    後者の中に p の倍数は p*m (1つだけ) があることを示す。 *)
+Lemma count_multiples_in_range :
+  forall (p m : nat),
+    (0 < p)%nat ->
+    List.length (List.filter (fun k => Nat.eqb (k mod p) 0) (List.seq 0 (p * m))) = m.
+Admitted.
+
+(** 素数冪のオイラー関数:
+    prime p かつ 1 ≤ e のとき phi(p^e) = p^(e-1) * (p-1)。
+
+    証明の方針:
+    1. euler_phi (p^e) = |{k < p^e | gcd(k,p^e)=1}|
+    2. prime_pow_coprime_iff: gcd(k,p^e)=1 ↔ k mod p ≠ 0
+    3. 補数: |{k | gcd=1}| = p^e - |{k | p|k}| = p^e - p^(e-1)
+    4. 等式: p^e - p^(e-1) = p^(e-1) * (p-1) *)
+Lemma euler_phi_prime_pow :
+  forall (p e : nat),
+    prime (Z.of_nat p) ->
+    (1 <= e)%nat ->
+    euler_phi (p ^ e) = (p ^ (e - 1) * (p - 1))%nat.
+Proof.
+  intros p e Hprime He.
+  assert (Hp : (0 < p)%nat) by (apply prime_ge_2 in Hprime; lia).
+  assert (Hpe_pos : (0 < p ^ e)%nat).
+  { generalize e. intro n. induction n as [| n' IHn'].
+    - exact (Nat.lt_0_succ 0).
+    - simpl. apply (proj2 (Nat.lt_0_mul' p (p^n'))). split. exact Hp. exact IHn'. }
+  unfold euler_phi.
+  (* gcd = 1 と k mod p ≠ 0 の等価性を使ってフィルタを書き換える *)
+  assert (Hfilter_eq :
+    List.filter (fun k => Z.gcd (Z.of_nat k) (Z.of_nat (p ^ e)) =? 1) (List.seq 0 (p ^ e)) =
+    List.filter (fun k => negb (Nat.eqb (Nat.modulo k p) 0)) (List.seq 0 (p ^ e))).
+  { apply List.filter_ext_in.
+    intros k Hk_in.
+    apply List.in_seq in Hk_in. simpl in Hk_in.
+    destruct Hk_in as [_ Hk_lt].
+    apply Bool.eq_iff_eq_true.
+    rewrite Z.eqb_eq.
+    rewrite Bool.negb_true_iff.
+    rewrite Nat.eqb_neq.
+    exact (prime_pow_coprime_iff p e k Hprime He). }
+  rewrite Hfilter_eq.
+  (* 補数公式 *)
+  assert (Hcomp := @List.filter_length nat
+    (fun k => Nat.eqb (Nat.modulo k p) 0) (List.seq 0 (p ^ e))).
+  rewrite List.seq_length in Hcomp.
+  assert (Hneg_len : List.length (List.filter (fun k => negb (Nat.eqb (Nat.modulo k p) 0))
+                                               (List.seq 0 (p ^ e))) =
+                     (Nat.sub (p ^ e) (p ^ (e - 1)))).
+  { assert (Hmult_count : List.length (List.filter (fun k => Nat.eqb (Nat.modulo k p) 0)
+                                                    (List.seq 0 (p ^ e)))
+                          = (p ^ (e - 1))%nat).
+    { replace (p ^ e)%nat with (p * p ^ (e - 1))%nat.
+      - apply count_multiples_in_range. exact Hp.
+      - rewrite <- Nat.pow_succ_r'. f_equal. lia. }
+    lia. }
+  rewrite Hneg_len.
+  (* p^e - p^(e-1) = p^(e-1) * (p-1): e = S(e-1) を使って p^e = p * p^(e-1) に変換 *)
+  assert (Hfact : (Nat.sub (p ^ e) (p ^ (e - 1)) = p ^ (e - 1) * (p - 1))%nat).
+  { assert (He_eq : (p ^ e = p * p ^ (e - 1))%nat).
+    { rewrite <- Nat.pow_succ_r'. f_equal. lia. }
+    rewrite He_eq. nia. }
+  exact Hfact.
+Qed.
+
+(** 補助補題: 異なる素数の冪は互いに素。
+    prime p, prime q, p <> q → Nat.gcd (p^e) (q^f) = 1。 *)
+Lemma prime_pow_coprime_distinct :
+  forall (p q e f : nat),
+    prime (Z.of_nat p) ->
+    prime (Z.of_nat q) ->
+    p <> q ->
+    Nat.gcd (p ^ e) (q ^ f) = 1%nat.
+Admitted.
+
+(** 補助補題: gcd(a,c)=1 かつ gcd(b,c)=1 ならば gcd(a*b,c)=1 (Nat レベル)。
+    証明: d = gcd(a*b,c) とおき、d | b を Gauss の補題で導き、d | gcd(b,c)=1 を示す。 *)
+Lemma nat_gcd_mul_coprime : forall a b c : nat,
+  Nat.gcd a c = 1%nat -> Nat.gcd b c = 1%nat -> Nat.gcd (a * b) c = 1%nat.
+Proof.
+  intros a b c Hac Hbc.
+  set (d := Nat.gcd (a * b) c).
+  assert (Hd_dvd_c : Nat.divide d c) by apply Nat.gcd_divide_r.
+  assert (Hd_dvd_ab : Nat.divide d (a * b)) by apply Nat.gcd_divide_l.
+  assert (Hda : Nat.gcd d a = 1%nat).
+  { apply Nat.divide_1_r.
+    assert (H : Nat.divide (Nat.gcd d a) (Nat.gcd a c)).
+    { apply Nat.gcd_greatest.
+      - apply Nat.gcd_divide_r.
+      - apply Nat.divide_trans with d.
+        + apply Nat.gcd_divide_l.
+        + exact Hd_dvd_c. }
+    rewrite Hac in H. exact H. }
+  assert (Hd_dvd_b : Nat.divide d b).
+  { apply Nat.gauss with a.
+    - destruct Hd_dvd_ab as [k Hk]. exists k. lia.
+    - exact Hda. }
+  unfold d.
+  apply Nat.divide_1_r.
+  assert (H : Nat.divide (Nat.gcd (a * b) c) (Nat.gcd b c)).
+  { apply Nat.gcd_greatest.
+    - exact Hd_dvd_b.
+    - apply Nat.gcd_divide_r. }
+  rewrite Hbc in H. exact H.
+Qed.
+
+(** 主定理: n = p^e * q^f * r^g (p, q, r は異なる素数) のとき
+    φ(n) = p^(e-1)(p-1) * q^(f-1)(q-1) * r^(g-1)(r-1)。
+    証明:
+      1. prime_pow_coprime_distinct で gcd(p^e, q^f) = 1、gcd(p^e*q^f, r^g) = 1 を示す。
+      2. euler_phi_mul を 2 回適用して乗法性を導く。
+      3. euler_phi_prime_pow を 3 回適用して各因子の公式を得る。
+      4. ring で等式を整理する。 *)
+Theorem euler_phi_three_prime_powers :
+  forall (p q r e f g : nat),
+    prime (Z.of_nat p) ->
+    prime (Z.of_nat q) ->
+    prime (Z.of_nat r) ->
+    p <> q -> q <> r -> p <> r ->
+    (1 <= e)%nat -> (1 <= f)%nat -> (1 <= g)%nat ->
+    euler_phi (p ^ e * q ^ f * r ^ g) =
+      (p ^ (e - 1) * (p - 1) * q ^ (f - 1) * (q - 1) * r ^ (g - 1) * (r - 1))%nat.
+Proof.
+  intros p q r e f g Hprime Hqprime Hrprime Hpq Hqr Hpr He Hf Hg.
+  assert (Hpn : (2 <= p)%nat) by (apply prime_ge_2 in Hprime; lia).
+  assert (Hqn : (2 <= q)%nat) by (apply prime_ge_2 in Hqprime; lia).
+  assert (Hrn : (2 <= r)%nat) by (apply prime_ge_2 in Hrprime; lia).
+  (* 各冪は 1 より大: p^e >= p^1 = p >= 2 > 1 *)
+  assert (Hpe_ge : (1 < p ^ e)%nat).
+  { apply Nat.lt_le_trans with p; [lia |].
+    apply Nat.le_trans with (p ^ 1)%nat.
+    + rewrite Nat.pow_1_r. lia.
+    + apply Nat.pow_le_mono_r; lia. }
+  assert (Hqf_ge : (1 < q ^ f)%nat).
+  { apply Nat.lt_le_trans with q; [lia |].
+    apply Nat.le_trans with (q ^ 1)%nat.
+    + rewrite Nat.pow_1_r. lia.
+    + apply Nat.pow_le_mono_r; lia. }
+  assert (Hrg_ge : (1 < r ^ g)%nat).
+  { apply Nat.lt_le_trans with r; [lia |].
+    apply Nat.le_trans with (r ^ 1)%nat.
+    + rewrite Nat.pow_1_r. lia.
+    + apply Nat.pow_le_mono_r; lia. }
+  assert (Hpeqf_ge : (1 < p ^ e * q ^ f)%nat) by nia.
+  (* 異なる素数の冪は互いに素 *)
+  assert (Hcop_pq : Nat.gcd (p ^ e) (q ^ f) = 1%nat)
+    by (apply prime_pow_coprime_distinct; [exact Hprime | exact Hqprime | exact Hpq]).
+  assert (Hcop_pr : Nat.gcd (p ^ e) (r ^ g) = 1%nat)
+    by (apply prime_pow_coprime_distinct; [exact Hprime | exact Hrprime | exact Hpr]).
+  assert (Hcop_qr : Nat.gcd (q ^ f) (r ^ g) = 1%nat)
+    by (apply prime_pow_coprime_distinct; [exact Hqprime | exact Hrprime | exact Hqr]).
+  (* gcd(p^e * q^f, r^g) = 1: nat_gcd_mul_coprime を使う *)
+  assert (Hcop_pqr : Nat.gcd (p ^ e * q ^ f) (r ^ g) = 1%nat).
+  { apply nat_gcd_mul_coprime; [exact Hcop_pr | exact Hcop_qr]. }
+  (* euler_phi 乗法性の 2 回適用 *)
+  rewrite (euler_phi_mul (p ^ e * q ^ f) (r ^ g) Hpeqf_ge Hrg_ge Hcop_pqr).
+  rewrite (euler_phi_mul (p ^ e) (q ^ f) Hpe_ge Hqf_ge Hcop_pq).
+  (* euler_phi_prime_pow を 3 回適用 *)
+  rewrite (euler_phi_prime_pow p e Hprime He).
+  rewrite (euler_phi_prime_pow q f Hqprime Hf).
+  rewrite (euler_phi_prime_pow r g Hrprime Hg).
+  nia.
+Qed.

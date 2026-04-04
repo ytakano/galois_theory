@@ -375,3 +375,34 @@
 - carrier type is `{x | range /\ gcd = 1}` (conjunction)
 - `crt_exists_3` expects just `range` bounds → use `proj1 Hx` not `Hx`
 - gcd condition extraction: `proj2 Hx`
+
+### `nat_gcd_mul_coprime`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma nat_gcd_mul_coprime : forall a b c : nat,
+    Nat.gcd a c = 1%nat -> Nat.gcd b c = 1%nat -> Nat.gcd (a * b) c = 1%nat.
+  ```
+- **Proof Strategy**: Set d = gcd(a*b, c). Show gcd(d,a)=1 using gcd_greatest (d|d|c and gcd(d,a)|gcd(a,c)=1). Apply Nat.gauss to get d|b. Conclude d|gcd(b,c)=1.
+- **Key Tactics**: `Nat.gcd_greatest`, `Nat.gauss`, `Nat.divide_trans`, `Nat.divide_1_r`
+- **Dependencies**: Nat stdlib
+- **Notes**: `Z_scope` must be open; use `1%nat` not `1` for the equality goals. `Nat.gauss` requires `n|(m*p)` where the divisor argument must be `(b*a)` form; use `destruct ... exists k; lia` to convert `Nat.divide d (a*b)` to `Nat.divide d (b*a)`.
+- **Date**: 2026-04-14
+
+### `euler_phi_three_prime_powers`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem euler_phi_three_prime_powers :
+    forall (p q r e f g : nat),
+      prime (Z.of_nat p) -> prime (Z.of_nat q) -> prime (Z.of_nat r) ->
+      p <> q -> q <> r -> p <> r ->
+      (1 <= e)%nat -> (1 <= f)%nat -> (1 <= g)%nat ->
+      euler_phi (p ^ e * q ^ f * r ^ g) =
+        (p ^ (e - 1) * (p - 1) * q ^ (f - 1) * (q - 1) * r ^ (g - 1) * (r - 1))%nat.
+  ```
+- **Proof Strategy**: Apply `euler_phi_mul` twice (using coprimality from `prime_pow_coprime_distinct` and `nat_gcd_mul_coprime`), then `euler_phi_prime_pow` three times, close with `nia`.
+- **Key Tactics**: `Nat.pow_le_mono_r`, `nat_gcd_mul_coprime`, `euler_phi_mul`, `euler_phi_prime_pow`, `nia`
+- **Dependencies**: `prime_pow_coprime_distinct` (Admitted), `count_multiples_in_range` (Admitted via euler_phi_prime_pow), `nat_gcd_mul_coprime`, `euler_phi_mul`, `euler_phi_prime_pow`
+- **Notes**: ⚠️ `ring` does not work for nat (no ring structure declared); use `nia` instead. ⚠️ `Nat.one_lt_pow` doesn't exist; use `Nat.pow_le_mono_r` + `Nat.pow_1_r`. ⚠️ `Nat.Coprime.coprime_mul_l_iff` doesn't exist; prove `nat_gcd_mul_coprime` manually. ⚠️ `p^1` in Z scope parses as Z.pow; annotate `(p^1)%nat`. ⚠️ Do NOT use `rewrite <- Nat.mul_assoc` before `euler_phi_mul` as it changes the goal form.
+- **Date**: 2026-04-14
