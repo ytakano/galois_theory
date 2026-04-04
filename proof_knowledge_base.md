@@ -239,3 +239,139 @@
   - 逆元の存在証明: `epsilon_spec (inhabits 0%Z) P znz_coprime_bezout_inv` パターン。逆元公理: `unfold cong; destruct; Z.mod_add by lia; Z.mod_small`。
   - `rel_prime a n` への変換: `unfold rel_prime; apply Zis_gcd_sym; rewrite <- Ha; apply Zgcd_is_gcd` が定石。
 - **Date**: 2026-04-04
+
+---
+
+### `znz_units_gcd_dvd`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma znz_units_gcd_dvd : forall (m n : nat) (a : Z),
+    Z.gcd a (Z.of_nat (m * n)) = 1 ->
+    Z.gcd a (Z.of_nat m) = 1.
+  ```
+: 1775132645:1;rocq compile  `Zis_gcd a m 1` に変換し `constructor` で3サブゴールを生成。第3サブゴールで `Zis_gcd a (m*n) 1` を `destruct` して第3フィールド H3 を取り出し、`Z.divide_mul_r` で d|m → d|m*n を示す。integer.v
+- **Key Tactics**: `Zis_gcd_gcd`, `constructor`, `Z.divide_1_l`, `Zgcd_is_gcd`, `destruct Hmn as [_ _ H3]`, `Z.divide_mul_r`, `Nat2Z.inj_mul`
+- **Dependencies**: `Zis_gcd_gcd`, `Zgcd_is_gcd`, `Z.divide_1_l`, `Z.divide_mul_r`, `Nat2Z.inj_mul`
+- **Notes**: `destruct Hmn as [_ _ H3]` で Zis_gcd レコードの第3フィールドのみを取り出せる。
+- **Date**: 2026-04-04
+
+---
+
+### `znz_units_gcd_mul`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma znz_units_gcd_mul : forall (m n : nat) (a : Z),
+    Z.gcd a (Z.of_nat m) = 1 ->
+    Z.gcd a (Z.of_nat n) = 1 ->
+    Z.gcd a (Z.of_nat (m * n)) = 1.
+  ```
+- **Proof Strategy**: `unfold rel_prime; rewrite <- Hm; apply Zgcd_is_gcd` パターンで `rel_prime a (Z.of_nat m)` を得て、`rel_prime_mult` で `rel_prime a (Z.of_nat m * Z.of_nat n)` を構成。`Nat2Z.inj_mul` で `Z.of_nat (m*n)` に変換後 `Zis_gcd_gcd` で結論。
+- **Key Tactics**: `unfold rel_prime`, `Zgcd_is_gcd`, `rel_prime_mult`, `Nat2Z.inj_mul`, `Zis_gcd_gcd`
+- **Dependencies**: `rel_prime_mult`, `Zgcd_is_gcd`, `Zis_gcd_gcd`, `Nat2Z.inj_mul`
+- **Notes**: `rel_prime_mult p q r : rel_prime p q → rel_prime p r → rel_prime p (q*r)` — 第1引数が固定。`rel_prime a m` から `a` が固定なので `rel_prime_mult a m n` がそのまま使える。
+- **Date**: 2026-04-04
+
+---
+
+### `znz_units_coprime_mod_l/m/r`
+- **Type**: Lemma (3個)
+- **Statement**:
+  ```coq
+  Lemma znz_units_coprime_mod_l : forall (p q r : nat) (Hp : (0 < p)%nat) (a : Z),
+    Z.gcd a (Z.of_nat (p * q * r)) = 1 ->
+    Z.gcd (a mod Z.of_nat p) (Z.of_nat p) = 1.
+  ```
+- **Proof Strategy**: `znz_gcd_mod_eq` を逆向きに rewrite して `Z.gcd a (Z.of_nat p) = 1` に帰着し、`znz_units_gcd_dvd` で `Z.gcd a (Z.of_nat (p * (q*r))) = 1` から導く。`Nat.mul_assoc` で `p*q*r = p*(q*r)` に変形。
+- **Key Tactics**: `rewrite <- znz_gcd_mod_eq`, `apply znz_units_gcd_dvd with (n := q*r)`, `Nat.mul_assoc`
+- **Notes**: m版は `Nat.mul_comm` + `Nat.mul_assoc` で `q*(p*r)` に変形、r版は `Nat.mul_comm` で `r*(p*q)` に変形して `znz_units_gcd_dvd` を適用。
+- **Date**: 2026-04-04
+
+---
+
+### `znz_units_gcd_mul3`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma znz_units_gcd_mul3 : forall (p q r : nat) (a : Z),
+    Z.gcd a (Z.of_nat p) = 1 ->
+    Z.gcd a (Z.of_nat q) = 1 ->
+    Z.gcd a (Z.of_nat r) = 1 ->
+    Z.gcd a (Z.of_nat (p * q * r)) = 1.
+  ```
+- **Proof Strategy**: `Nat.mul_assoc` で `p*q*r = (p*q)*r`、`znz_units_gcd_mul` を2回適用。
+- **Key Tactics**: `Nat.mul_assoc`, `znz_units_gcd_mul`
+- **Date**: 2026-04-04
+
+---
+
+### `znz_units_decomp_mul_mod`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma znz_units_decomp_mul_mod : forall (p q r : nat) (Hp : (0 < p)%nat) (a b : Z),
+    (a * b) mod Z.of_nat (p * q * r) mod Z.of_nat p =
+    (a mod Z.of_nat p * (b mod Z.of_nat p)) mod Z.of_nat p.
+  ```
+- **Proof Strategy**: `znz_mod_mod_l` で `mod (p*q*r) mod p = mod p`、`Z.mul_mod` で乗算分配則。
+- **Key Tactics**: `znz_mod_mod_l`, `Z.mul_mod`, `lia`
+- **Notes**: `Z.mul_mod` は ` 0` を必要とする。`lia` で `0 < p → Z.of_nat p ≠ 0` を処理。n 
+- **Date**: 2026-04-04
+
+---
+
+### `znz_units_decomp`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem znz_units_decomp :
+    forall (p q r : nat) (Hp : (1 < p)%nat) (Hq : (1 < q)%nat) (Hr : (1 < r)%nat)
+      (Hpqr : (1 < p * q * r)%nat),
+      pairwise_coprime3 p q r ->
+      znz_units_group (p * q * r) Hpqr ≅
+      znz_units_group p Hp ×ₒ znz_units_group q Hq ×ₒ znz_units_group r Hr.
+  ```
+- **Proof Strategy**: `znz_decomp`（加法群版）と同じ構造。写像 φ([a]) = (a mod p, a mod q, a mod r) を `set (phi := ...)` で定義し、準同型性・単射性・全射性の3つを個別に証明する。
+  - 写像定義: carrier は `{x | range ∧ gcd=1}` の連言。`znz_units_coprime_mod_l/m/r` で各 gcd=1 を示す。
+  - 準同型性: `znz_units_decomp_mul_mod` を各成分に適用。
+  - 単射性: `injection Heq` → `crt_unique_3` → `sig_eq`（znz_decomp と同じ）。
+  - 全射性: `crt_exists_3` で n 構成、`znz_gcd_mod_eq` + `znz_units_gcd_mul3` で `gcd(n,pqr)=1`。
+- **Key Tactics**: `set phi`, `unfold IsIsomorphism`, `sig_eq`, `simpl`, `f_equal`, `znz_units_decomp_mul_mod`, `injection`, `crt_unique_3`, `Z.mod_divide`, `Zminus_mod`, `Zmod_0_l`, `crt_exists_3`, `znz_gcd_mod_eq`, `znz_units_gcd_mul3`
+- **Dependencies**: `znz_units_coprime_mod_l/m/r`, `znz_units_gcd_mul3`, `znz_units_decomp_mul_mod`, `znz_units_group`, `group_product`, `pairwise_coprime3`, `crt_unique_3`, `crt_exists_3`, `sig_eq`, `Nat2Z.inj_mul`
+- **Notes**:
+  - ⚠️ コメント内に `(Z/nZ)*` と書くと `*)` がコメント閉じと解釈されて構文エラー。`(Z/nZ)^*` と書くこと。
+  - carrier の型が `{x | range ∧ gcd=1}` の連言なので、`apply sig_eq; simpl` だけでなく、後続で `injection` を使う場合は連言の各成分が独立した H に分解される
+  - 全射性での `proj2_sig` の構造: `proj2 (proj2_sig a)` が gcd 条件 `Z.gcd x n = 1` を取り出す。
+- **Date**: 2026-04-04
+
+---
+
+## Pitfalls & Lessons Learned
+
+### `Z.divide_mul_r` vs `Z.divide_mul_l`
+- `Z.divide_mul_l : (n | a) → (n | a * b)` — left factor
+- `Z.divide_mul_r : (n | b) → (n | a * b)` — right factor
+- When goal is `(d | m * n)` and you have `(d | m)`, use `Z.divide_mul_l`.
+
+### `rewrite znz_gcd_mod_eq` direction
+- Forward (`rewrite`): converts `gcd(a mod n, n)` → `gcd(a, n)` in goal
+- Backward (`rewrite <-`): converts `gcd(a, n)` → `gcd(a mod n, n)` in goal
+
+### `Nat.mul_assoc` direction (Rocq 9.1)
+- `Nat.mul_assoc : n * (m * p) = n * m * p` (LHS right-paren, RHS left-assoc)
+ `n * m * p`
+- Cannot use `rewrite` on a left-assoc goal; use direct `apply` with explicit args.
+
+### `znz_units_decomp_mul_mod` unification issue
+- Lemma conclusion's first `p` parameter causes unification failure for q/r components
+- Fix: inline with `znz_mod_mod_l/m/r` + `Z.mul_mod` directly.
+
+### `ring` tactic for `nat`
+- May fail with "Cannot find a declared ring structure over 'nat'"
+- Use `Nat.mul_assoc` + `Nat.mul_comm` + `reflexivity` for nat equalities instead.
+
+### znz_units_group carrier conjunction
+- carrier type is `{x | range /\ gcd = 1}` (conjunction)
+- `crt_exists_3` expects just `range` bounds → use `proj1 Hx` not `Hx`
+- gcd condition extraction: `proj2 Hx`

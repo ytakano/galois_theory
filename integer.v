@@ -2815,3 +2815,225 @@ Proof.
       * apply sig_eq. simpl. exact Hnq.
     + apply sig_eq. simpl. exact Hnr.
 Qed.
+
+(** ===================================================================== *)
+(** 既約剰余類群の分解定理                                                *)
+(** Decomposition Theorem for the Group of Units (Z/nZ)^*                 *)
+(** p, q, r が pairwise coprime で n = p*q*r のとき、                     *)
+(** (Z/(pqr)Z)^* ≅ (Z/pZ)^* × (Z/qZ)^* × (Z/rZ)^* を示す。             *)
+(** 写像は φ([a]) = ([a mod p], [a mod q], [a mod r])。                   *)
+(** ===================================================================== *)
+
+(** 補助補題: gcd(a, m*n) = 1 ならば gcd(a, m) = 1。
+    d が a と m の公約数であれば、m | m*n より d | m*n となり、
+    d | gcd(a, m*n) = 1 が成り立つ。Zis_gcd の第3フィールドを利用。 *)
+Lemma znz_units_gcd_dvd : forall (m n : nat) (a : Z),
+  Z.gcd a (Z.of_nat (m * n)) = 1 ->
+  Z.gcd a (Z.of_nat m) = 1.
+Proof.
+  intros m n a H.
+  apply Zis_gcd_gcd. lia.
+  constructor.
+  - apply Z.divide_1_l.
+  - apply Z.divide_1_l.
+  - intros d Hda Hdm.
+    assert (Hmn : Zis_gcd a (Z.of_nat (m * n)) 1).
+    { rewrite <- H. apply Zgcd_is_gcd. }
+    destruct Hmn as [_ _ H3].
+    apply H3.
+    + exact Hda.
+    + rewrite Nat2Z.inj_mul. apply Z.divide_mul_l. exact Hdm.
+Qed.
+
+(** 補助補題: gcd(a, m) = 1 かつ gcd(a, n) = 1 ならば gcd(a, m*n) = 1。
+    rel_prime_mult を利用: rel_prime a m かつ rel_prime a n → rel_prime a (m*n)。 *)
+Lemma znz_units_gcd_mul : forall (m n : nat) (a : Z),
+  Z.gcd a (Z.of_nat m) = 1 ->
+  Z.gcd a (Z.of_nat n) = 1 ->
+  Z.gcd a (Z.of_nat (m * n)) = 1.
+Proof.
+  intros m n a Hm Hn.
+  assert (Hrm : rel_prime a (Z.of_nat m)).
+  { unfold rel_prime. rewrite <- Hm. apply Zgcd_is_gcd. }
+  assert (Hrn : rel_prime a (Z.of_nat n)).
+  { unfold rel_prime. rewrite <- Hn. apply Zgcd_is_gcd. }
+  assert (Hr : rel_prime a (Z.of_nat m * Z.of_nat n)).
+  { apply rel_prime_mult; assumption. }
+  rewrite Nat2Z.inj_mul.
+  apply Zis_gcd_gcd. lia.
+  exact Hr.
+Qed.
+
+(** 補助補題: gcd(a, p*q*r) = 1 ならば gcd(a mod p, p) = 1。
+    znz_units_gcd_dvd で gcd(a, p) = 1 を得て、znz_gcd_mod_eq で mod に変換する。
+    p*q*r = p * (q*r) に変形して znz_units_gcd_dvd を適用する。 *)
+Lemma znz_units_coprime_mod_l : forall (p q r : nat) (Hp : (0 < p)%nat) (a : Z),
+  Z.gcd a (Z.of_nat (p * q * r)) = 1 ->
+  Z.gcd (a mod Z.of_nat p) (Z.of_nat p) = 1.
+Proof.
+  intros p q r Hp a H.
+  rewrite znz_gcd_mod_eq by exact Hp.
+  apply (znz_units_gcd_dvd p (q * r)).
+  rewrite Nat.mul_assoc. exact H.
+Qed.
+
+(** 補助補題: gcd(a, p*q*r) = 1 ならば gcd(a mod q, q) = 1。 *)
+Lemma znz_units_coprime_mod_m : forall (p q r : nat) (Hq : (0 < q)%nat) (a : Z),
+  Z.gcd a (Z.of_nat (p * q * r)) = 1 ->
+  Z.gcd (a mod Z.of_nat q) (Z.of_nat q) = 1.
+Proof.
+  intros p q r Hq a H.
+  rewrite znz_gcd_mod_eq by exact Hq.
+  apply (znz_units_gcd_dvd q (p * r)).
+  rewrite Nat.mul_assoc. rewrite (Nat.mul_comm q p). exact H.
+Qed.
+
+(** 補助補題: gcd(a, p*q*r) = 1 ならば gcd(a mod r, r) = 1。 *)
+Lemma znz_units_coprime_mod_r : forall (p q r : nat) (Hr : (0 < r)%nat) (a : Z),
+  Z.gcd a (Z.of_nat (p * q * r)) = 1 ->
+  Z.gcd (a mod Z.of_nat r) (Z.of_nat r) = 1.
+Proof.
+  intros p q r Hr a H.
+  rewrite znz_gcd_mod_eq by exact Hr.
+  apply (znz_units_gcd_dvd r (p * q)).
+  rewrite (Nat.mul_comm r (p * q)). exact H.
+Qed.
+
+(** 補助補題: gcd(a,p)=1 ∧ gcd(a,q)=1 ∧ gcd(a,r)=1 ならば gcd(a, p*q*r) = 1。
+    znz_units_gcd_mul を2回適用する。 *)
+Lemma znz_units_gcd_mul3 : forall (p q r : nat) (a : Z),
+  Z.gcd a (Z.of_nat p) = 1 ->
+  Z.gcd a (Z.of_nat q) = 1 ->
+  Z.gcd a (Z.of_nat r) = 1 ->
+  Z.gcd a (Z.of_nat (p * q * r)) = 1.
+Proof.
+  intros p q r a Hp Hq Hr.
+  apply (znz_units_gcd_mul (p * q) r).
+  - apply (znz_units_gcd_mul p q); assumption.
+  - exact Hr.
+Qed.
+
+(** 補助補題: (a * b) mod (p*q*r) mod p = (a mod p * (b mod p)) mod p。
+    znz_mod_mod_l で mod (p*q*r) mod p = mod p に簡約し、
+    Z.mul_mod で乗算の mod 分配則を適用する。 *)
+Lemma znz_units_decomp_mul_mod : forall (p q r : nat) (Hp : (0 < p)%nat) (a b : Z),
+  (a * b) mod Z.of_nat (p * q * r) mod Z.of_nat p =
+  (a mod Z.of_nat p * (b mod Z.of_nat p)) mod Z.of_nat p.
+Proof.
+  intros p q r Hp a b.
+  rewrite znz_mod_mod_l by exact Hp.
+  apply Z.mul_mod. lia.
+Qed.
+
+(** 既約剰余類群の分解定理:
+    p, q, r が pairwise coprime のとき、
+    (Z/(pqr)Z)^* ≅ (Z/pZ)^* × (Z/qZ)^* × (Z/rZ)^*。
+
+    写像: φ([a]) = (([a mod p], [a mod q]), [a mod r])
+
+    証明の方針:
+    - 写像の定義: 各成分の range と gcd=1 を znz_units_coprime_mod_l/m/r で示す。
+    - 準同型性: znz_units_decomp_mul_mod で乗算の mod 分配則を適用。
+    - 単射性: crt_unique_3 から a = b を導き sig_eq で等号を得る。
+    - 全射性: crt_exists_3 で逆像を構成し、znz_units_gcd_mul3 で gcd 条件を示す。 *)
+
+Theorem znz_units_decomp :
+  forall (p q r : nat) (Hp : (1 < p)%nat) (Hq : (1 < q)%nat) (Hr : (1 < r)%nat)
+    (Hpqr : (1 < p * q * r)%nat),
+    pairwise_coprime3 p q r ->
+    znz_units_group (p * q * r) Hpqr ≅
+    znz_units_group p Hp ×ₒ znz_units_group q Hq ×ₒ znz_units_group r Hr.
+Proof.
+  intros p q r Hp Hq Hr Hpqr Hpair.
+  assert (HP : (0 < p)%nat) by lia.
+  assert (HQ : (0 < q)%nat) by lia.
+  assert (HR : (0 < r)%nat) by lia.
+  assert (HPQR : (0 < p * q * r)%nat) by lia.
+  assert (HP' : 0 < Z.of_nat p) by lia.
+  assert (HQ' : 0 < Z.of_nat q) by lia.
+  assert (HR' : 0 < Z.of_nat r) by lia.
+  (* 写像 φ の定義 *)
+  set (phi := fun (a : carrier (znz_units_group (p * q * r) Hpqr)) =>
+    ( ( exist (fun x => 0 <= x < Z.of_nat p /\ Z.gcd x (Z.of_nat p) = 1)
+              (proj1_sig a mod Z.of_nat p)
+              (conj (Z.mod_pos_bound (proj1_sig a) (Z.of_nat p) HP')
+                    (znz_units_coprime_mod_l p q r HP (proj1_sig a)
+                       (proj2 (proj2_sig a))))
+      , exist (fun x => 0 <= x < Z.of_nat q /\ Z.gcd x (Z.of_nat q) = 1)
+              (proj1_sig a mod Z.of_nat q)
+              (conj (Z.mod_pos_bound (proj1_sig a) (Z.of_nat q) HQ')
+                    (znz_units_coprime_mod_m p q r HQ (proj1_sig a)
+                       (proj2 (proj2_sig a))))
+      )
+    , exist (fun x => 0 <= x < Z.of_nat r /\ Z.gcd x (Z.of_nat r) = 1)
+              (proj1_sig a mod Z.of_nat r)
+              (conj (Z.mod_pos_bound (proj1_sig a) (Z.of_nat r) HR')
+                    (znz_units_coprime_mod_r p q r HR (proj1_sig a)
+                       (proj2 (proj2_sig a))))
+    ) : carrier (znz_units_group p Hp ×ₒ znz_units_group q Hq ×ₒ znz_units_group r Hr)).
+  exists phi.
+  unfold IsIsomorphism. split; [| split].
+
+  (* ====== 準同型性 ====== *)
+  - intros [a Ha] [b Hb].
+    unfold phi. simpl.
+    f_equal.
+    + f_equal.
+      * apply sig_eq. simpl.
+        rewrite znz_mod_mod_l by exact HP. apply Z.mul_mod. lia.
+      * apply sig_eq. simpl.
+        rewrite znz_mod_mod_m by exact HQ. apply Z.mul_mod. lia.
+    + apply sig_eq. simpl.
+      rewrite znz_mod_mod_r by exact HR. apply Z.mul_mod. lia.
+
+  (* ====== 単射性 ====== *)
+  - intros [a Ha] [b Hb] Heq.
+    apply sig_eq. simpl.
+    unfold phi in Heq. simpl in Heq.
+    injection Heq as H1 H2 H3.
+    assert (Hmul : Z.of_nat (p * q * r) = Z.of_nat p * Z.of_nat q * Z.of_nat r).
+    { rewrite !Nat2Z.inj_mul. ring. }
+    assert (Ha' : 0 <= a < Z.of_nat p * Z.of_nat q * Z.of_nat r).
+    { rewrite <- Hmul. exact (proj1 Ha). }
+    assert (Hb' : 0 <= b < Z.of_nat p * Z.of_nat q * Z.of_nat r).
+    { rewrite <- Hmul. exact (proj1 Hb). }
+    apply crt_unique_3 with (p := p) (q := q) (r := r).
+    + exact Hpair.
+    + exact HP.
+    + exact HQ.
+    + exact HR.
+    + exact Ha'.
+    + exact Hb'.
+    + unfold cong. apply Z.mod_divide. lia.
+      rewrite Zminus_mod, H1, Z.sub_diag. apply Zmod_0_l.
+    + unfold cong. apply Z.mod_divide. lia.
+      rewrite Zminus_mod, H2, Z.sub_diag. apply Zmod_0_l.
+    + unfold cong. apply Z.mod_divide. lia.
+      rewrite Zminus_mod, H3, Z.sub_diag. apply Zmod_0_l.
+
+  (* ====== 全射性 ====== *)
+  - intros [[[x Hx] [y Hy]] [z Hz]].
+    destruct (crt_exists_3 p q r x y z Hpair HP HQ HR (proj1 Hx) (proj1 Hy) (proj1 Hz))
+      as [n [Hn [Hnp [Hnq Hnr]]]].
+    assert (Hn_range : 0 <= n < Z.of_nat (p * q * r)).
+    { rewrite Nat2Z.inj_mul, Nat2Z.inj_mul. exact Hn. }
+    (* gcd(n, p*q*r) = 1 を構成する *)
+    assert (Hgp : Z.gcd n (Z.of_nat p) = 1).
+    { rewrite <- znz_gcd_mod_eq by exact HP.
+      rewrite Hnp. exact (proj2 Hx). }
+    assert (Hgq : Z.gcd n (Z.of_nat q) = 1).
+    { rewrite <- znz_gcd_mod_eq by exact HQ.
+      rewrite Hnq. exact (proj2 Hy). }
+    assert (Hgr : Z.gcd n (Z.of_nat r) = 1).
+    { rewrite <- znz_gcd_mod_eq by exact HR.
+      rewrite Hnr. exact (proj2 Hz). }
+    assert (Hgpqr : Z.gcd n (Z.of_nat (p * q * r)) = 1).
+    { apply znz_units_gcd_mul3; assumption. }
+    exists (exist _ n (conj Hn_range Hgpqr)).
+    unfold phi. simpl.
+    f_equal.
+    + f_equal.
+      * apply sig_eq. simpl. exact Hnp.
+      * apply sig_eq. simpl. exact Hnq.
+    + apply sig_eq. simpl. exact Hnr.
+Qed.
