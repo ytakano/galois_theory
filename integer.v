@@ -2064,3 +2064,245 @@ Proof.
       destruct Hn as [k1 Hk1]. destruct Hn' as [k2 Hk2].
       exists (k1 - k2). lia.
 Qed.
+
+(** 3変数版の pairwise coprime 条件。 *)
+Definition pairwise_coprime3 (p q r : nat) : Prop :=
+  Nat.gcd p q = 1%nat /\ Nat.gcd q r = 1%nat /\ Nat.gcd p r = 1%nat.
+
+(** 補題: pairwise_coprime3 から各 gcd 仮定を取り出す。 *)
+Lemma pairwise_coprime3_pq : forall (p q r : nat),
+  pairwise_coprime3 p q r -> Nat.gcd p q = 1%nat.
+Proof.
+  intros p q r [Hpq _]. exact Hpq.
+Qed.
+
+Lemma pairwise_coprime3_qr : forall (p q r : nat),
+  pairwise_coprime3 p q r -> Nat.gcd q r = 1%nat.
+Proof.
+  intros p q r [_ [Hqr _]]. exact Hqr.
+Qed.
+
+Lemma pairwise_coprime3_pr : forall (p q r : nat),
+  pairwise_coprime3 p q r -> Nat.gcd p r = 1%nat.
+Proof.
+  intros p q r [_ [_ Hpr]]. exact Hpr.
+Qed.
+
+(** 補題: pairwise_coprime3 なら gcd(p*q, r) = 1。 *)
+Lemma pairwise_coprime3_gcd_pq_r : forall (p q r : nat),
+  pairwise_coprime3 p q r -> Nat.gcd (p * q) r = 1%nat.
+Proof.
+  intros p q r Hpair.
+  pose proof (pairwise_coprime3_pr p q r Hpair) as Hpr.
+  pose proof (pairwise_coprime3_qr p q r Hpair) as Hqr.
+  destruct (nat_coprime_bezout p r Hpr) as [x1 [y1 Hbez1]].
+  destruct (nat_coprime_bezout q r Hqr) as [x2 [y2 Hbez2]].
+
+  assert (Hmul :
+    (Z.of_nat p * x1 + Z.of_nat r * y1) *
+    (Z.of_nat q * x2 + Z.of_nat r * y2) = 1).
+  { rewrite Hbez1, Hbez2. ring. }
+
+  assert (Hex : exists x y : Z,
+    Z.of_nat (p * q) * x + Z.of_nat r * y = 1).
+  {
+    exists (x1 * x2).
+    exists (Z.of_nat p * x1 * y2 + Z.of_nat q * x2 * y1 + Z.of_nat r * y1 * y2).
+    rewrite Nat2Z.inj_mul.
+    rewrite <- Hmul.
+    ring.
+  }
+
+  pose proof (proj1 (linear_diophantine (Z.of_nat (p * q)) (Z.of_nat r) 1) Hex)
+    as Hdiv.
+  destruct Hdiv as [k Hk].
+  assert (HgcdZ : Z.gcd (Z.of_nat (p * q)) (Z.of_nat r) = 1).
+  { pose proof (Z.gcd_nonneg (Z.of_nat (p * q)) (Z.of_nat r)) as Hnonneg. nia. }
+  rewrite <- Nat2Z.inj_gcd.
+  rewrite Nat2Z.inj_mul.
+  lia.
+Qed.
+
+(** 補題: (mod p*q) の合同は (mod p) に降格できる。 *)
+Lemma cong_of_cong_mul_l : forall (p q : nat) (a b : Z),
+  cong (p * q) a b -> cong p a b.
+Proof.
+  intros p q a b H.
+  unfold cong in *.
+  destruct H as [k Hk].
+  rewrite Nat2Z.inj_mul in Hk.
+  exists (Z.of_nat q * k).
+  lia.
+Qed.
+
+(** 補題: (mod p*q) の合同は (mod q) に降格できる。 *)
+Lemma cong_of_cong_mul_r : forall (p q : nat) (a b : Z),
+  cong (p * q) a b -> cong q a b.
+Proof.
+  intros p q a b H.
+  unfold cong in *.
+  destruct H as [k Hk].
+  rewrite Nat2Z.inj_mul in Hk.
+  exists (Z.of_nat p * k).
+  lia.
+Qed.
+
+(** 補題: 3つの法で割り切れ、かつ pairwise coprime なら積でも割り切れる。 *)
+Lemma coprime_divide_mul_3 : forall (p q r : nat) (a : Z),
+  pairwise_coprime3 p q r ->
+  (Z.of_nat p | a) ->
+  (Z.of_nat q | a) ->
+  (Z.of_nat r | a) ->
+  (Z.of_nat p * Z.of_nat q * Z.of_nat r | a).
+Proof.
+  intros p q r a Hpair Hp Hq Hr.
+  assert (Hgcd_pq : Nat.gcd p q = 1%nat).
+  { apply pairwise_coprime3_pq with (r := r). exact Hpair. }
+  assert (Hgcd_pq_r : Nat.gcd (p * q) r = 1%nat).
+  { apply pairwise_coprime3_gcd_pq_r. exact Hpair. }
+  assert (Hpq_div : (Z.of_nat p * Z.of_nat q | a)).
+  { apply coprime_divide_mul; assumption. }
+  assert (Hmul : (Z.of_nat (p * q) * Z.of_nat r | a)).
+  { apply coprime_divide_mul; assumption. }
+  rewrite Nat2Z.inj_mul in Hmul.
+  replace (Z.of_nat p * Z.of_nat q * Z.of_nat r)
+    with (Z.of_nat (p * q) * Z.of_nat r) by (rewrite Nat2Z.inj_mul; ring).
+  exact Hmul.
+Qed.
+
+(** 補題: 3変数中国剰余定理の存在性。 *)
+Lemma crt_exists_3 : forall (p q r : nat) (a b c : Z),
+  pairwise_coprime3 p q r ->
+  (0 < p)%nat ->
+  (0 < q)%nat ->
+  (0 < r)%nat ->
+  0 <= a < Z.of_nat p ->
+  0 <= b < Z.of_nat q ->
+  0 <= c < Z.of_nat r ->
+  exists n : Z,
+    0 <= n < Z.of_nat p * Z.of_nat q * Z.of_nat r /\
+    Z.modulo n (Z.of_nat p) = a /\
+    Z.modulo n (Z.of_nat q) = b /\
+    Z.modulo n (Z.of_nat r) = c.
+Proof.
+  intros p q r a b c Hpair Hp Hq Hr Ha Hb Hc.
+  assert (Hpq : Nat.gcd p q = 1%nat).
+  { apply pairwise_coprime3_pq with (r := r). exact Hpair. }
+  assert (Hpq_r : Nat.gcd (p * q) r = 1%nat).
+  { apply pairwise_coprime3_gcd_pq_r. exact Hpair. }
+  assert (Hpq_pos : (0 < p * q)%nat) by lia.
+
+  destruct (chinese_remainder p q a b Hpq Hp Hq Ha Hb)
+    as [t [Htbound [Htmodp Htmodq]]].
+
+  destruct (chinese_remainder (p * q) r t c Hpq_r Hpq_pos Hr Htbound Hc)
+    as [n [Hnbound [Hnmodpq Hnmodr]]].
+
+  exists n.
+  split.
+  - replace (Z.of_nat p * Z.of_nat q * Z.of_nat r)
+      with (Z.of_nat (p * q) * Z.of_nat r) by (rewrite Nat2Z.inj_mul; ring).
+    exact Hnbound.
+  - split.
+    + assert (Hcong_n_t_pq : cong (p * q) n t).
+      { apply cong_of_mod with (m := p * q); [exact Hpq_pos | exact Hnmodpq]. }
+      assert (Hcong_n_t_p : cong p n t).
+      { apply cong_of_cong_mul_l with (q := q). exact Hcong_n_t_pq. }
+      assert (Hcong_t_a_p : cong p t a).
+      { apply cong_of_mod with (m := p); [exact Hp | exact Htmodp]. }
+      assert (Hcong_n_a_p : cong p n a).
+      { apply cong_trans with (b := t); assumption. }
+      apply mod_of_cong; try exact Hp; try exact Ha; exact Hcong_n_a_p.
+    + split.
+      * assert (Hcong_n_t_pq : cong (p * q) n t).
+        { apply cong_of_mod with (m := p * q); [exact Hpq_pos | exact Hnmodpq]. }
+        assert (Hcong_n_t_q : cong q n t).
+        { apply cong_of_cong_mul_r with (p := p). exact Hcong_n_t_pq. }
+        assert (Hcong_t_b_q : cong q t b).
+        { apply cong_of_mod with (m := q); [exact Hq | exact Htmodq]. }
+        assert (Hcong_n_b_q : cong q n b).
+        { apply cong_trans with (b := t); assumption. }
+        apply mod_of_cong; try exact Hq; try exact Hb; exact Hcong_n_b_q.
+      * exact Hnmodr.
+Qed.
+
+(** 補題: 3変数中国剰余定理の一意性。 *)
+Lemma crt_unique_3 : forall (p q r : nat) (n1 n2 : Z),
+  pairwise_coprime3 p q r ->
+  (0 < p)%nat ->
+  (0 < q)%nat ->
+  (0 < r)%nat ->
+  0 <= n1 < Z.of_nat p * Z.of_nat q * Z.of_nat r ->
+  0 <= n2 < Z.of_nat p * Z.of_nat q * Z.of_nat r ->
+  cong p n1 n2 ->
+  cong q n1 n2 ->
+  cong r n1 n2 ->
+  n1 = n2.
+Proof.
+  intros p q r n1 n2 Hpair Hp Hq Hr Hn1 Hn2 Hcp Hcq Hcr.
+  assert (Hdiv : (Z.of_nat p * Z.of_nat q * Z.of_nat r | n1 - n2)).
+  { apply coprime_divide_mul_3; assumption. }
+  destruct Hdiv as [k Hk].
+  assert (Hrange :
+    -(Z.of_nat p * Z.of_nat q * Z.of_nat r) < n1 - n2 < Z.of_nat p * Z.of_nat q * Z.of_nat r).
+  { lia. }
+  assert (Hk0 : k = 0).
+  {
+    rewrite Hk in Hrange.
+    destruct (Z.eq_dec k 0) as [Heq | Hneq].
+    - exact Heq.
+    - exfalso.
+      destruct (Z.lt_ge_cases 0 k) as [Hpos | Hneg].
+      + assert (k >= 1) by lia. nia.
+      + assert (k <= -1) by lia. nia.
+  }
+  subst k. lia.
+Qed.
+
+(** 定理: 3変数版中国剰余定理。
+    p, q, r が pairwise coprime で、a,b,c が各法の範囲にあるとき、
+    3つの合同式を同時に満たす解が [0,p*q*r) に唯一存在する。 *)
+Theorem chinese_remainder_3 : forall (p q r : nat) (a b c : Z),
+  pairwise_coprime3 p q r ->
+  (0 < p)%nat ->
+  (0 < q)%nat ->
+  (0 < r)%nat ->
+  0 <= a < Z.of_nat p ->
+  0 <= b < Z.of_nat q ->
+  0 <= c < Z.of_nat r ->
+  exists! n : Z,
+    0 <= n < Z.of_nat p * Z.of_nat q * Z.of_nat r /\
+    Z.modulo n (Z.of_nat p) = a /\
+    Z.modulo n (Z.of_nat q) = b /\
+    Z.modulo n (Z.of_nat r) = c.
+Proof.
+  intros p q r a b c Hpair Hp Hq Hr Ha Hb Hc.
+  destruct (crt_exists_3 p q r a b c Hpair Hp Hq Hr Ha Hb Hc)
+    as [n [Hbound [Hmodp [Hmodq Hmodr]]]].
+  exists n.
+  split.
+  - exact (conj Hbound (conj Hmodp (conj Hmodq Hmodr))).
+  - intros n' [Hbound' [Hmodp' [Hmodq' Hmodr']]].
+    apply crt_unique_3 with (p := p) (q := q) (r := r).
+    + exact Hpair.
+    + exact Hp.
+    + exact Hq.
+    + exact Hr.
+    + exact Hbound.
+    + exact Hbound'.
+    + unfold cong.
+      assert (Hn := cong_of_mod p n a Hp Hmodp).
+      assert (Hn' := cong_of_mod p n' a Hp Hmodp').
+      destruct Hn as [k1 Hk1]. destruct Hn' as [k2 Hk2].
+      exists (k1 - k2). lia.
+    + unfold cong.
+      assert (Hn := cong_of_mod q n b Hq Hmodq).
+      assert (Hn' := cong_of_mod q n' b Hq Hmodq').
+      destruct Hn as [k1 Hk1]. destruct Hn' as [k2 Hk2].
+      exists (k1 - k2). lia.
+    + unfold cong.
+      assert (Hn := cong_of_mod r n c Hr Hmodr).
+      assert (Hn' := cong_of_mod r n' c Hr Hmodr').
+      destruct Hn as [k1 Hk1]. destruct Hn' as [k2 Hk2].
+      exists (k1 - k2). lia.
+Qed.
