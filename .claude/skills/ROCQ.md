@@ -14,7 +14,6 @@ This skill guides you through proving theorems and lemmas in Rocq/Coq by proposi
 | `progress/` | Directory for storing all proof progress and planning files |
 | `progress/<name>_plan.md` | Proof strategy and proposed lemmas for a given theorem/lemma |
 | `progress/<name>_progress.md` | Completed proofs and remaining TODOs for a given theorem/lemma |
-| `proof_knowledge_base.md` | Persistent knowledge base of proven results (project root) |
 
 Replace `<name>` with the theorem or lemma name (e.g., `nat_add_comm_plan.md`).
 
@@ -64,7 +63,7 @@ N. `<name>` (main goal)
 
 ### Step 2: Prove — Work Through Lemmas One at a Time
 
-> **BLOCKING REQUIREMENT**: After completing or abandoning each lemma attempt — whether compilation succeeds or fails — you **MUST** update `progress/<name>_progress.md` **and** `proof_knowledge_base.md` **before** moving on to the next lemma. Skipping these updates is a workflow violation and must not occur under any circumstances.
+> **BLOCKING REQUIREMENT**: After completing or abandoning each lemma attempt — whether compilation succeeds or fails — you **MUST** update `progress/<name>_progress.md` **before** moving on to the next lemma. Skipping this update is a workflow violation and must not occur under any circumstances.
 
 1. Read `progress/<name>_plan.md` to review the strategy and lemma list.
    - If the file does not exist, return to Step 1.
@@ -77,7 +76,7 @@ N. `<name>` (main goal)
    - If compilation fails, classify the failure before retrying:
      - **Syntax/Tactic failure**: revise proof script and retry.
      - **Missing dependency**: add required lemmas to `progress/<name>_plan.md` and prove them first.
-     - **Potentially false statement / insufficient assumptions**: escalate to plan revision.
+     - **Potentially false statement / insufficient assumptions**: escalate to plan revision (see "Handling Failed and Unprovable Statements").
    - Do not repeat the same strategy indefinitely. If the same approach fails after 2-3 attempts, revise the plan instead of continuing blind retries.
 5. **MANDATORY — Update `progress/<name>_progress.md` immediately**, regardless of whether compilation succeeded or failed:
    - On success: add the completed lemma under `## Completed Lemmas` with its proof code, and remove it from `## TODO`.
@@ -223,8 +222,6 @@ Maintain a persistent record of proven results in `proof_knowledge_base.md` at t
 | Lemma compiled successfully | Full entry using the template above |
 | Lemma failed / `Admitted` | Minimal entry with failure diagnosis in `Notes` to warn future sessions |
 | Failed approach to avoid | Add a bullet in `Notes` starting with "⚠️ Dead end:" |
-
----
 
 ## Notes
 

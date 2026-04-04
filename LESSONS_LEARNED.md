@@ -87,6 +87,8 @@ Planモードでは、同じようなことを行うので、もしかしたら�
 
 証明する際に必要ないファイルやディレクトリを明示的に記載することにしました。これにより、証明に集中できるようになり、トークンも節約できると考えました。推論に不要なファイルは、[settings.local.json](.claude/settings.local.json)の`deny`セクションに記載しています。
 
+ちなみに、これを行うために、Claudeに読み込み不要なファイルを記述する方法を聞きましたが、全くの嘘を教えられました。よって、自分で調べて設定しました。
+
 ## 推論の深さを推定
 
 推論の深さをClaude Codeに推定させることにしました。これにより、推論の深さに応じて、適切な推論方法を選択できるようになると考えました。推論の深さは、単純なタスク（例：事実の検索、単一ファイルの編集）から複雑なタスク（例：アーキテクチャ設計、アルゴリズム設計、証明）まで、段階的に分類することができます。推論の深さの推定は、[CLAUDE.md](CLAUDE.md)の「Reasoning Policy」のセクションに記載しています。
@@ -109,3 +111,24 @@ Always make your reasoning depth assessment explicit before responding:
 Claude Codeを利用していると、しょっちゅうトークン制限に到達してしまい、思うように作業ができませんでした。そこで、Copilotを利用することにしました。Copilotでも、Claude Codeと同様に、スキル、Planモードなどを利用することができます。Copilotは、Claude Codeよりもトークン制限が緩いようで、証明のためのスキルも問題なく利用できました。
 
 `subgroup_of_cyclic`は、Copilotを利用して証明しました。Copilotでも、Claude Codeと同様に証明が可能なことがわかりました。Copilotの設定は、[.github](.github/)以下のディレクトリに置く必要があり、スキルもこのディレクトリに置く必要があります。
+
+## rocq-proverスキルの改善
+
+rocq-proverスキルでは、`progress/*_progress.md`というファイルに進捗を保存するように指示していました。しかし、エージェントがこれを無視するので、Copilotに無視しないように修正してもらいました。これにより、正しく進捗を保存できるようになりました。
+
+また、証明可能な定理のみを想定していたため、証明不能な定理を証明しようとした際に、正しくハンドルできるように、スキルを修正してもらいました。これにより、証明不能な定理を証明しようとした際に、適切なエラーメッセージを返すようになりました。
+
+```markdown
+1. Record the reason in `progress/<name>_progress.md` under `## Proof Attempts & Diagnostics`.
+2. Update `progress/<name>_plan.md` to either:
+   - replace the statement with a corrected one, or
+   - add the missing assumptions explicitly, or
+   - remove the statement from the active proof path if it is outside scope.
+3. Keep the workflow explicit:
+   - Use `Admitted` only as a temporary marker for potentially true but unfinished goals.
+   - Do **not** keep permanently false statements as `Admitted` placeholders.
+  ```
+
+# Knowledge Baseの構築
+
+証明の過程で得られた知見や洞察を、Knowledge Baseにまとめていくことにしました。これにより、今後の証明やプロジェクトに役立てることができると考えました。Knowledge Baseは、[proof_knowledge_base.md](proof_knowledge_base.md)に記載するよう、rocq-proverスキルで指示しています。
