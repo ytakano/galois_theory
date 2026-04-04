@@ -184,3 +184,28 @@
 - **Dependencies**: `fin_all_length`, `fin_all_NoDup`, `List.NoDup_map`
 - **Notes**: `NoDup_incl_length` か同等の補題（`List` ライブラリ）が必要。
 - **Date**: 2026-04-03
+
+---
+
+### `znz_decomp`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem znz_decomp :
+    forall (p q r : nat) (Hp : (0 < p)%nat) (Hq : (0 < q)%nat) (Hr : (0 < r)%nat)
+      (Hpqr : (0 < p * q * r)%nat),
+      pairwise_coprime3 p q r ->
+      znz_group (p * q * r) Hpqr ≅
+      znz_group p Hp ×ₒ znz_group q Hq ×ₒ znz_group r Hr.
+  ```
+- **Proof Strategy**: `IsIsomorphism` の定義に従い `exists phi` で写像を与え、準同型性・単射性・全射性の3つを個別に証明する。写像は `φ([a]) = (([a mod p], [a mod q]), [a mod r])`。
+- **Key Tactics**: `set phi`, `unfold IsIsomorphism`, `apply Z.mod_mod_divide`, `Zplus_mod`, `sig_eq`, `simpl`, `injection`, `apply Z.mod_divide`, `Zminus_mod`, `Zmod_0_l`, `crt_unique_3`, `crt_exists_3`
+- **Dependencies**: `znz_dvd_mul3_l/m/r`, `znz_mod_mod_l/m/r`, `pairwise_coprime3`, `znz_group`, `group_product`, `sig_eq`, `crt_unique_3`, `crt_exists_3`, `Z.mod_mod_divide` (stdlib), `Zminus_mod` (stdlib), `Zmod_0_l` (stdlib)
+- **Notes**:
+  - ⚠️ Dead end: `Nat.mul_pos` は Rocq 9.1 では存在しない → `Hpqr : (0 < p*q*r)%nat` を引数として受け取る。
+  - ⚠️ Dead end: `mod_mod_divide` (素の名前) は環境にない → `Z.mod_mod_divide` を使う。
+  - ⚠️ Dead end: `apply sig_eq.` だけでは goal が `proj1_sig (exist _ a Ha) = ...` のまま → `apply sig_eq. simpl.` が必要。これがないと後続の `rewrite H1` が失敗する (「Found no subterm matching 'a mod Z.of_nat p'」エラー)。
+  - ⚠️ Dead end: `Z.mod_0_l` は `a <> 0` が必要な版 → 無条件版 `Zmod_0_l` を使う。
+  - `cong p a b` の証明: `apply Z.mod_divide. * lia. * rewrite Zminus_mod, Hi, Z.sub_diag. apply Zmod_0_l.` パターンが有効。
+  - 全射性で `crt_exists_3` の境界型 `Z.of_nat p * Z.of_nat q * Z.of_nat r` を `znz_group` のキャリア境界 `Z.of_nat (p*q*r)` に変換するには `Nat2Z.inj_mul` を使う。
+- **Date**: 2026-04-04

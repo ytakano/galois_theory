@@ -2324,3 +2324,180 @@ Proof.
       destruct Hn as [k1 Hk1]. destruct Hn' as [k2 Hk2].
       exists (k1 - k2). lia.
 Qed.
+
+(** ===================================================================== *)
+(** Z/nZの分解定理 (Decomposition Theorem for Z/nZ)                       *)
+(** p, q, r が pairwise coprime で n = p*q*r のとき、                     *)
+(** Z/(pqr)Z ≅ Z/pZ × Z/qZ × Z/rZ を示す。                              *)
+(** 写像は φ([a]) = ([a mod p], [a mod q], [a mod r])。                   *)
+(** ===================================================================== *)
+
+(** 補助補題: p は p*q*r を割り切る。 *)
+Lemma znz_dvd_mul3_l : forall (p q r : nat),
+  (Z.of_nat p | Z.of_nat (p * q * r)).
+Proof.
+  intros p q r.
+  rewrite Nat2Z.inj_mul, Nat2Z.inj_mul.
+  exists (Z.of_nat q * Z.of_nat r).
+  ring.
+Qed.
+
+(** 補助補題: q は p*q*r を割り切る。 *)
+Lemma znz_dvd_mul3_m : forall (p q r : nat),
+  (Z.of_nat q | Z.of_nat (p * q * r)).
+Proof.
+  intros p q r.
+  rewrite Nat2Z.inj_mul, Nat2Z.inj_mul.
+  exists (Z.of_nat p * Z.of_nat r).
+  ring.
+Qed.
+
+(** 補助補題: r は p*q*r を割り切る。 *)
+Lemma znz_dvd_mul3_r : forall (p q r : nat),
+  (Z.of_nat r | Z.of_nat (p * q * r)).
+Proof.
+  intros p q r.
+  rewrite Nat2Z.inj_mul, Nat2Z.inj_mul.
+  exists (Z.of_nat p * Z.of_nat q).
+  ring.
+Qed.
+
+(** 補助補題: (a mod (p*q*r)) mod p = a mod p。
+    mod_mod_divide (stdlib) と znz_dvd_mul3_l から直接得られる。 *)
+Lemma znz_mod_mod_l : forall (p q r : nat) (a : Z),
+  (0 < p)%nat ->
+  (a mod Z.of_nat (p * q * r)) mod Z.of_nat p = a mod Z.of_nat p.
+Proof.
+  intros p q r a Hp.
+  apply Z.mod_mod_divide.
+  apply znz_dvd_mul3_l.
+Qed.
+
+(** 補助補題: (a mod (p*q*r)) mod q = a mod q。 *)
+Lemma znz_mod_mod_m : forall (p q r : nat) (a : Z),
+  (0 < q)%nat ->
+  (a mod Z.of_nat (p * q * r)) mod Z.of_nat q = a mod Z.of_nat q.
+Proof.
+  intros p q r a Hq.
+  apply Z.mod_mod_divide.
+  apply znz_dvd_mul3_m.
+Qed.
+
+(** 補助補題: (a mod (p*q*r)) mod r = a mod r。 *)
+Lemma znz_mod_mod_r : forall (p q r : nat) (a : Z),
+  (0 < r)%nat ->
+  (a mod Z.of_nat (p * q * r)) mod Z.of_nat r = a mod Z.of_nat r.
+Proof.
+  intros p q r a Hr.
+  apply Z.mod_mod_divide.
+  apply znz_dvd_mul3_r.
+Qed.
+
+(** Z/nZの分解定理:
+    p, q, r が pairwise coprime のとき、
+    Z/(pqr)Z ≅ Z/pZ × Z/qZ × Z/rZ。
+
+    写像: φ([a]) = (([a mod p], [a mod q]), [a mod r])
+
+    証明の方針:
+    - 準同型性: mod_mod_divide + Zplus_mod を用いて各成分の等号を示す。
+    - 単射性: crt_unique_3 から a = b (Z 値として) を導き sig_eq で等号を得る。
+    - 全射性: crt_exists_3 で任意の (x,y,z) の逆像を構成する。  *)
+
+Theorem znz_decomp :
+  forall (p q r : nat) (Hp : (0 < p)%nat) (Hq : (0 < q)%nat) (Hr : (0 < r)%nat)
+    (Hpqr : (0 < p * q * r)%nat),
+    pairwise_coprime3 p q r ->
+    znz_group (p * q * r) Hpqr ≅
+    znz_group p Hp ×ₒ znz_group q Hq ×ₒ znz_group r Hr.
+Proof.
+  intros p q r Hp Hq Hr Hpqr Hpair.
+  assert (HN : 0 < Z.of_nat (p * q * r)) by lia.
+  assert (HP : 0 < Z.of_nat p) by lia.
+  assert (HQ : 0 < Z.of_nat q) by lia.
+  assert (HR : 0 < Z.of_nat r) by lia.
+  (* 写像 φ の定義 *)
+  set (phi := fun (a : carrier (znz_group (p * q * r) Hpqr)) =>
+    ( ( exist (fun x => 0 <= x < Z.of_nat p)
+              (proj1_sig a mod Z.of_nat p)
+              (Z.mod_pos_bound (proj1_sig a) (Z.of_nat p) HP)
+      , exist (fun x => 0 <= x < Z.of_nat q)
+              (proj1_sig a mod Z.of_nat q)
+              (Z.mod_pos_bound (proj1_sig a) (Z.of_nat q) HQ)
+      )
+    , exist (fun x => 0 <= x < Z.of_nat r)
+              (proj1_sig a mod Z.of_nat r)
+              (Z.mod_pos_bound (proj1_sig a) (Z.of_nat r) HR)
+    ) : carrier (znz_group p Hp ×ₒ znz_group q Hq ×ₒ znz_group r Hr)).
+  exists phi.
+  unfold IsIsomorphism. split; [| split].
+
+  (* ====== 準同型性 ====== *)
+  - intros [a Ha] [b Hb].
+    unfold phi. simpl.
+    (* 各成分について (a + b) mod (pqr) mod p = ((a mod p) + (b mod p)) mod p を示す *)
+    assert (Hmod_l : (a + b) mod Z.of_nat (p * q * r) mod Z.of_nat p =
+                     (a mod Z.of_nat p + b mod Z.of_nat p) mod Z.of_nat p).
+    { rewrite znz_mod_mod_l by exact Hp.
+      rewrite <- Zplus_mod. reflexivity. }
+    assert (Hmod_m : (a + b) mod Z.of_nat (p * q * r) mod Z.of_nat q =
+                     (a mod Z.of_nat q + b mod Z.of_nat q) mod Z.of_nat q).
+    { rewrite znz_mod_mod_m by exact Hq.
+      rewrite <- Zplus_mod. reflexivity. }
+    assert (Hmod_r : (a + b) mod Z.of_nat (p * q * r) mod Z.of_nat r =
+                     (a mod Z.of_nat r + b mod Z.of_nat r) mod Z.of_nat r).
+    { rewrite znz_mod_mod_r by exact Hr.
+      rewrite <- Zplus_mod. reflexivity. }
+    f_equal.
+    + f_equal.
+      * apply sig_eq. simpl. exact Hmod_l.
+      * apply sig_eq. simpl. exact Hmod_m.
+    + apply sig_eq. simpl. exact Hmod_r.
+
+  (* ====== 単射性 ====== *)
+  - intros [a Ha] [b Hb] Heq.
+    apply sig_eq. simpl.
+    (* injection Heq が直接 a mod p = b mod p などの値の等号を生成する *)
+    unfold phi in Heq. simpl in Heq.
+    injection Heq as H1 H2 H3.
+    (* Z.of_nat (p*q*r) = Z.of_nat p * Z.of_nat q * Z.of_nat r に変換 *)
+    assert (Hmul : Z.of_nat (p * q * r) = Z.of_nat p * Z.of_nat q * Z.of_nat r).
+    { rewrite !Nat2Z.inj_mul. ring. }
+    assert (Ha' : 0 <= a < Z.of_nat p * Z.of_nat q * Z.of_nat r).
+    { rewrite <- Hmul. exact Ha. }
+    assert (Hb' : 0 <= b < Z.of_nat p * Z.of_nat q * Z.of_nat r).
+    { rewrite <- Hmul. exact Hb. }
+    (* crt_unique_3 を適用: cong p a b, cong q a b, cong r a b から a = b *)
+    apply crt_unique_3 with (p := p) (q := q) (r := r).
+    + exact Hpair.
+    + exact Hp.
+    + exact Hq.
+    + exact Hr.
+    + exact Ha'.
+    + exact Hb'.
+    + (* cong p a b: a mod p = b mod p → p | a - b *)
+      unfold cong. apply Z.mod_divide.
+      * lia.
+      * rewrite Zminus_mod, H1, Z.sub_diag. apply Zmod_0_l.
+    + unfold cong. apply Z.mod_divide.
+      * lia.
+      * rewrite Zminus_mod, H2, Z.sub_diag. apply Zmod_0_l.
+    + unfold cong. apply Z.mod_divide.
+      * lia.
+      * rewrite Zminus_mod, H3, Z.sub_diag. apply Zmod_0_l.
+
+  (* ====== 全射性 ====== *)
+  - intros [[[x Hx] [y Hy]] [z Hz]].
+    (* crt_exists_3 で逆像を構成 *)
+    destruct (crt_exists_3 p q r x y z Hpair Hp Hq Hr Hx Hy Hz)
+      as [n [Hn [Hnp [Hnq Hnr]]]].
+    assert (Hn_bound : 0 <= n < Z.of_nat (p * q * r)).
+    { rewrite Nat2Z.inj_mul, Nat2Z.inj_mul. exact Hn. }
+    exists (exist _ n Hn_bound).
+    unfold phi. simpl.
+    f_equal.
+    + f_equal.
+      * apply sig_eq. simpl. exact Hnp.
+      * apply sig_eq. simpl. exact Hnq.
+    + apply sig_eq. simpl. exact Hnr.
+Qed.
