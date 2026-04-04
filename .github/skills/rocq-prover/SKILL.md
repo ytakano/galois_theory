@@ -25,6 +25,8 @@ Replace `<name>` with the theorem or lemma name (e.g., `nat_add_comm_plan.md`).
 
 When the user presents a theorem or lemma to prove:
 
+> **MANDATORY**: Before doing anything else, read `proof_knowledge_base.md` (if it exists) to check for relevant proven results, reusable tactics patterns, and known pitfalls from previous sessions. If the file does not exist, proceed without it — it will be created when the first lemma is proven.
+
 1. Check whether `progress/<name>_plan.md` already exists.
    - If it **does not exist**, create it and proceed to step 2.
    - If it **exists**, read it and skip to Step 2.
@@ -80,8 +82,12 @@ N. `<name>` (main goal)
    - On success: add the completed lemma under `## Completed Lemmas` with its proof code, and remove it from `## TODO`.
    - On failure / `Admitted`: record status and diagnosis under `## Proof Attempts & Diagnostics`, then update `## TODO`.
 6. **Verify the update**: read back `progress/<name>_progress.md` to confirm the file reflects the latest state.
-7. **CHECKPOINT**: Confirm that `progress/<name>_progress.md` is up to date before selecting the next lemma. Do not proceed to the next lemma until this checkpoint passes.
-8. Repeat from step 3 until all lemmas are proved, then proceed to Step 3.
+7. **MANDATORY — Update `proof_knowledge_base.md` immediately** after step 6:
+   - On **success**: add or update an entry for the lemma using the template in the "Proof Knowledge Base" section. Include the statement, proof strategy, key tactics used, and any notable pitfalls encountered.
+   - On **failure / abandoned**: add a note about the failed approach under the lemma's `Notes` field so future sessions avoid repeating the same dead end. If no entry exists yet, create a minimal entry with the failure diagnosis.
+8. **Verify the update**: read back `proof_knowledge_base.md` to confirm the entry was written correctly.
+9. **CHECKPOINT**: Confirm that both `progress/<name>_progress.md` and `proof_knowledge_base.md` are up to date before selecting the next lemma. Do not proceed until this checkpoint passes.
+10. Repeat from step 3 until all lemmas are proved, then proceed to Step 3.
 
 **`<name>_progress.md` template:**
 ~~~markdown
@@ -124,7 +130,10 @@ N. `<name>` (main goal)
    ```
    rocq compile <filename>
    ```
-   - If compilation succeeds, record the final proof in `progress/<name>_progress.md` and mark the goal as complete.
+   - If compilation succeeds:
+     1. Record the final proof in `progress/<name>_progress.md` and mark the goal as complete.
+     2. **MANDATORY — Update `proof_knowledge_base.md`** with an entry for the main theorem (statement, proof strategy, key lemmas used, date).
+     3. Verify the update: read back `proof_knowledge_base.md` to confirm the entry was written.
    - If compilation fails, analyze the failure, revise the strategy or add new lemmas as needed, update `progress/<name>_plan.md`, and return to Step 2.
 
 ---
@@ -178,9 +187,41 @@ Not every attempted statement is true or derivable from the current assumptions.
 
 ## Proof Knowledge Base
 
-As you prove lemmas and theorems, build a knowledge base of proven results that can be reused in future proofs. This will help you avoid redundant work and speed up the proving process over time. Maintain the knowledge base in a separate file: `./proof_knowledge_base.md`.
+Maintain a persistent record of proven results in `proof_knowledge_base.md` at the project root. This file accumulates reusable knowledge across all proof sessions.
 
-Read the knowledge base before starting new proofs.
+### Rules
+
+- **MANDATORY**: Read `proof_knowledge_base.md` at the very start of Step 1 (before planning) to leverage prior results and avoid dead ends.
+- **MANDATORY**: Update `proof_knowledge_base.md` after every lemma compilation attempt (Step 2, step 7) and after the main theorem is proven (Step 3).
+- If the file does not exist, create it the first time a lemma is successfully compiled. Use the template below.
+
+### `proof_knowledge_base.md` Template
+
+~~~markdown
+# Proof Knowledge Base
+
+## Lemmas and Theorems
+
+### `lemma_name`
+- **Type**: Lemma / Theorem / Definition / Instance
+- **Statement**:
+  ```coq
+  <Rocq statement>
+  ```
+- **Proof Strategy**: <brief description of the overall approach>
+- **Key Tactics**: <comma-separated list, e.g., `omega`, `induction n`, `apply gpow_add`, `rewrite`>
+- **Dependencies**: <lemmas/theorems this proof relies on>
+- **Notes**: <pitfalls, important observations, or failed approaches to avoid>
+- **Date**: YYYY-MM-DD
+~~~
+
+### What to Record
+
+| Situation | What to write |
+|-----------|--------------|
+| Lemma compiled successfully | Full entry using the template above |
+| Lemma failed / `Admitted` | Minimal entry with failure diagnosis in `Notes` to warn future sessions |
+| Failed approach to avoid | Add a bullet in `Notes` starting with "⚠️ Dead end:" |
 
 ## Notes
 
