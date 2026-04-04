@@ -1775,6 +1775,17 @@ Proof.
   lia.
 Qed.
 
+(** 補助: Nat.divide a b ならば (Z.of_nat a | Z.of_nat b)。
+    自然数の割り切り関係を整数の割り切り関係に持ち上げる。 *)
+Lemma nat_divide_to_Z_of_nat : forall (a b : nat),
+  Nat.divide a b -> (Z.of_nat a | Z.of_nat b).
+Proof.
+  intros a b [k Hk].
+  exists (Z.of_nat k).
+  rewrite Hk, Nat2Z.inj_mul.
+  lia.
+Qed.
+
 Lemma nat_coprime_bezout : forall (p q : nat),
   Nat.gcd p q = 1%nat ->
   exists x y : Z, Z.of_nat p * x + Z.of_nat q * y = 1.
@@ -2117,10 +2128,14 @@ Proof.
     as Hdiv.
   destruct Hdiv as [k Hk].
   assert (HgcdZ : Z.gcd (Z.of_nat (p * q)) (Z.of_nat r) = 1).
-  { pose proof (Z.gcd_nonneg (Z.of_nat (p * q)) (Z.of_nat r)) as Hnonneg. nia. }
-  rewrite <- Nat2Z.inj_gcd.
-  rewrite Nat2Z.inj_mul.
-  lia.
+  { pose proof (Z.gcd_nonneg (Z.of_nat (p * q)) (Z.of_nat r)) as Hnonneg.
+    apply Z.divide_1_r_nonneg; [exact Hnonneg | exists k; lia]. }
+  apply Nat2Z.inj. simpl.
+  apply Z.divide_1_r_nonneg; [apply Nat2Z.is_nonneg | ].
+  rewrite <- HgcdZ.
+  apply Z.gcd_greatest.
+  - apply nat_divide_to_Z_of_nat, Nat.gcd_divide_l.
+  - apply nat_divide_to_Z_of_nat, Nat.gcd_divide_r.
 Qed.
 
 (** 補題: (mod p*q) の合同は (mod p) に降格できる。 *)
@@ -2163,10 +2178,11 @@ Proof.
   assert (Hpq_div : (Z.of_nat p * Z.of_nat q | a)).
   { apply coprime_divide_mul; assumption. }
   assert (Hmul : (Z.of_nat (p * q) * Z.of_nat r | a)).
-  { apply coprime_divide_mul; assumption. }
+  { apply coprime_divide_mul.
+    - exact Hgcd_pq_r.
+    - rewrite Nat2Z.inj_mul. exact Hpq_div.
+    - exact Hr. }
   rewrite Nat2Z.inj_mul in Hmul.
-  replace (Z.of_nat p * Z.of_nat q * Z.of_nat r)
-    with (Z.of_nat (p * q) * Z.of_nat r) by (rewrite Nat2Z.inj_mul; ring).
   exact Hmul.
 Qed.
 
@@ -2193,10 +2209,12 @@ Proof.
   assert (Hpq_pos : (0 < p * q)%nat) by lia.
 
   destruct (chinese_remainder p q a b Hpq Hp Hq Ha Hb)
-    as [t [Htbound [Htmodp Htmodq]]].
+    as [t [[Htbound [Htmodp Htmodq]] _]].
+  assert (Htbound' : 0 <= t < Z.of_nat (p * q)).
+  { rewrite Nat2Z.inj_mul. exact Htbound. }
 
-  destruct (chinese_remainder (p * q) r t c Hpq_r Hpq_pos Hr Htbound Hc)
-    as [n [Hnbound [Hnmodpq Hnmodr]]].
+  destruct (chinese_remainder (p * q) r t c Hpq_r Hpq_pos Hr Htbound' Hc)
+    as [n [[Hnbound [Hnmodpq Hnmodr]] _]].
 
   exists n.
   split.
@@ -2205,21 +2223,21 @@ Proof.
     exact Hnbound.
   - split.
     + assert (Hcong_n_t_pq : cong (p * q) n t).
-      { apply cong_of_mod with (m := p * q); [exact Hpq_pos | exact Hnmodpq]. }
+      { apply cong_of_mod; [exact Hpq_pos | exact Hnmodpq]. }
       assert (Hcong_n_t_p : cong p n t).
       { apply cong_of_cong_mul_l with (q := q). exact Hcong_n_t_pq. }
       assert (Hcong_t_a_p : cong p t a).
-      { apply cong_of_mod with (m := p); [exact Hp | exact Htmodp]. }
+      { apply cong_of_mod; [exact Hp | exact Htmodp]. }
       assert (Hcong_n_a_p : cong p n a).
       { apply cong_trans with (b := t); assumption. }
       apply mod_of_cong; try exact Hp; try exact Ha; exact Hcong_n_a_p.
     + split.
       * assert (Hcong_n_t_pq : cong (p * q) n t).
-        { apply cong_of_mod with (m := p * q); [exact Hpq_pos | exact Hnmodpq]. }
+        { apply cong_of_mod; [exact Hpq_pos | exact Hnmodpq]. }
         assert (Hcong_n_t_q : cong q n t).
         { apply cong_of_cong_mul_r with (p := p). exact Hcong_n_t_pq. }
         assert (Hcong_t_b_q : cong q t b).
-        { apply cong_of_mod with (m := q); [exact Hq | exact Htmodq]. }
+        { apply cong_of_mod; [exact Hq | exact Htmodq]. }
         assert (Hcong_n_b_q : cong q n b).
         { apply cong_trans with (b := t); assumption. }
         apply mod_of_cong; try exact Hq; try exact Hb; exact Hcong_n_b_q.
