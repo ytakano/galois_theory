@@ -1880,49 +1880,166 @@ Proof.
            (proj1 (proj2_sig a)) (proj2 (proj2_sig a))).
 Qed.
 
-(** 既約剰余類群 (Z/nZ)* の定義:
-    台集合: {x : Z | 0 <= x < n /\ Z.gcd x n = 1}
-    演算:   [a] * [b] := [(a * b) mod n]
-    単位元: [1]
-    逆元:   znz_units_inv_val (epsilon による構成)
+(** 既約剰余類群 (Z/nZ)* の定義
+    =====================================================================
+    【数学的概要】
+    Z/nZ のうち n と互いに素な元 [x]（gcd(x, n) = 1）の全体は、
+    剰余乗算 [a] * [b] := [a * b mod n] に関して群をなす。
+    これを「既約剰余類群」または「乗法群 (Z/nZ)*」と呼ぶ。
 
-    証明の方針:
-      - op の carrier 条件: mod_pos_bound と znz_gcd_mod_eq + znz_gcd_mul_coprime。
-      - 結合律: Zmult_mod_idemp_l/r と Z.mul_assoc。
-      - 単位元: Z.mul_1_l/r と Z.mod_small。
-      - 逆元公理: znz_units_inv_prop から cong を取り出し mod_of_cong で変換。  *)
+    台集合: {x : Z | 0 <= x < n /\ gcd(x, n) = 1}
+    演算:   [a] * [b] := [a * b mod n]
+    単位元: [1]
+    逆元:   ベズーの補題から存在が保証される乗法逆元
+
+    【Rocq での定義スタイル: Definition ... : Group. Proof. ... Defined.】
+    Group レコードには op/e/inv の値フィールドと、
+    5つの群公理（結合律・左右単位元・左右逆元）の証明フィールドがある。
+    `refine {| ... |}` を使うと、値フィールドをインラインで埋めつつ、
+    残った群公理の証明ゴールをタクティクで後から証明できる。
+    `Defined`（`Qed` ではなく）で閉じることで計算的透明性を保つ。
+
+    【シグマ型と exist】
+    carrier は `{x : Z | P x}` というシグマ型（依存ペア型）である。
+    シグマ型の要素を構成するには `exist _ value proof` を使う。
+      exist _ v pf : {x : Z | P x}
+    これは「値 v と、v が性質 P を満たす証明 pf のペア」を作る。
+    op や inv の戻り値もシグマ型なので、必ず exist で包む必要がある。
+
+    【proj1_sig / proj2_sig】
+    シグマ型 `{x : T | P x}` から成分を取り出す標準関数:
+      proj1_sig : {x : T | P x} -> T          （値の取り出し）
+      proj2_sig : forall s : {x : T | P x},   （証明の取り出し）
+                  P (proj1_sig s)
+    op の定義で `proj1_sig a` と書くのは、シグマ型の要素 a から
+    整数値を取り出して乗算するためである。
+
+    【conj / proj1 / proj2】
+    carrier の性質は `0 <= x < n /\ gcd(x, n) = 1` という連言 (A /\ B)。
+      conj : A -> B -> A /\ B    （連言の構成）
+      proj1 : A /\ B -> A        （左成分の取り出し）
+      proj2 : A /\ B -> B        （右成分の取り出し）
+    exist に渡す証明を `conj pf1 pf2` で組み立て、
+    既存の証明から各成分を `proj1 (proj2_sig a)` 等で取り出す。
+
+    【op の証明引数に出てくる補題】
+    - Z.mod_pos_bound : 0 < n → 0 <= a mod n < n
+        剰余が台集合の範囲条件 (0 <= _ < n) を満たすことを保証する。
+    - znz_gcd_mod_eq : gcd(a mod n, n) = gcd(a, n)
+        剰余を取っても gcd は変わらないことを示す。
+        gcd(a*b mod n, n) = gcd(a*b, n) の変換に使う。
+    - znz_gcd_mul_coprime : gcd(a,n)=1 ∧ gcd(b,n)=1 → gcd(a*b,n)=1
+        乗算の閉包性。a, b が共に n と互いに素ならば積も互いに素。
+    - eq_trans : a = b → b = c → a = c（等号の推移律）
+        znz_gcd_mod_eq と znz_gcd_mul_coprime を繋いで
+        gcd(a*b mod n, n) = 1 を示す。
+
+    【inv の構成と epsilon】
+    逆元の存在は znz_coprime_bezout_inv で「∃ b, ...」として示されるが、
+    これは存在命題であり、値そのものではない。
+    epsilon (ClassicalEpsilon より) を使うと、
+    存在が保証されている値を古典論理によって実際に取り出せる。
+      znz_units_inv_val : 逆元の値を epsilon で定義
+      znz_units_inv_prop : epsilon_spec を使い逆元の性質を証明
+
+    【群公理証明で使う補題】
+    - sig_eq : proj1_sig が等しければシグマ型の等号が成立
+        群公理はすべて carrier 上の等号なので、まず sig_eq で
+        整数値の等号に帰着させる。
+    - Zmult_mod_idemp_l/r : (a mod n) * b mod n = a * b mod n 等
+        結合律の証明で、mod を整理するために使う。
+    - Z.mul_assoc : a * (b * c) = a * b * c（整数乗算の結合律）
+    - Z.mul_1_l/r : 1 * a = a / a * 1 = a（1 が乗算の単位元）
+    - Z.mod_small : 0 <= a < n → a mod n = a
+        単位元公理で「1 * a mod n = a」を示す際に使う。
+    - Z.mod_add : (a + k * n) mod n = a mod n
+        逆元公理で「a * b = k * n + 1 → a * b mod n = 1」を示す際に使う。
+      *)
 Definition znz_units_group (n : nat) (Hn : (1 < n)%nat) : Group.
 Proof.
   assert (HN : 0 < Z.of_nat n) by lia.
   assert (Hn_pos : (0 < n)%nat) by lia.
-  (* 単位元 1 の carrier 条件を事前に証明 *)
+  (* 単位元 1 の carrier 条件を事前に証明:
+     H1n は exist で単位元を構成する際の範囲証明として使う *)
   assert (H1n : (0 : Z) <= 1 < Z.of_nat n) by lia.
+  (* refine {| ... |}: Group レコードの値フィールドをインラインで埋める。
+     残った群公理（結合律・単位元・逆元）の証明ゴールは後続の - ブロックで証明する。 *)
   refine {|
+    (* carrier: 台集合。0 <= x < n かつ gcd(x,n) = 1 を満たす整数のシグマ型。 *)
     carrier := {x : Z | 0 <= x < Z.of_nat n /\ Z.gcd x (Z.of_nat n) = 1};
+
+    (* op: 剰余乗算 [a]*[b] = [a*b mod n]。
+       戻り値はシグマ型なので exist で包む必要がある。
+         - proj1_sig a : シグマ型の要素 a から整数値を取り出す
+         - (proj1_sig a * proj1_sig b) mod Z.of_nat n : 乗算して mod を取る
+       exist の第3引数（証明）は conj で 2 つの条件を組み立てる:
+         条件1（範囲）: Z.mod_pos_bound _ _ HN
+                        0 < n ならば 0 <= a*b mod n < n が成立
+         条件2（互素）: eq_trans (znz_gcd_mod_eq ...) (znz_gcd_mul_coprime ...)
+                        gcd(a*b mod n, n)
+                          = gcd(a*b, n)   [znz_gcd_mod_eq: mod と gcd の交換]
+                          = 1             [znz_gcd_mul_coprime: 乗算閉包性]
+       proj2_sig a の型は (0<=a<n) /\ gcd(a,n)=1 なので、
+       proj2 (proj2_sig a) で「gcd(a,n)=1」の部分を取り出している。 *)
     op := fun a b =>
       exist _ ((proj1_sig a * proj1_sig b) mod Z.of_nat n)
         (conj (Z.mod_pos_bound _ _ HN)
               (eq_trans (znz_gcd_mod_eq n Hn_pos (proj1_sig a * proj1_sig b))
                         (znz_gcd_mul_coprime n (proj1_sig a) (proj1_sig b)
                            (proj2 (proj2_sig a)) (proj2 (proj2_sig b)))));
+
+    (* e: 単位元 [1]。
+       exist で整数 1 をシグマ型に持ち上げる。
+         conj H1n ... : 範囲条件 0 <= 1 < n（H1n は事前に証明済み）
+         znz_gcd_one n : gcd(1, n) = 1 *)
     e := exist _ 1 (conj H1n (znz_gcd_one n));
+
+    (* inv: 乗法逆元。
+       znz_units_inv_val は epsilon（古典論理）を使って逆元の値を取り出す関数。
+       znz_coprime_bezout_inv は「∃ b, 条件」という存在命題を証明するが、
+       epsilon を使うことで存在が保証された値を実際に取り出せる。
+       exist の証明引数:
+         conj (proj1 ...) (proj2 (proj2 ...))
+           - proj1 (...): 0 <= b < n（範囲条件）
+           - proj2 (proj2 (...)): gcd(b, n) = 1（互素条件）
+       znz_units_inv_prop n Hn a の型は
+         0 <= b < n /\ cong n (a * b) 1 /\ gcd(b,n) = 1
+       なので proj1 で範囲、proj2 (proj2 ...) で互素を取り出す。 *)
     inv := fun a =>
       exist _ (znz_units_inv_val n Hn a)
         (conj (proj1 (znz_units_inv_prop n Hn a))
               (proj2 (proj2 (znz_units_inv_prop n Hn a))))
   |}.
-  - (* 結合律: (a*b mod n) * c mod n = a * (b*c mod n) mod n *)
+  - (* 結合律: (a*b mod n) * c mod n = a * (b*c mod n) mod n
+       sig_eq: proj1_sig が等しければシグマ型の等号が成立するので、
+       整数の等号 (a*b mod n) * c mod n = a * (b*c mod n) mod n を証明すればよい。
+       Zmult_mod_idemp_r: a * (b mod n) mod n = a * b mod n
+       Zmult_mod_idemp_l: (a mod n) * b mod n = a * b mod n
+       これらで両辺を a * b * c mod n に変形し、Z.mul_assoc で統一する。 *)
     intros [a Ha] [b Hb] [c Hc]. apply sig_eq. simpl.
     rewrite Zmult_mod_idemp_r, Zmult_mod_idemp_l, Z.mul_assoc. reflexivity.
-  - (* 左単位元: 1 * a mod n = a *)
+  - (* 左単位元: 1 * a mod n = a
+       sig_eq で整数の等号に帰着。
+       Z.mul_1_l: 1 * a = a
+       Z.mod_small: 0 <= a < n ならば a mod n = a
+       proj1 Ha で範囲条件 0 <= a < n を取り出す。 *)
     intros [a Ha]. apply sig_eq.
     cbn [proj1_sig].
     rewrite Z.mul_1_l. apply Z.mod_small. exact (proj1 Ha).
-  - (* 右単位元: a * 1 mod n = a *)
+  - (* 右単位元: a * 1 mod n = a
+       Z.mul_1_r: a * 1 = a
+       後は左単位元と同様。 *)
     intros [a Ha]. apply sig_eq.
     cbn [proj1_sig].
     rewrite Z.mul_1_r. apply Z.mod_small. exact (proj1 Ha).
-  - (* 左逆元: b * a mod n = 1 (b は a の乗法逆元) *)
+  - (* 左逆元: b * a mod n = 1 (b は znz_units_inv_val で取り出した a の逆元)
+       sig_eq で整数の等号に帰着。
+       znz_units_inv_prop で「cong n (a * b) 1」を取り出す。
+         cong n x y の定義: ∃ k, x - y = n * k（n | (x - y)）
+       Z.mul_comm で順序を b * a → a * b に変換し、
+       cong の定義を展開して a * b = n * k + 1 という形に変形する。
+       Z.mod_add: (1 + k * n) mod n = 1 mod n
+       Z.mod_small: 0 <= 1 < n ならば 1 mod n = 1 *)
     intros a. apply sig_eq. simpl.
     pose proof (znz_units_inv_prop n Hn a) as Hb.
     destruct Hb as [_ [Hcong _]].
@@ -1936,7 +2053,9 @@ Proof.
     replace (Z.of_nat n * k + 1) with (1 + k * Z.of_nat n) by ring.
     rewrite Z.mod_add by lia.
     apply Z.mod_small. lia.
-  - (* 右逆元: a * b mod n = 1 *)
+  - (* 右逆元: a * b mod n = 1
+       左逆元と同様の証明。
+       こちらは Z.mul_comm による順序変換が不要（a * b の順番のまま）。 *)
     intros a. apply sig_eq. simpl.
     pose proof (znz_units_inv_prop n Hn a) as Hb.
     destruct Hb as [_ [Hcong _]].
