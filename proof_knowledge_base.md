@@ -605,3 +605,65 @@
 - **Dependencies**: `Ring` Record
 - **Notes**: `field_inv` を sigma 型 `{x | P x}` ではなく全域 `Z → Z` にすることで、具体例の定義が柔軟になる。ただし `znz_units_inv_val` は sigma 型を期待するので、具体例 `znz_p_field` では独立した epsilon ベース逆元関数が必要。
 - **Date**: 2026-04-05
+
+---
+
+### `znz_field_inv_val`
+- **Type**: Definition
+- **Statement**:
+  ```coq
+  Definition znz_field_inv_val (p : nat) (a : {x : Z | 0 <= x < Z.of_nat p}) : Z :=
+    epsilon (inhabits 0%Z)
+      (fun b => 0 <= b < Z.of_nat p /\ cong p (proj1_sig a * b) 1).
+  ```
+- **Proof Strategy**: `epsilon` (classical choice) を使い、`znz_coprime_bezout_inv` が保証する逆元の存在から witness を取り出echo
+- **Key Tactics**: `epsilon`, `inhabits`
+- **Dependencies**: `cong`, `znz_coprime_bezout_inv`
+- **Notes**: sigma 型の引数 `a` から `proj1_sig a` を取り出して coprimeness 条件を使う。
+- **Date**: 2026-04-05
+
+---
+
+### `znz_field_inv_spec`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma znz_field_inv_spec : forall (p : nat) (Hp : prime (Z.of_nat p))
+      (a : {x : Z | 0 <= x < Z.of_nat p}),
+    proj1_sig a <> 0 ->
+    0 <= znz_field_inv_val p a < Z.of_nat p /\
+    cong p (proj1_sig a * znz_field_inv_val p a) 1.
+  ```
+- **Proof Strategy**: 1) `Z.mod_small` で `proj1_sig a mod p = proj1_sig a` を示す。2) `znz_prime_nonzero_coprime` で `gcd(proj1_sig a, p) = 1` を得る。3) `znz_coprime_bezout_inv` で逆元の存在 `∃ b, ...` を得る。4) `epsilon_spec` で `znz_field_inv_val` が条件を満たすことを確認。
+- **Key Tactics**: `apply epsilon_spec`, `apply znz_coprime_bezout_inv`, `apply znz_prime_nonzero_coprime`, `rewrite Z.mod_small`
+- **Dependencies**: `znz_field_inv_val`, `znz_prime_nonzero_coprime`, `znz_coprime_bezout_inv`, `epsilon_spec`
+- **Notes**: ⚠️ `⟨b, Hb_range, Hb_cong⟩` は Lean 構文。Rocq では `ex_intro _ b (conj Hb_range Hb_cong)` を使う。
+- **Date**: 2026-04-05
+
+---
+
+### `znz_p_ring`
+- **Type**: Definition (Ring instance)
+- **Statement**:
+  ```coq
+  Definition znz_p_ring (p : nat) (Hp : prime (Z.of_nat p)) : Ring.
+  ```
+- **Proof Strategy**: carrier = `{x : Z | 0 <= x < Z.of_nat p}` の sigma 型。全演算は mod p で正規化。`sig_eq. simpl.` 後に `Zplus_mod_idemp_*`/`Zmult_mod_idemp_*` を使う。
+- **Key Tactics**: `refine {| ... |}`, `sig_eq`, `simpl`, `Zplus_mod_idemp_l/r`, `Zmult_mod_idemp_l/r`, `Z.mod_small`
+- **Dependencies**: `sig_eq`, `Z.mod_pos_bound`, `Zplus_mod_idemp_l`, `Zmult_mod_idemp_l`
+- **Notes**: `ring_one := exist _ (1 mod Z.of_nat p) ...`。ネストした `refine {| field_ring := {| ... |} |}` は失敗 → `znz_p_ring` を別途 `Defined` で定義してから `znz_p_field` で参照する。
+- **Date**: 2026-04-05
+
+---
+
+### `znz_p_field`
+- **Type**: Definition (Field instance)
+- **Statement**:
+  ```coq
+  Definition znz_p_field (p : nat) (Hp : prime (Z.of_nat p)) : Field.
+  ```
+- **Proof Strategy**: `field_ring := znz_p_ring p Hp`。`field_inv` は inline `match Z.eq_dec (proj1_sig a) 0 with | left _ => 0-elem | right Ha => znz_field_inv_val p a-elem end`。各公理: (1) field_mul_comm: `rewrite Z.mul_comm; reflexivity`。(2) field_inv_l: `cbn [proj1_sig]` + `znz_field_inv_spec` + `Z.mod_add` + `reflexivity`。(3) field_one_ne_zero: `assert H := proj1_sig eq`、`rewrite H`、`simpl`、`Z.mod_small`、`lia`。
+- **Key Tactics**: `refine {| ... |}`, `cbn [proj1_sig]`, `rewrite Z.mul_comm`, `apply znz_field_inv_spec`, `rewrite Z.mod_add`, `assert (H : proj1_sig ... = proj1_sig ...)`
+- **Dependencies**: `znz_p_ring`, `znz_field_inv_val`, `znz_field_inv_spec`, `sig_eq`
+: 1775132645:1;rocq compile integer.: `simpl` だけでは `proj1_sig (exist _ val ...)` が `val` に簡約されないことがある。
+- **Date**: 2026-04-05

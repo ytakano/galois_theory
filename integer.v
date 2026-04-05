@@ -4136,15 +4136,145 @@ Proof.
   lia.
 Qed.
 
-(** 素数 p のとき Z/pZ は体である。
-    証明方針:
-      - 台集合: carrier = Z (mod p 演算で正規化)
-      - 加法: (Z, +, 0, neg) mod p で加法群
-      - 乗法: mul = fun a b => a*b mod p、単位元 = 1 mod p
-      - 逆元: p が素数なら a ≢ 0 (mod p) → gcd(a,p)=1 → Bezout 係数が逆元
-      - 1 ≠ 0: p ≥ 2 なので 1 mod p = 1 ≠ 0
+(** Z/pZ の乗法逆元の値 (epsilon による定義):
+    `znz_units_inv_val` と同構造だが、引数に gcd 条件を要求しない
+    ({x | 0<=x<p} のみ)。素数条件のもとで非零元に対して逆元を取り出す。
+    非零でない場合 (a = 0) は epsilon の結果が任意の値を返す可能性があるが、
+    `field_inv_l` では非零仮定のもとでしか使わないため問題ない。  *)
+Definition znz_field_inv_val (p : nat)
+    (a : {x : Z | 0 <= x < Z.of_nat p}) : Z :=
+  epsilon (inhabits 0%Z)
+    (fun b => 0 <= b < Z.of_nat p /\ cong p (proj1_sig a * b) 1).
 
-    TODO: refine による実装は field_inv の型 (Z → Z vs sigma 型) の整合を
-    znz_units_inv_val と合わせる必要がある。現在は Admitted。  *)
+(** Z/pZ の乗法逆元の性質:
+    p が素数で proj1_sig a ≠ 0 ならば、
+    znz_field_inv_val p a は [0, p) の範囲にあり、
+    cong p (proj1_sig a * znz_field_inv_val p a) 1 が成立する。
+
+    証明方針:
+      1. Z.mod_small と sigma 型の範囲条件より proj1_sig a mod p = proj1_sig a
+      2. znz_prime_nonzero_coprime → Z.gcd (proj1_sig a) p = 1
+      3. znz_coprime_bezout_inv → ∃ b ∈ [0,p), cong p (proj1_sig a * b) 1
+      4. epsilon_spec でその b が znz_field_inv_val の値であることを示す  *)
+Lemma znz_field_inv_spec : forall (p : nat) (Hp : prime (Z.of_nat p))
+    (a : {x : Z | 0 <= x < Z.of_nat p}),
+  proj1_sig a <> 0 ->
+  0 <= znz_field_inv_val p a < Z.of_nat p /\
+  cong p (proj1_sig a * znz_field_inv_val p a) 1.
+Proof.
+  intros p Hp a Ha.
+  assert (Hp2 : (2 <= p)%nat) by (apply prime_ge_2 in Hp; lia).
+  unfold znz_field_inv_val.
+  apply epsilon_spec.
+  assert (Ha_range : 0 <= proj1_sig a < Z.of_nat p) by exact (proj2_sig a).
+  assert (Hgcd : Z.gcd (proj1_sig a) (Z.of_nat p) = 1).
+  { rewrite <- (Z.mod_small (proj1_sig a) (Z.of_nat p)) by exact Ha_range.
+    apply znz_prime_nonzero_coprime.
+    - exact Hp.
+    - rewrite Z.mod_small by exact Ha_range.
+      exact Ha. }
+  destruct (znz_coprime_bezout_inv p (ltac:(lia)) (proj1_sig a) Ha_range Hgcd)
+    as [b [Hb_range [Hb_cong _]]].
+  exact (ex_intro _ b (conj Hb_range Hb_cong)).
+Qed.
+
+(** Z/pZ の環 (Ring) 構造 (p は素数):
+    台集合 {x : Z | 0 <= x < p} に加法と乗法を定義する。
+    加法は znz_group と同じ。乗法は znz_units_group と同じパターン。  *)
+Definition znz_p_ring (p : nat) (Hp : prime (Z.of_nat p)) : Ring.
+Proof.
+  assert (Hp2 : (2 <= p)%nat) by (apply prime_ge_2 in Hp; lia).
+  assert (HN : 0 < Z.of_nat p) by lia.
+  refine {|
+    ring_carrier := {x : Z | 0 <= x < Z.of_nat p};
+    ring_add := fun a b =>
+      exist _ ((proj1_sig a + proj1_sig b) mod Z.of_nat p)
+              (Z.mod_pos_bound _ _ HN);
+    ring_zero := exist _ 0 (conj (Z.le_refl 0) HN);
+    ring_neg := fun a =>
+      exist _ ((- proj1_sig a) mod Z.of_nat p)
+              (Z.mod_pos_bound _ _ HN);
+    ring_mul := fun a b =>
+      exist _ ((proj1_sig a * proj1_sig b) mod Z.of_nat p)
+              (Z.mod_pos_bound _ _ HN);
+    ring_one := exist _ (1 mod Z.of_nat p)
+                        (Z.mod_pos_bound _ _ HN)
+  |}.
+  (* ring_add_assoc *)
+  - intros [a Ha] [b Hb] [c Hc]. apply sig_eq. simpl.
+    rewrite Zplus_mod_idemp_l, Zplus_mod_idemp_r, Z.add_assoc. reflexivity.
+  (* ring_add_comm *)
+  - intros [a Ha] [b Hb]. apply sig_eq. simpl.
+    rewrite Z.add_comm. reflexivity.
+  (* ring_add_zero_l *)
+  - intros [a Ha]. apply sig_eq. simpl.
+    apply Z.mod_small. exact Ha.
+  (* ring_add_neg_l *)
+  - intros [a Ha]. apply sig_eq. simpl.
+    rewrite Zplus_mod_idemp_l, Z.add_opp_diag_l. apply Zmod_0_l.
+  (* ring_mul_assoc *)
+  - intros [a Ha] [b Hb] [c Hc]. apply sig_eq. simpl.
+    rewrite Zmult_mod_idemp_r, Zmult_mod_idemp_l, Z.mul_assoc. reflexivity.
+  (* ring_mul_one_l: (1 mod p * a) mod p = a *)
+  - intros [a Ha]. apply sig_eq. simpl.
+    rewrite Zmult_mod_idemp_l, Z.mul_1_l. apply Z.mod_small. exact Ha.
+  (* ring_mul_one_r: (a * (1 mod p)) mod p = a *)
+  - intros [a Ha]. apply sig_eq. simpl.
+    rewrite Zmult_mod_idemp_r, Z.mul_1_r. apply Z.mod_small. exact Ha.
+  (* ring_distr_l *)
+  - intros [a Ha] [b Hb] [c Hc]. apply sig_eq. simpl.
+    rewrite Zmult_mod_idemp_r, Zplus_mod_idemp_l, Zplus_mod_idemp_r.
+    rewrite Z.mul_add_distr_l. reflexivity.
+  (* ring_distr_r *)
+  - intros [a Ha] [b Hb] [c Hc]. apply sig_eq. simpl.
+    rewrite Zmult_mod_idemp_l, Zplus_mod_idemp_l, Zplus_mod_idemp_r.
+    rewrite Z.mul_add_distr_r. reflexivity.
+Defined.
+
+(** 素数 p のとき Z/pZ は体である。
+    台集合は {x : Z | 0 <= x < Z.of_nat p} (sigma 型、znz_group と同じ)。
+    Ring 部分は znz_p_ring を使う。  *)
 Definition znz_p_field (p : nat) (Hp : prime (Z.of_nat p)) : Field.
-Admitted.
+Proof.
+  assert (Hp2 : (2 <= p)%nat) by (apply prime_ge_2 in Hp; lia).
+  assert (HN : 0 < Z.of_nat p) by lia.
+  refine {|
+    field_ring := znz_p_ring p Hp;
+    field_inv  := fun a =>
+      match Z.eq_dec (proj1_sig a) 0 with
+      | left _   => exist (fun x => 0 <= x < Z.of_nat p) 0 (conj (Z.le_refl 0) HN)
+      | right Ha => exist (fun x => 0 <= x < Z.of_nat p) (znz_field_inv_val p a)
+                         (proj1 (znz_field_inv_spec p Hp a Ha))
+      end;
+    field_mul_comm  := _;
+    field_inv_l     := _;
+    field_one_ne_zero := _
+  |}.
+  (* field_mul_comm *)
+  - intros [a Ha] [b Hb]. apply sig_eq. simpl.
+    rewrite Z.mul_comm. reflexivity.
+  (* field_inv_l: x ≠ 0 → inv(x) * x = 1 *)
+  - intros x Hx.
+    assert (Ha : proj1_sig x <> 0).
+    { intro Heq. apply Hx. apply sig_eq. simpl. exact Heq. }
+    destruct (znz_field_inv_spec p Hp x Ha) as [_ Hcong].
+    apply sig_eq. simpl.
+    destruct (Z.eq_dec (proj1_sig x) 0) as [Hc | Hc].
+    + contradiction.
+    + (* proj1_sig (field_inv F x) = znz_field_inv_val p x を明示的に簡約 *)
+      cbn [proj1_sig].
+      rewrite Z.mul_comm.
+      unfold cong in Hcong. destruct Hcong as [k Hk].
+      assert (Heq : proj1_sig x * znz_field_inv_val p x = Z.of_nat p * k + 1) by lia.
+      rewrite Heq.
+      replace (Z.of_nat p * k + 1) with (1 + k * Z.of_nat p) by ring.
+      rewrite Z.mod_add by lia.
+      reflexivity.
+  (* field_one_ne_zero: 1 mod p ≠ 0 *)
+  - intro Heq.
+    assert (H : proj1_sig (ring_one (znz_p_ring p Hp)) = proj1_sig (ring_zero (znz_p_ring p Hp))).
+    { rewrite Heq. reflexivity. }
+    simpl in H.
+    rewrite Z.mod_small in H by lia.
+    lia.
+Defined.

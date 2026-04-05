@@ -1,4 +1,4 @@
-DIGEST a1a4a9a0ae53663a8a73801ac40ed955
+DIGEST b0ce03d7f672b3748cbf503b23edc415
 Finteger
 R15:32 Corelib.Init.Peano <> <> lib
 R34:49 Corelib.Init.Nat <> <> lib
@@ -10614,3 +10614,1166 @@ R147392:147410 integer <> euler_phi_prime_pow thm
 R147440:147458 integer <> euler_phi_prime_pow thm
 R147440:147458 integer <> euler_phi_prime_pow thm
 R147440:147458 integer <> euler_phi_prime_pow thm
+rec 148509:148512 <> Ring
+proj 148528:148539 <> ring_carrier
+proj 148552:148559 <> ring_add
+proj 148611:148619 <> ring_zero
+proj 148639:148646 <> ring_neg
+proj 148684:148691 <> ring_mul
+proj 148744:148751 <> ring_one
+proj 148805:148818 <> ring_add_assoc
+proj 148912:148924 <> ring_add_comm
+proj 148991:149005 <> ring_add_zero_l
+proj 149066:149079 <> ring_add_neg_l
+proj 149188:149201 <> ring_mul_assoc
+proj 149295:149308 <> ring_mul_one_l
+proj 149368:149381 <> ring_mul_one_r
+proj 149463:149474 <> ring_distr_l
+proj 149581:149592 <> ring_distr_r
+R148575:148578 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R148563:148574 integer <> ring_carrier:716 meth
+R148591:148594 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R148579:148590 integer <> ring_carrier:716 meth
+R148595:148606 integer <> ring_carrier:716 meth
+R148623:148634 integer <> ring_carrier:716 meth
+R148663:148666 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R148651:148662 integer <> ring_carrier:716 meth
+R148667:148678 integer <> ring_carrier:716 meth
+R148708:148711 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R148696:148707 integer <> ring_carrier:716 meth
+R148724:148727 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R148712:148723 integer <> ring_carrier:716 meth
+R148728:148739 integer <> ring_carrier:716 meth
+R148756:148767 integer <> ring_carrier:716 meth
+R148837:148848 integer <> ring_carrier:716 meth
+binder 148829:148829 <> a:722
+binder 148831:148831 <> b:723
+binder 148833:148833 <> c:724
+R148880:148882 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R148855:148862 integer <> ring_add:717 meth
+R148879:148879 integer <> c:724 var
+R148865:148872 integer <> ring_add:717 meth
+R148876:148876 integer <> b:723 var
+R148874:148874 integer <> a:722 var
+R148883:148890 integer <> ring_add:717 meth
+R148895:148902 integer <> ring_add:717 meth
+R148906:148906 integer <> c:724 var
+R148904:148904 integer <> b:723 var
+R148892:148892 integer <> a:722 var
+R148942:148953 integer <> ring_carrier:716 meth
+binder 148936:148936 <> a:726
+binder 148938:148938 <> b:727
+R148972:148974 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R148960:148967 integer <> ring_add:717 meth
+R148971:148971 integer <> b:727 var
+R148969:148969 integer <> a:726 var
+R148975:148982 integer <> ring_add:717 meth
+R148986:148986 integer <> a:726 var
+R148984:148984 integer <> b:727 var
+R149020:149031 integer <> ring_carrier:716 meth
+binder 149016:149016 <> a:729
+R149058:149060 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R149038:149045 integer <> ring_add:717 meth
+R149057:149057 integer <> a:729 var
+R149047:149055 integer <> ring_zero:718 meth
+R149061:149061 integer <> a:729 var
+R149095:149106 integer <> ring_carrier:716 meth
+binder 149091:149091 <> a:731
+R149136:149138 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R149113:149120 integer <> ring_add:717 meth
+R149135:149135 integer <> a:731 var
+R149123:149130 integer <> ring_neg:719 meth
+R149132:149132 integer <> a:731 var
+R149139:149147 integer <> ring_zero:718 meth
+R149220:149231 integer <> ring_carrier:716 meth
+binder 149212:149212 <> a:733
+binder 149214:149214 <> b:734
+binder 149216:149216 <> c:735
+R149263:149265 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R149238:149245 integer <> ring_mul:720 meth
+R149262:149262 integer <> c:735 var
+R149248:149255 integer <> ring_mul:720 meth
+R149259:149259 integer <> b:734 var
+R149257:149257 integer <> a:733 var
+R149266:149273 integer <> ring_mul:720 meth
+R149278:149285 integer <> ring_mul:720 meth
+R149289:149289 integer <> c:735 var
+R149287:149287 integer <> b:734 var
+R149275:149275 integer <> a:733 var
+R149323:149334 integer <> ring_carrier:716 meth
+binder 149319:149319 <> a:737
+R149360:149362 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R149341:149348 integer <> ring_mul:720 meth
+R149359:149359 integer <> a:737 var
+R149350:149357 integer <> ring_one:721 meth
+R149363:149363 integer <> a:737 var
+R149396:149407 integer <> ring_carrier:716 meth
+binder 149392:149392 <> a:739
+R149433:149435 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R149414:149421 integer <> ring_mul:720 meth
+R149425:149432 integer <> ring_one:721 meth
+R149423:149423 integer <> a:739 var
+R149436:149436 integer <> a:739 var
+R149493:149504 integer <> ring_carrier:716 meth
+binder 149485:149485 <> a:741
+binder 149487:149487 <> b:742
+binder 149489:149489 <> c:743
+R149536:149538 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R149511:149518 integer <> ring_mul:720 meth
+R149523:149530 integer <> ring_add:717 meth
+R149534:149534 integer <> c:743 var
+R149532:149532 integer <> b:742 var
+R149520:149520 integer <> a:741 var
+R149539:149546 integer <> ring_add:717 meth
+R149564:149571 integer <> ring_mul:720 meth
+R149575:149575 integer <> c:743 var
+R149573:149573 integer <> a:741 var
+R149549:149556 integer <> ring_mul:720 meth
+R149560:149560 integer <> b:742 var
+R149558:149558 integer <> a:741 var
+R149611:149622 integer <> ring_carrier:716 meth
+binder 149603:149603 <> a:745
+binder 149605:149605 <> b:746
+binder 149607:149607 <> c:747
+R149654:149656 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R149629:149636 integer <> ring_mul:720 meth
+R149653:149653 integer <> c:747 var
+R149639:149646 integer <> ring_add:717 meth
+R149650:149650 integer <> b:746 var
+R149648:149648 integer <> a:745 var
+R149657:149664 integer <> ring_add:717 meth
+R149682:149689 integer <> ring_mul:720 meth
+R149693:149693 integer <> c:747 var
+R149691:149691 integer <> b:746 var
+R149667:149674 integer <> ring_mul:720 meth
+R149678:149678 integer <> c:747 var
+R149676:149676 integer <> a:745 var
+prf 149798:149812 <> ring_add_zero_r
+R149828:149831 integer <> Ring rec
+binder 149824:149824 <> R:749
+R149839:149850 integer <> ring_carrier proj
+R149852:149852 integer <> R:749 var
+binder 149835:149835 <> a:750
+R149884:149886 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R149858:149865 integer <> ring_add proj
+R149867:149867 integer <> R:749 var
+R149869:149869 integer <> a:750 var
+R149872:149880 integer <> ring_zero proj
+R149882:149882 integer <> R:749 var
+R149887:149887 integer <> a:750 var
+R149921:149933 integer <> ring_add_comm proj
+R149921:149933 integer <> ring_add_comm proj
+R149921:149933 integer <> ring_add_comm proj
+R149944:149958 integer <> ring_add_zero_l proj
+R149944:149958 integer <> ring_add_zero_l proj
+prf 150059:150072 <> ring_add_neg_r
+R150088:150091 integer <> Ring rec
+binder 150084:150084 <> R:751
+R150099:150110 integer <> ring_carrier proj
+R150112:150112 integer <> R:751 var
+binder 150095:150095 <> a:752
+R150145:150147 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R150118:150125 integer <> ring_add proj
+R150127:150127 integer <> R:751 var
+R150129:150129 integer <> a:752 var
+R150132:150139 integer <> ring_neg proj
+R150141:150141 integer <> R:751 var
+R150143:150143 integer <> a:752 var
+R150148:150156 integer <> ring_zero proj
+R150158:150158 integer <> R:751 var
+R150192:150204 integer <> ring_add_comm proj
+R150192:150204 integer <> ring_add_comm proj
+R150192:150204 integer <> ring_add_comm proj
+R150215:150228 integer <> ring_add_neg_l proj
+R150215:150228 integer <> ring_add_neg_l proj
+prf 150368:150384 <> ring_add_cancel_l
+R150400:150403 integer <> Ring rec
+binder 150396:150396 <> R:753
+R150415:150426 integer <> ring_carrier proj
+R150428:150428 integer <> R:753 var
+binder 150407:150407 <> a:754
+binder 150409:150409 <> b:755
+binder 150411:150411 <> c:756
+R150465:150468 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R150448:150450 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R150434:150441 integer <> ring_add proj
+R150443:150443 integer <> R:753 var
+R150445:150445 integer <> a:754 var
+R150447:150447 integer <> b:755 var
+R150451:150458 integer <> ring_add proj
+R150460:150460 integer <> R:753 var
+R150462:150462 integer <> a:754 var
+R150464:150464 integer <> c:756 var
+R150470:150472 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R150469:150469 integer <> b:755 var
+R150473:150473 integer <> c:756 var
+R150561:150579 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R150519:150526 integer <> ring_add proj
+R150531:150538 integer <> ring_neg proj
+R150546:150553 integer <> ring_add proj
+R150580:150587 integer <> ring_add proj
+R150592:150599 integer <> ring_neg proj
+R150607:150614 integer <> ring_add proj
+R150561:150579 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R150519:150526 integer <> ring_add proj
+R150531:150538 integer <> ring_neg proj
+R150546:150553 integer <> ring_add proj
+R150580:150587 integer <> ring_add proj
+R150592:150599 integer <> ring_neg proj
+R150607:150614 integer <> ring_add proj
+R150668:150681 integer <> ring_add_assoc proj
+R150687:150700 integer <> ring_add_assoc proj
+R150668:150681 integer <> ring_add_assoc proj
+R150668:150681 integer <> ring_add_assoc proj
+R150687:150700 integer <> ring_add_assoc proj
+R150687:150700 integer <> ring_add_assoc proj
+R150720:150733 integer <> ring_add_neg_l proj
+R150736:150750 integer <> ring_add_zero_l proj
+R150753:150767 integer <> ring_add_zero_l proj
+R150720:150733 integer <> ring_add_neg_l proj
+R150720:150733 integer <> ring_add_neg_l proj
+R150736:150750 integer <> ring_add_zero_l proj
+R150736:150750 integer <> ring_add_zero_l proj
+R150753:150767 integer <> ring_add_zero_l proj
+R150753:150767 integer <> ring_add_zero_l proj
+prf 150956:150970 <> ring_mul_zero_l
+R150986:150989 integer <> Ring rec
+binder 150982:150982 <> R:757
+R150997:151008 integer <> ring_carrier proj
+R151010:151010 integer <> R:757 var
+binder 150993:150993 <> a:758
+R151042:151044 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R151016:151023 integer <> ring_mul proj
+R151025:151025 integer <> R:757 var
+R151028:151036 integer <> ring_zero proj
+R151038:151038 integer <> R:757 var
+R151041:151041 integer <> a:758 var
+R151045:151053 integer <> ring_zero proj
+R151055:151055 integer <> R:757 var
+R151088:151104 integer <> ring_add_cancel_l thm
+R151109:151116 integer <> ring_mul proj
+R151121:151129 integer <> ring_zero proj
+R151088:151104 integer <> ring_add_cancel_l thm
+R151109:151116 integer <> ring_mul proj
+R151121:151129 integer <> ring_zero proj
+R151152:151163 integer <> ring_distr_r proj
+R151152:151163 integer <> ring_distr_r proj
+R151152:151163 integer <> ring_distr_r proj
+R151176:151190 integer <> ring_add_zero_l proj
+R151176:151190 integer <> ring_add_zero_l proj
+R151176:151190 integer <> ring_add_zero_l proj
+R151203:151217 integer <> ring_add_zero_r thm
+R151203:151217 integer <> ring_add_zero_r thm
+R151203:151217 integer <> ring_add_zero_r thm
+prf 151401:151415 <> ring_mul_zero_r
+R151431:151434 integer <> Ring rec
+binder 151427:151427 <> R:759
+R151442:151453 integer <> ring_carrier proj
+R151455:151455 integer <> R:759 var
+binder 151438:151438 <> a:760
+R151487:151489 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R151461:151468 integer <> ring_mul proj
+R151470:151470 integer <> R:759 var
+R151472:151472 integer <> a:760 var
+R151475:151483 integer <> ring_zero proj
+R151485:151485 integer <> R:759 var
+R151490:151498 integer <> ring_zero proj
+R151500:151500 integer <> R:759 var
+R151533:151549 integer <> ring_add_cancel_l thm
+R151554:151561 integer <> ring_mul proj
+R151568:151576 integer <> ring_zero proj
+R151533:151549 integer <> ring_add_cancel_l thm
+R151554:151561 integer <> ring_mul proj
+R151568:151576 integer <> ring_zero proj
+R151597:151608 integer <> ring_distr_l proj
+R151597:151608 integer <> ring_distr_l proj
+R151597:151608 integer <> ring_distr_l proj
+R151621:151635 integer <> ring_add_zero_l proj
+R151621:151635 integer <> ring_add_zero_l proj
+R151621:151635 integer <> ring_add_zero_l proj
+R151648:151662 integer <> ring_add_zero_r thm
+R151648:151662 integer <> ring_add_zero_r thm
+R151648:151662 integer <> ring_add_zero_r thm
+prf 151843:151854 <> ring_neg_neg
+R151870:151873 integer <> Ring rec
+binder 151866:151866 <> R:761
+R151881:151892 integer <> ring_carrier proj
+R151894:151894 integer <> R:761 var
+binder 151877:151877 <> a:762
+R151925:151927 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R151900:151907 integer <> ring_neg proj
+R151909:151909 integer <> R:761 var
+R151912:151919 integer <> ring_neg proj
+R151921:151921 integer <> R:761 var
+R151923:151923 integer <> a:762 var
+R151928:151928 integer <> a:762 var
+R151961:151977 integer <> ring_add_cancel_l thm
+R151982:151989 integer <> ring_neg proj
+R151961:151977 integer <> ring_add_cancel_l thm
+R151982:151989 integer <> ring_neg proj
+R152008:152021 integer <> ring_add_neg_r thm
+R152008:152021 integer <> ring_add_neg_r thm
+R152008:152021 integer <> ring_add_neg_r thm
+R152034:152047 integer <> ring_add_neg_l proj
+R152034:152047 integer <> ring_add_neg_l proj
+R152034:152047 integer <> ring_add_neg_l proj
+prf 152241:152254 <> ring_neg_mul_l
+R152270:152273 integer <> Ring rec
+binder 152266:152266 <> R:763
+R152283:152294 integer <> ring_carrier proj
+R152296:152296 integer <> R:763 var
+binder 152277:152277 <> a:764
+binder 152279:152279 <> b:765
+R152329:152331 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R152302:152309 integer <> ring_mul proj
+R152311:152311 integer <> R:763 var
+R152314:152321 integer <> ring_neg proj
+R152323:152323 integer <> R:763 var
+R152325:152325 integer <> a:764 var
+R152328:152328 integer <> b:765 var
+R152332:152339 integer <> ring_neg proj
+R152341:152341 integer <> R:763 var
+R152344:152351 integer <> ring_mul proj
+R152353:152353 integer <> R:763 var
+R152355:152355 integer <> a:764 var
+R152357:152357 integer <> b:765 var
+R152393:152409 integer <> ring_add_cancel_l thm
+R152414:152421 integer <> ring_mul proj
+R152393:152409 integer <> ring_add_cancel_l thm
+R152414:152421 integer <> ring_mul proj
+R152442:152455 integer <> ring_add_neg_r thm
+R152442:152455 integer <> ring_add_neg_r thm
+R152442:152455 integer <> ring_add_neg_r thm
+R152471:152482 integer <> ring_distr_r proj
+R152471:152482 integer <> ring_distr_r proj
+R152471:152482 integer <> ring_distr_r proj
+R152495:152508 integer <> ring_add_neg_r thm
+R152495:152508 integer <> ring_add_neg_r thm
+R152495:152508 integer <> ring_add_neg_r thm
+R152519:152533 integer <> ring_mul_zero_l thm
+R152519:152533 integer <> ring_mul_zero_l thm
+prf 152712:152725 <> ring_neg_mul_r
+R152741:152744 integer <> Ring rec
+binder 152737:152737 <> R:766
+R152754:152765 integer <> ring_carrier proj
+R152767:152767 integer <> R:766 var
+binder 152748:152748 <> a:767
+binder 152750:152750 <> b:768
+R152800:152802 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R152773:152780 integer <> ring_mul proj
+R152782:152782 integer <> R:766 var
+R152784:152784 integer <> a:767 var
+R152787:152794 integer <> ring_neg proj
+R152796:152796 integer <> R:766 var
+R152798:152798 integer <> b:768 var
+R152803:152810 integer <> ring_neg proj
+R152812:152812 integer <> R:766 var
+R152815:152822 integer <> ring_mul proj
+R152824:152824 integer <> R:766 var
+R152826:152826 integer <> a:767 var
+R152828:152828 integer <> b:768 var
+R152864:152880 integer <> ring_add_cancel_l thm
+R152885:152892 integer <> ring_mul proj
+R152864:152880 integer <> ring_add_cancel_l thm
+R152885:152892 integer <> ring_mul proj
+R152913:152926 integer <> ring_add_neg_r thm
+R152913:152926 integer <> ring_add_neg_r thm
+R152913:152926 integer <> ring_add_neg_r thm
+R152942:152953 integer <> ring_distr_l proj
+R152942:152953 integer <> ring_distr_l proj
+R152942:152953 integer <> ring_distr_l proj
+R152966:152979 integer <> ring_add_neg_r thm
+R152966:152979 integer <> ring_add_neg_r thm
+R152966:152979 integer <> ring_add_neg_r thm
+R152990:153004 integer <> ring_mul_zero_r thm
+R152990:153004 integer <> ring_mul_zero_r thm
+rec 153652:153656 <> Field
+proj 153672:153681 <> field_ring
+proj 153695:153703 <> field_inv
+proj 153786:153799 <> field_mul_comm
+proj 153929:153939 <> field_inv_l
+proj 154114:154130 <> field_one_ne_zero
+R153686:153689 integer <> Ring rec
+R153730:153733 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R153707:153718 integer <> ring_carrier proj
+R153720:153729 integer <> field_ring:770 meth
+R153734:153745 integer <> ring_carrier proj
+R153747:153756 integer <> field_ring:770 meth
+R153816:153827 integer <> ring_carrier proj
+R153829:153838 integer <> field_ring:770 meth
+binder 153810:153810 <> a:772
+binder 153812:153812 <> b:773
+R153868:153870 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R153845:153852 integer <> ring_mul proj
+R153854:153863 integer <> field_ring:770 meth
+R153865:153865 integer <> a:772 var
+R153867:153867 integer <> b:773 var
+R153871:153878 integer <> ring_mul proj
+R153880:153889 integer <> field_ring:770 meth
+R153891:153891 integer <> b:773 var
+R153893:153893 integer <> a:772 var
+R153954:153965 integer <> ring_carrier proj
+R153967:153976 integer <> field_ring:770 meth
+binder 153950:153950 <> x:775
+R154008:154015 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R153984:153987 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R153983:153983 integer <> x:775 var
+R153988:153996 integer <> ring_zero proj
+R153998:154007 integer <> field_ring:770 meth
+R154051:154053 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R154016:154023 integer <> ring_mul proj
+R154025:154034 integer <> field_ring:770 meth
+R154037:154045 integer <> field_inv:771 meth
+R154047:154047 integer <> x:775 var
+R154050:154050 integer <> x:775 var
+R154054:154061 integer <> ring_one proj
+R154063:154072 integer <> field_ring:770 meth
+R154153:154156 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R154134:154141 integer <> ring_one proj
+R154143:154152 integer <> field_ring:770 meth
+R154157:154165 integer <> ring_zero proj
+R154167:154176 integer <> field_ring:770 meth
+prf 154299:154309 <> field_inv_r
+R154325:154329 integer <> Field rec
+binder 154321:154321 <> F:778
+R154337:154348 integer <> ring_carrier proj
+R154350:154350 integer <> F:778 var
+binder 154333:154333 <> x:779
+R154372:154377 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R154357:154360 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R154356:154356 integer <> x:779 var
+R154361:154369 integer <> ring_zero proj
+R154371:154371 integer <> F:778 var
+R154406:154408 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R154378:154385 integer <> ring_mul proj
+R154387:154387 integer <> F:778 var
+R154389:154389 integer <> x:779 var
+R154392:154400 integer <> field_inv proj
+R154402:154402 integer <> F:778 var
+R154404:154404 integer <> x:779 var
+R154409:154416 integer <> ring_one proj
+R154418:154418 integer <> F:778 var
+R154455:154468 integer <> field_mul_comm proj
+R154455:154468 integer <> field_mul_comm proj
+R154455:154468 integer <> field_mul_comm proj
+R154479:154489 integer <> field_inv_l proj
+R154479:154489 integer <> field_inv_l proj
+prf 154721:154737 <> field_inv_nonzero
+R154753:154757 integer <> Field rec
+binder 154749:154749 <> F:780
+R154765:154776 integer <> ring_carrier proj
+R154778:154778 integer <> F:780 var
+binder 154761:154761 <> x:781
+R154800:154805 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R154785:154788 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R154784:154784 integer <> x:781 var
+R154789:154797 integer <> ring_zero proj
+R154799:154799 integer <> F:780 var
+R154819:154822 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R154806:154814 integer <> field_inv proj
+R154816:154816 integer <> F:780 var
+R154818:154818 integer <> x:781 var
+R154823:154831 integer <> ring_zero proj
+R154833:154833 integer <> F:780 var
+R154879:154889 integer <> field_inv_l proj
+R154879:154889 integer <> field_inv_l proj
+R154936:154950 integer <> ring_mul_zero_l thm
+R154936:154950 integer <> ring_mul_zero_l thm
+R154936:154950 integer <> ring_mul_zero_l thm
+R154967:154983 integer <> field_one_ne_zero proj
+R154988:154993 Corelib.Init.Logic <> eq_sym thm
+R154967:154983 integer <> field_one_ne_zero proj
+R154988:154993 Corelib.Init.Logic <> eq_sym thm
+prf 155226:155247 <> field_no_zero_divisors
+R155263:155267 integer <> Field rec
+binder 155259:155259 <> F:782
+R155277:155288 integer <> ring_carrier proj
+R155290:155290 integer <> F:782 var
+binder 155271:155271 <> a:783
+binder 155273:155273 <> b:784
+R155324:155329 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R155310:155312 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R155296:155303 integer <> ring_mul proj
+R155305:155305 integer <> F:782 var
+R155307:155307 integer <> a:783 var
+R155309:155309 integer <> b:784 var
+R155313:155321 integer <> ring_zero proj
+R155323:155323 integer <> F:782 var
+R155345:155348 Corelib.Init.Logic <> ::type_scope:x_'\/'_x not
+R155331:155333 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R155330:155330 integer <> a:783 var
+R155334:155342 integer <> ring_zero proj
+R155344:155344 integer <> F:782 var
+R155350:155352 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R155349:155349 integer <> b:784 var
+R155353:155361 integer <> ring_zero proj
+R155363:155363 integer <> F:782 var
+R155405:155411 Stdlib.Logic.Classical_Prop <> classic prfax
+R155415:155417 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R155418:155426 integer <> ring_zero proj
+R155405:155411 Stdlib.Logic.Classical_Prop <> classic prfax
+R155415:155417 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R155418:155426 integer <> ring_zero proj
+R155493:155503 integer <> field_inv_l proj
+R155493:155503 integer <> field_inv_l proj
+R155582:155584 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R155539:155546 integer <> ring_mul proj
+R155551:155559 integer <> field_inv proj
+R155567:155574 integer <> ring_mul proj
+R155585:155593 integer <> ring_zero proj
+R155582:155584 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R155539:155546 integer <> ring_mul proj
+R155551:155559 integer <> field_inv proj
+R155567:155574 integer <> ring_mul proj
+R155585:155593 integer <> ring_zero proj
+R155624:155638 integer <> ring_mul_zero_r thm
+R155624:155638 integer <> ring_mul_zero_r thm
+R155658:155671 integer <> ring_mul_assoc proj
+R155658:155671 integer <> ring_mul_assoc proj
+R155658:155671 integer <> ring_mul_assoc proj
+R155715:155728 integer <> ring_mul_one_l proj
+R155715:155728 integer <> ring_mul_one_l proj
+R155715:155728 integer <> ring_mul_one_l proj
+prf 155978:155995 <> field_mul_cancel_l
+R156011:156015 integer <> Field rec
+binder 156007:156007 <> F:785
+R156027:156038 integer <> ring_carrier proj
+R156040:156040 integer <> F:785 var
+binder 156019:156019 <> a:786
+binder 156021:156021 <> b:787
+binder 156023:156023 <> c:788
+R156062:156067 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R156047:156050 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R156046:156046 integer <> a:786 var
+R156051:156059 integer <> ring_zero proj
+R156061:156061 integer <> F:785 var
+R156099:156104 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R156082:156084 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R156068:156075 integer <> ring_mul proj
+R156077:156077 integer <> F:785 var
+R156079:156079 integer <> a:786 var
+R156081:156081 integer <> b:787 var
+R156085:156092 integer <> ring_mul proj
+R156094:156094 integer <> F:785 var
+R156096:156096 integer <> a:786 var
+R156098:156098 integer <> c:788 var
+R156106:156108 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R156105:156105 integer <> b:787 var
+R156109:156109 integer <> c:788 var
+R156158:156168 integer <> field_inv_l proj
+R156158:156168 integer <> field_inv_l proj
+R156246:156263 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R156203:156210 integer <> ring_mul proj
+R156215:156223 integer <> field_inv proj
+R156231:156238 integer <> ring_mul proj
+R156264:156271 integer <> ring_mul proj
+R156276:156284 integer <> field_inv proj
+R156292:156299 integer <> ring_mul proj
+R156246:156263 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R156203:156210 integer <> ring_mul proj
+R156215:156223 integer <> field_inv proj
+R156231:156238 integer <> ring_mul proj
+R156264:156271 integer <> ring_mul proj
+R156276:156284 integer <> field_inv proj
+R156292:156299 integer <> ring_mul proj
+R156355:156368 integer <> ring_mul_assoc proj
+R156374:156387 integer <> ring_mul_assoc proj
+R156355:156368 integer <> ring_mul_assoc proj
+R156355:156368 integer <> ring_mul_assoc proj
+R156374:156387 integer <> ring_mul_assoc proj
+R156374:156387 integer <> ring_mul_assoc proj
+R156413:156426 integer <> ring_mul_one_l proj
+R156429:156442 integer <> ring_mul_one_l proj
+R156413:156426 integer <> ring_mul_one_l proj
+R156413:156426 integer <> ring_mul_one_l proj
+R156429:156442 integer <> ring_mul_one_l proj
+R156429:156442 integer <> ring_mul_one_l proj
+def 156610:156618 <> field_div
+R156625:156629 integer <> Field rec
+binder 156621:156621 <> F:789
+R156639:156650 integer <> ring_carrier proj
+R156652:156652 integer <> F:789 var
+binder 156633:156633 <> a:790
+binder 156635:156635 <> b:791
+R156657:156668 integer <> ring_carrier proj
+R156670:156670 integer <> F:789 var
+R156677:156684 integer <> ring_mul proj
+R156686:156686 integer <> F:789 var
+R156688:156688 integer <> a:790 var
+R156691:156699 integer <> field_inv proj
+R156701:156701 integer <> F:789 var
+R156703:156703 integer <> b:791 var
+prf 157504:157528 <> znz_prime_nonzero_coprime
+R157544:157546 Corelib.Init.Datatypes <> nat ind
+binder 157540:157540 <> p:792
+R157554:157554 Corelib.Numbers.BinNums <> Z ind
+binder 157550:157550 <> a:793
+R157578:157583 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R157560:157564 Stdlib.ZArith.Znumtheory <> prime ind
+R157567:157574 Stdlib.ZArith.BinInt Z of_nat def
+R157576:157576 integer <> p:792 var
+R157605:157610 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R157600:157603 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R157585:157589 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R157584:157584 integer <> a:793 var
+R157590:157597 Stdlib.ZArith.BinInt Z of_nat def
+R157599:157599 integer <> p:792 var
+R157648:157650 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R157611:157615 Stdlib.ZArith.BinInt Z gcd def
+R157619:157623 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R157618:157618 integer <> a:793 var
+R157624:157631 Stdlib.ZArith.BinInt Z of_nat def
+R157633:157633 integer <> p:792 var
+R157637:157644 Stdlib.ZArith.BinInt Z of_nat def
+R157646:157646 integer <> p:792 var
+R157699:157703 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R157704:157711 Stdlib.ZArith.BinInt Z of_nat def
+R157699:157703 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R157704:157711 Stdlib.ZArith.BinInt Z of_nat def
+R157735:157738 Corelib.Init.Peano <> ::nat_scope:x_'<='_x not
+R157757:157766 Stdlib.ZArith.Znumtheory <> prime_ge_2 thm
+R157735:157738 Corelib.Init.Peano <> ::nat_scope:x_'<='_x not
+R157757:157766 Stdlib.ZArith.Znumtheory <> prime_ge_2 thm
+R157810:157813 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R157805:157808 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x not
+R157815:157817 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<'_x not
+R157818:157825 Stdlib.ZArith.BinInt Z of_nat def
+R157810:157813 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R157805:157808 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x not
+R157815:157817 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<'_x not
+R157818:157825 Stdlib.ZArith.BinInt Z of_nat def
+R157858:157872 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R157858:157872 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R157858:157872 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R157927:157937 Stdlib.ZArith.Znumtheory <> Zis_gcd_gcd thm
+R157927:157937 Stdlib.ZArith.Znumtheory <> Zis_gcd_gcd thm
+R157957:157967 Stdlib.ZArith.Znumtheory <> Zis_gcd_sym thm
+R157957:157967 Stdlib.ZArith.Znumtheory <> Zis_gcd_sym thm
+R157979:157993 Stdlib.ZArith.Znumtheory <> prime_rel_prime thm
+R157996:158003 Stdlib.ZArith.BinInt Z of_nat def
+R157979:157993 Stdlib.ZArith.Znumtheory <> prime_rel_prime thm
+R157996:158003 Stdlib.ZArith.BinInt Z of_nat def
+R158082:158084 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R158082:158084 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+def 158556:158572 <> znz_field_inv_val
+R158579:158581 Corelib.Init.Datatypes <> nat ind
+binder 158575:158575 <> p:794
+R158593:158593 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R158595:158597 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R158599:158601 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R158621:158621 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R158598:158598 Corelib.Numbers.BinNums <> Z ind
+binder 158594:158594 <> x:795
+R158603:158606 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R158608:158610 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R158607:158607 integer <> x:795 var
+R158607:158607 integer <> x:795 var
+R158611:158618 Stdlib.ZArith.BinInt Z of_nat def
+R158620:158620 integer <> p:794 var
+binder 158589:158589 <> a:796
+R158626:158626 Corelib.Numbers.BinNums <> Z ind
+R158633:158639 Stdlib.Logic.ClassicalEpsilon <> epsilon def
+binder 158665:158665 <> b:797
+R158689:158692 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R158671:158674 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R158676:158678 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R158675:158675 integer <> b:797 var
+R158675:158675 integer <> b:797 var
+R158679:158686 Stdlib.ZArith.BinInt Z of_nat def
+R158688:158688 integer <> p:794 var
+R158693:158696 integer <> cong def
+R158698:158698 integer <> p:794 var
+R158712:158714 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R158701:158709 Corelib.Init.Specif <> proj1_sig def
+R158711:158711 integer <> a:796 var
+R158715:158715 integer <> b:797 var
+R158642:158649 Corelib.Init.Logic <> inhabits constr
+prf 159286:159303 <> znz_field_inv_spec
+R159319:159321 Corelib.Init.Datatypes <> nat ind
+binder 159315:159315 <> p:798
+R159330:159334 Stdlib.ZArith.Znumtheory <> prime ind
+R159337:159344 Stdlib.ZArith.BinInt Z of_nat def
+R159346:159346 integer <> p:798 var
+binder 159325:159326 <> Hp:799
+R159359:159359 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R159361:159363 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R159365:159367 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R159387:159387 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R159364:159364 Corelib.Numbers.BinNums <> Z ind
+binder 159360:159360 <> x:800
+R159369:159372 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R159374:159376 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R159373:159373 integer <> x:800 var
+R159373:159373 integer <> x:800 var
+R159377:159384 Stdlib.ZArith.BinInt Z of_nat def
+R159386:159386 integer <> p:798 var
+binder 159355:159355 <> a:801
+R159409:159414 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R159404:159407 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R159393:159401 Corelib.Init.Specif <> proj1_sig def
+R159403:159403 integer <> a:801 var
+R159454:159459 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R159416:159419 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R159441:159443 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R159420:159436 integer <> znz_field_inv_val def
+R159438:159438 integer <> p:798 var
+R159440:159440 integer <> a:801 var
+R159420:159436 integer <> znz_field_inv_val def
+R159438:159438 integer <> p:798 var
+R159440:159440 integer <> a:801 var
+R159444:159451 Stdlib.ZArith.BinInt Z of_nat def
+R159453:159453 integer <> p:798 var
+R159460:159463 integer <> cong def
+R159465:159465 integer <> p:798 var
+R159479:159481 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R159468:159476 Corelib.Init.Specif <> proj1_sig def
+R159478:159478 integer <> a:801 var
+R159482:159498 integer <> znz_field_inv_val def
+R159500:159500 integer <> p:798 var
+R159502:159502 integer <> a:801 var
+R159553:159556 Corelib.Init.Peano <> ::nat_scope:x_'<='_x not
+R159575:159584 Stdlib.ZArith.Znumtheory <> prime_ge_2 thm
+R159553:159556 Corelib.Init.Peano <> ::nat_scope:x_'<='_x not
+R159575:159584 Stdlib.ZArith.Znumtheory <> prime_ge_2 thm
+R159608:159624 integer <> znz_field_inv_val def
+R159635:159646 Stdlib.Logic.ClassicalEpsilon <> epsilon_spec def
+R159635:159646 Stdlib.Logic.ClassicalEpsilon <> epsilon_spec def
+R159671:159674 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R159686:159688 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R159675:159683 Corelib.Init.Specif <> proj1_sig def
+R159675:159683 Corelib.Init.Specif <> proj1_sig def
+R159689:159696 Stdlib.ZArith.BinInt Z of_nat def
+R159711:159719 Corelib.Init.Specif <> proj2_sig def
+R159671:159674 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R159686:159688 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R159675:159683 Corelib.Init.Specif <> proj1_sig def
+R159675:159683 Corelib.Init.Specif <> proj1_sig def
+R159689:159696 Stdlib.ZArith.BinInt Z of_nat def
+R159711:159719 Corelib.Init.Specif <> proj2_sig def
+R159774:159776 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R159742:159746 Stdlib.ZArith.BinInt Z gcd def
+R159749:159757 Corelib.Init.Specif <> proj1_sig def
+R159763:159770 Stdlib.ZArith.BinInt Z of_nat def
+R159774:159776 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R159742:159746 Stdlib.ZArith.BinInt Z gcd def
+R159749:159757 Corelib.Init.Specif <> proj1_sig def
+R159763:159770 Stdlib.ZArith.BinInt Z of_nat def
+R159797:159807 Stdlib.ZArith.BinInt Z mod_small thm
+R159810:159818 Corelib.Init.Specif <> proj1_sig def
+R159824:159831 Stdlib.ZArith.BinInt Z of_nat def
+R159797:159807 Stdlib.ZArith.BinInt Z mod_small thm
+R159810:159818 Corelib.Init.Specif <> proj1_sig def
+R159824:159831 Stdlib.ZArith.BinInt Z of_nat def
+R159797:159807 Stdlib.ZArith.BinInt Z mod_small thm
+R159810:159818 Corelib.Init.Specif <> proj1_sig def
+R159824:159831 Stdlib.ZArith.BinInt Z of_nat def
+R159866:159890 integer <> znz_prime_nonzero_coprime thm
+R159866:159890 integer <> znz_prime_nonzero_coprime thm
+R159923:159933 Stdlib.ZArith.BinInt Z mod_small thm
+R159923:159933 Stdlib.ZArith.BinInt Z mod_small thm
+R159923:159933 Stdlib.ZArith.BinInt Z mod_small thm
+R159984:160005 integer <> znz_coprime_bezout_inv thm
+R160023:160031 Corelib.Init.Specif <> proj1_sig def
+R159984:160005 integer <> znz_coprime_bezout_inv thm
+R160023:160031 Corelib.Init.Specif <> proj1_sig def
+R160095:160102 Corelib.Init.Logic <> ex_intro constr
+R160109:160112 Corelib.Init.Logic <> conj constr
+R160095:160102 Corelib.Init.Logic <> ex_intro constr
+R160109:160112 Corelib.Init.Logic <> conj constr
+def 160359:160368 <> znz_p_ring
+R160375:160377 Corelib.Init.Datatypes <> nat ind
+binder 160371:160371 <> p:802
+R160386:160390 Stdlib.ZArith.Znumtheory <> prime ind
+R160393:160400 Stdlib.ZArith.BinInt Z of_nat def
+R160402:160402 integer <> p:802 var
+binder 160381:160382 <> Hp:803
+R160408:160411 integer <> Ring rec
+R160439:160442 Corelib.Init.Peano <> ::nat_scope:x_'<='_x not
+R160461:160470 Stdlib.ZArith.Znumtheory <> prime_ge_2 thm
+R160439:160442 Corelib.Init.Peano <> ::nat_scope:x_'<='_x not
+R160461:160470 Stdlib.ZArith.Znumtheory <> prime_ge_2 thm
+R160501:160503 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<'_x not
+R160504:160511 Stdlib.ZArith.BinInt Z of_nat def
+R160501:160503 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<'_x not
+R160504:160511 Stdlib.ZArith.BinInt Z of_nat def
+R160540:160551 integer <> ring_carrier proj
+R160540:160551 integer <> ring_carrier proj
+R160540:160551 integer <> ring_carrier proj
+R160591:160598 integer <> ring_add proj
+R160591:160598 integer <> ring_add proj
+R160717:160725 integer <> ring_zero proj
+R160717:160725 integer <> ring_zero proj
+R160769:160776 integer <> ring_neg proj
+R160769:160776 integer <> ring_neg proj
+R160881:160888 integer <> ring_mul proj
+R160881:160888 integer <> ring_mul proj
+R161007:161014 integer <> ring_one proj
+R161007:161014 integer <> ring_one proj
+R160556:160556 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R160558:160560 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R160562:160564 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R160584:160584 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R160561:160561 Corelib.Numbers.BinNums <> Z ind
+binder 160557:160557 <> x:804
+R160566:160569 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R160571:160573 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R160570:160570 integer <> x:804 var
+R160570:160570 integer <> x:804 var
+R160574:160581 Stdlib.ZArith.BinInt Z of_nat def
+binder 160607:160607 <> a:805
+binder 160609:160609 <> b:806
+R160620:160624 Corelib.Init.Specif <> exist constr
+R160688:160702 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R160629:160629 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160655:160660 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160641:160643 Stdlib.ZArith.BinInt <> ::Z_scope:x_'+'_x not
+R160630:160638 Corelib.Init.Specif <> proj1_sig def
+R160640:160640 integer <> a:805 var
+R160644:160652 Corelib.Init.Specif <> proj1_sig def
+R160654:160654 integer <> b:806 var
+R160661:160668 Stdlib.ZArith.BinInt Z of_nat def
+R160730:160734 Corelib.Init.Specif <> exist constr
+R160741:160744 Corelib.Init.Logic <> conj constr
+R160747:160755 Stdlib.ZArith.BinInt Z le_refl thm
+binder 160785:160785 <> a:807
+R160796:160800 Corelib.Init.Specif <> exist constr
+R160852:160866 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R160805:160805 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160819:160824 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160806:160807 Stdlib.ZArith.BinInt <> ::Z_scope:'-'_x not
+R160808:160816 Corelib.Init.Specif <> proj1_sig def
+R160818:160818 integer <> a:807 var
+R160825:160832 Stdlib.ZArith.BinInt Z of_nat def
+binder 160897:160897 <> a:808
+binder 160899:160899 <> b:809
+R160910:160914 Corelib.Init.Specif <> exist constr
+R160978:160992 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R160919:160919 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160945:160950 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160931:160933 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R160920:160928 Corelib.Init.Specif <> proj1_sig def
+R160930:160930 integer <> a:808 var
+R160934:160942 Corelib.Init.Specif <> proj1_sig def
+R160944:160944 integer <> b:809 var
+R160951:160958 Stdlib.ZArith.BinInt Z of_nat def
+R161019:161023 Corelib.Init.Specif <> exist constr
+R161071:161085 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R161029:161033 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R161034:161041 Stdlib.ZArith.BinInt Z of_nat def
+R160540:160551 integer <> ring_carrier proj
+R160540:160551 integer <> ring_carrier proj
+R160540:160551 integer <> ring_carrier proj
+R160591:160598 integer <> ring_add proj
+R160591:160598 integer <> ring_add proj
+R160717:160725 integer <> ring_zero proj
+R160717:160725 integer <> ring_zero proj
+R160769:160776 integer <> ring_neg proj
+R160769:160776 integer <> ring_neg proj
+R160881:160888 integer <> ring_mul proj
+R160881:160888 integer <> ring_mul proj
+R161007:161014 integer <> ring_one proj
+R161007:161014 integer <> ring_one proj
+R160556:160556 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R160558:160560 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R160562:160564 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R160584:160584 Corelib.Init.Specif <> ::type_scope:'{'_x_':'_x_'|'_x_'}' not
+R160561:160561 Corelib.Numbers.BinNums <> Z ind
+binder 160557:160557 <> x:810
+R160566:160569 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R160571:160573 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R160570:160570 integer <> x:810 var
+R160570:160570 integer <> x:810 var
+R160574:160581 Stdlib.ZArith.BinInt Z of_nat def
+binder 160607:160607 <> a:811
+binder 160609:160609 <> b:812
+R160620:160624 Corelib.Init.Specif <> exist constr
+R160688:160702 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R160629:160629 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160655:160660 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160641:160643 Stdlib.ZArith.BinInt <> ::Z_scope:x_'+'_x not
+R160630:160638 Corelib.Init.Specif <> proj1_sig def
+R160640:160640 integer <> a:811 var
+R160644:160652 Corelib.Init.Specif <> proj1_sig def
+R160654:160654 integer <> b:812 var
+R160661:160668 Stdlib.ZArith.BinInt Z of_nat def
+R160730:160734 Corelib.Init.Specif <> exist constr
+R160741:160744 Corelib.Init.Logic <> conj constr
+R160747:160755 Stdlib.ZArith.BinInt Z le_refl thm
+binder 160785:160785 <> a:813
+R160796:160800 Corelib.Init.Specif <> exist constr
+R160852:160866 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R160805:160805 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160819:160824 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160806:160807 Stdlib.ZArith.BinInt <> ::Z_scope:'-'_x not
+R160808:160816 Corelib.Init.Specif <> proj1_sig def
+R160818:160818 integer <> a:813 var
+R160825:160832 Stdlib.ZArith.BinInt Z of_nat def
+binder 160897:160897 <> a:814
+binder 160899:160899 <> b:815
+R160910:160914 Corelib.Init.Specif <> exist constr
+R160978:160992 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R160919:160919 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160945:160950 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R160931:160933 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R160920:160928 Corelib.Init.Specif <> proj1_sig def
+R160930:160930 integer <> a:814 var
+R160934:160942 Corelib.Init.Specif <> proj1_sig def
+R160944:160944 integer <> b:815 var
+R160951:160958 Stdlib.ZArith.BinInt Z of_nat def
+R161019:161023 Corelib.Init.Specif <> exist constr
+R161071:161085 Stdlib.ZArith.BinInt Z mod_pos_bound thm
+R161029:161033 Stdlib.ZArith.BinInt <> ::Z_scope:x_'mod'_x not
+R161034:161041 Stdlib.ZArith.BinInt Z of_nat def
+R161163:161168 integer <> sig_eq thm
+R161163:161168 integer <> sig_eq thm
+R161190:161206 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R161209:161225 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R161228:161238 Stdlib.ZArith.BinInt Z add_assoc thm
+R161190:161206 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R161190:161206 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R161209:161225 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R161209:161225 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R161228:161238 Stdlib.ZArith.BinInt Z add_assoc thm
+R161228:161238 Stdlib.ZArith.BinInt Z add_assoc thm
+R161308:161313 integer <> sig_eq thm
+R161308:161313 integer <> sig_eq thm
+R161335:161344 Stdlib.ZArith.BinInt Z add_comm thm
+R161335:161344 Stdlib.ZArith.BinInt Z add_comm thm
+R161335:161344 Stdlib.ZArith.BinInt Z add_comm thm
+R161409:161414 integer <> sig_eq thm
+R161409:161414 integer <> sig_eq thm
+R161434:161444 Stdlib.ZArith.BinInt Z mod_small thm
+R161434:161444 Stdlib.ZArith.BinInt Z mod_small thm
+R161505:161510 integer <> sig_eq thm
+R161505:161510 integer <> sig_eq thm
+R161532:161548 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R161551:161566 Stdlib.ZArith.BinInt Z add_opp_diag_l thm
+R161532:161548 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R161532:161548 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R161551:161566 Stdlib.ZArith.BinInt Z add_opp_diag_l thm
+R161551:161566 Stdlib.ZArith.BinInt Z add_opp_diag_l thm
+R161575:161582 Stdlib.ZArith.Zdiv <> Zmod_0_l thm
+R161575:161582 Stdlib.ZArith.Zdiv <> Zmod_0_l thm
+R161647:161652 integer <> sig_eq thm
+R161647:161652 integer <> sig_eq thm
+R161674:161690 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R161693:161709 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R161712:161722 Stdlib.ZArith.BinInt Z mul_assoc thm
+R161674:161690 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R161674:161690 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R161693:161709 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R161693:161709 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R161712:161722 Stdlib.ZArith.BinInt Z mul_assoc thm
+R161712:161722 Stdlib.ZArith.BinInt Z mul_assoc thm
+R161811:161816 integer <> sig_eq thm
+R161811:161816 integer <> sig_eq thm
+R161838:161854 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R161857:161865 Stdlib.ZArith.BinInt Z mul_1_l thm
+R161838:161854 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R161838:161854 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R161857:161865 Stdlib.ZArith.BinInt Z mul_1_l thm
+R161857:161865 Stdlib.ZArith.BinInt Z mul_1_l thm
+R161874:161884 Stdlib.ZArith.BinInt Z mod_small thm
+R161874:161884 Stdlib.ZArith.BinInt Z mod_small thm
+R161972:161977 integer <> sig_eq thm
+R161972:161977 integer <> sig_eq thm
+R161999:162015 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R162018:162026 Stdlib.ZArith.BinInt Z mul_1_r thm
+R161999:162015 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R161999:162015 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R162018:162026 Stdlib.ZArith.BinInt Z mul_1_r thm
+R162018:162026 Stdlib.ZArith.BinInt Z mul_1_r thm
+R162035:162045 Stdlib.ZArith.BinInt Z mod_small thm
+R162035:162045 Stdlib.ZArith.BinInt Z mod_small thm
+R162118:162123 integer <> sig_eq thm
+R162118:162123 integer <> sig_eq thm
+R162145:162161 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R162164:162180 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R162183:162199 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R162145:162161 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R162145:162161 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_r thm
+R162164:162180 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R162164:162180 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R162183:162199 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R162183:162199 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R162214:162230 Stdlib.ZArith.BinInt Z mul_add_distr_l thm
+R162214:162230 Stdlib.ZArith.BinInt Z mul_add_distr_l thm
+R162214:162230 Stdlib.ZArith.BinInt Z mul_add_distr_l thm
+R162306:162311 integer <> sig_eq thm
+R162306:162311 integer <> sig_eq thm
+R162333:162349 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R162352:162368 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R162371:162387 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R162333:162349 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R162333:162349 Stdlib.ZArith.Zdiv <> Zmult_mod_idemp_l thm
+R162352:162368 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R162352:162368 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_l thm
+R162371:162387 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R162371:162387 Stdlib.ZArith.Zdiv <> Zplus_mod_idemp_r thm
+R162402:162418 Stdlib.ZArith.BinInt Z mul_add_distr_r thm
+R162402:162418 Stdlib.ZArith.BinInt Z mul_add_distr_r thm
+R162402:162418 Stdlib.ZArith.BinInt Z mul_add_distr_r thm
+def 162633:162643 <> znz_p_field
+R162650:162652 Corelib.Init.Datatypes <> nat ind
+binder 162646:162646 <> p:816
+R162661:162665 Stdlib.ZArith.Znumtheory <> prime ind
+R162668:162675 Stdlib.ZArith.BinInt Z of_nat def
+R162677:162677 integer <> p:816 var
+binder 162656:162657 <> Hp:817
+R162683:162687 integer <> Field rec
+R162715:162718 Corelib.Init.Peano <> ::nat_scope:x_'<='_x not
+R162737:162746 Stdlib.ZArith.Znumtheory <> prime_ge_2 thm
+R162715:162718 Corelib.Init.Peano <> ::nat_scope:x_'<='_x not
+R162737:162746 Stdlib.ZArith.Znumtheory <> prime_ge_2 thm
+R162777:162779 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<'_x not
+R162780:162787 Stdlib.ZArith.BinInt Z of_nat def
+R162777:162779 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<'_x not
+R162780:162787 Stdlib.ZArith.BinInt Z of_nat def
+R162816:162825 integer <> field_ring proj
+R162816:162825 integer <> field_ring proj
+R162816:162825 integer <> field_ring proj
+R162851:162859 integer <> field_inv proj
+R162851:162859 integer <> field_inv proj
+R163159:163172 integer <> field_mul_comm proj
+R163159:163172 integer <> field_mul_comm proj
+R163185:163195 integer <> field_inv_l proj
+R163185:163195 integer <> field_inv_l proj
+R163211:163227 integer <> field_one_ne_zero proj
+R163211:163227 integer <> field_one_ne_zero proj
+R162830:162839 integer <> znz_p_ring def
+binder 162869:162869 <> a:818
+R162886:162893 Stdlib.ZArith.BinInt Z eq_dec def
+R162896:162904 Corelib.Init.Specif <> proj1_sig def
+R162906:162906 integer <> a:818 var
+R162924:162927 Corelib.Init.Specif <> left constr
+R162936:162940 Corelib.Init.Specif <> exist constr
+R162976:162979 Corelib.Init.Logic <> conj constr
+R162982:162990 Stdlib.ZArith.BinInt Z le_refl thm
+binder 162947:162947 <> x:819
+R162953:162956 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R162958:162960 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R162957:162957 integer <> x:819 var
+R162957:162957 integer <> x:819 var
+R162961:162968 Stdlib.ZArith.BinInt Z of_nat def
+R163007:163011 Corelib.Init.Specif <> right constr
+R163019:163023 Corelib.Init.Specif <> exist constr
+R163106:163110 Corelib.Init.Logic <> proj1 thm
+R163113:163130 integer <> znz_field_inv_spec thm
+R163137:163137 integer <> a:818 var
+R163057:163073 integer <> znz_field_inv_val def
+R163077:163077 integer <> a:818 var
+binder 163030:163030 <> x:820
+R163036:163039 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R163041:163043 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R163040:163040 integer <> x:820 var
+R163040:163040 integer <> x:820 var
+R163044:163051 Stdlib.ZArith.BinInt Z of_nat def
+R162816:162825 integer <> field_ring proj
+R162816:162825 integer <> field_ring proj
+R162816:162825 integer <> field_ring proj
+R162851:162859 integer <> field_inv proj
+R162851:162859 integer <> field_inv proj
+R163159:163172 integer <> field_mul_comm proj
+R163159:163172 integer <> field_mul_comm proj
+R163185:163195 integer <> field_inv_l proj
+R163185:163195 integer <> field_inv_l proj
+R163211:163227 integer <> field_one_ne_zero proj
+R163211:163227 integer <> field_one_ne_zero proj
+R162830:162839 integer <> znz_p_ring def
+binder 162869:162869 <> a:821
+R162886:162893 Stdlib.ZArith.BinInt Z eq_dec def
+R162896:162904 Corelib.Init.Specif <> proj1_sig def
+R162906:162906 integer <> a:821 var
+R162924:162927 Corelib.Init.Specif <> left constr
+R162936:162940 Corelib.Init.Specif <> exist constr
+R162976:162979 Corelib.Init.Logic <> conj constr
+R162982:162990 Stdlib.ZArith.BinInt Z le_refl thm
+binder 162947:162947 <> x:822
+R162953:162956 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R162958:162960 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R162957:162957 integer <> x:822 var
+R162957:162957 integer <> x:822 var
+R162961:162968 Stdlib.ZArith.BinInt Z of_nat def
+R163007:163011 Corelib.Init.Specif <> right constr
+R163019:163023 Corelib.Init.Specif <> exist constr
+R163106:163110 Corelib.Init.Logic <> proj1 thm
+R163113:163130 integer <> znz_field_inv_spec thm
+R163137:163137 integer <> a:821 var
+R163057:163073 integer <> znz_field_inv_val def
+R163077:163077 integer <> a:821 var
+binder 163030:163030 <> x:823
+R163036:163039 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R163041:163043 Stdlib.ZArith.BinInt <> ::Z_scope:x_'<='_x_'<'_x not
+R163040:163040 integer <> x:823 var
+R163040:163040 integer <> x:823 var
+R163044:163051 Stdlib.ZArith.BinInt Z of_nat def
+R163295:163300 integer <> sig_eq thm
+R163295:163300 integer <> sig_eq thm
+R163322:163331 Stdlib.ZArith.BinInt Z mul_comm thm
+R163322:163331 Stdlib.ZArith.BinInt Z mul_comm thm
+R163322:163331 Stdlib.ZArith.BinInt Z mul_comm thm
+R163440:163443 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R163429:163437 Corelib.Init.Specif <> proj1_sig def
+R163440:163443 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R163429:163437 Corelib.Init.Specif <> proj1_sig def
+R163481:163486 integer <> sig_eq thm
+R163481:163486 integer <> sig_eq thm
+R163523:163540 integer <> znz_field_inv_spec thm
+R163523:163540 integer <> znz_field_inv_spec thm
+R163577:163582 integer <> sig_eq thm
+R163577:163582 integer <> sig_eq thm
+R163606:163613 Stdlib.ZArith.BinInt Z eq_dec def
+R163616:163624 Corelib.Init.Specif <> proj1_sig def
+R163606:163613 Stdlib.ZArith.BinInt Z eq_dec def
+R163616:163624 Corelib.Init.Specif <> proj1_sig def
+R163762:163770 Corelib.Init.Specif <> proj1_sig def
+R163788:163797 Stdlib.ZArith.BinInt Z mul_comm thm
+R163788:163797 Stdlib.ZArith.BinInt Z mul_comm thm
+R163788:163797 Stdlib.ZArith.BinInt Z mul_comm thm
+R163813:163816 integer <> cong def
+R163909:163911 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R163885:163887 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R163874:163882 Corelib.Init.Specif <> proj1_sig def
+R163888:163904 integer <> znz_field_inv_val def
+R163926:163928 Stdlib.ZArith.BinInt <> ::Z_scope:x_'+'_x not
+R163922:163924 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R163912:163919 Stdlib.ZArith.BinInt Z of_nat def
+R163909:163911 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R163885:163887 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R163874:163882 Corelib.Init.Specif <> proj1_sig def
+R163888:163904 integer <> znz_field_inv_val def
+R163926:163928 Stdlib.ZArith.BinInt <> ::Z_scope:x_'+'_x not
+R163922:163924 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R163912:163919 Stdlib.ZArith.BinInt Z of_nat def
+R163988:163990 Stdlib.ZArith.BinInt <> ::Z_scope:x_'+'_x not
+R163984:163986 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R163974:163981 Stdlib.ZArith.BinInt Z of_nat def
+R164001:164003 Stdlib.ZArith.BinInt <> ::Z_scope:x_'+'_x not
+R164005:164007 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R164008:164015 Stdlib.ZArith.BinInt Z of_nat def
+R163988:163990 Stdlib.ZArith.BinInt <> ::Z_scope:x_'+'_x not
+R163984:163986 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R163974:163981 Stdlib.ZArith.BinInt Z of_nat def
+R164001:164003 Stdlib.ZArith.BinInt <> ::Z_scope:x_'+'_x not
+R164005:164007 Stdlib.ZArith.BinInt <> ::Z_scope:x_'*'_x not
+R164008:164015 Stdlib.ZArith.BinInt Z of_nat def
+R164043:164051 Stdlib.ZArith.BinInt Z mod_add thm
+R164043:164051 Stdlib.ZArith.BinInt Z mod_add thm
+R164043:164051 Stdlib.ZArith.BinInt Z mod_add thm
+R164190:164192 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R164152:164160 Corelib.Init.Specif <> proj1_sig def
+R164163:164170 integer <> ring_one proj
+R164173:164182 integer <> znz_p_ring def
+R164193:164201 Corelib.Init.Specif <> proj1_sig def
+R164204:164212 integer <> ring_zero proj
+R164215:164224 integer <> znz_p_ring def
+R164190:164192 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R164152:164160 Corelib.Init.Specif <> proj1_sig def
+R164163:164170 integer <> ring_one proj
+R164173:164182 integer <> znz_p_ring def
+R164193:164201 Corelib.Init.Specif <> proj1_sig def
+R164204:164212 integer <> ring_zero proj
+R164215:164224 integer <> znz_p_ring def
+R164297:164307 Stdlib.ZArith.BinInt Z mod_small thm
+R164297:164307 Stdlib.ZArith.BinInt Z mod_small thm
+R164297:164307 Stdlib.ZArith.BinInt Z mod_small thm

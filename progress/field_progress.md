@@ -1,9 +1,9 @@
 # Proof Progress: Field (体) の定義
 
 ## Status Overview
-- Overall: In Progress
-- Complete Lemmas: 13/16
-- Unproven (`Admitted`): `znz_p_field`
+- Overall: Complete
+- Complete Lemmas: 16/16
+- Unproven (`Admitted`): なし
 - Failed/Abandoned Items: なし
 
 ## Completed Lemmas
@@ -133,15 +133,54 @@ Lemma znz_prime_nonzero_coprime : forall (p : nat) (a : Z),
 (* Zis_gcd_gcd + Zis_gcd_sym + prime_rel_prime *)
 ```
 
+### `znz_field_inv_val` (定義)
+```coq
+Definition znz_field_inv_val (p : nat) (a : {x : Z | 0 <= x < Z.of_nat p}) : Z :=
+  epsilon (inhabits 0%Z)
+    (fun b => 0 <= b < Z.of_nat p /\ cong p (proj1_sig a * b) 1).
+```
+
+### `znz_field_inv_spec`
+```coq
+Lemma znz_field_inv_spec : forall (p : nat) (Hp : prime (Z.of_nat p))
+    (a : {x : Z | 0 <= x < Z.of_nat p}),
+  proj1_sig a <> 0 ->
+  0 <= znz_field_inv_val p a < Z.of_nat p /\
+  cong p (proj1_sig a * znz_field_inv_val p a) 1.
+(* epsilon_spec + znz_prime_nonzero_coprime + znz_coprime_bezout_inv + Z.mod_small *)
+```
+
+### `znz_p_ring`
+```coq
+Definition znz_p_ring (p : nat) (Hp : prime (Z.of_nat p)) : Ring.
+(* carrier: {x : Z | 0 <= x < Z.of_nat p}, 全演算は mod p で正規化 *)
+(* ring_one := exist _ (1 mod p) ...; ring_add_assoc: Zplus_mod_idemp_*; ring_mul_assoc: Zmult_mod_idemp_* *)
+```
+
+### `znz_p_field` (2025-XX-XX 証明完了)
+```coq
+Definition znz_p_field (p : nat) (Hp : prime (Z.of_nat p)) : Field.
+(* field_ring := znz_p_ring p Hp
+   field_inv := fun a => match Z.eq_dec (proj1_sig a) 0 with
+     | left _ => exist _ 0 ...
+     | right Ha => exist _ (znz_field_inv_val p a) ...
+     end
+   field_mul_comm: rewrite Z.mul_comm; reflexivity
+   field_inv_l: cbn [proj1_sig] + znz_field_inv_spec + Z.mul_comm + Z.mod_add
+   field_one_ne_zero: proj1_sig ring_one = proj1_sig ring_zero → simpl + Z.mod_small + lia *)
+```
+
 ## Proof Attempts & Diagnostics
 
-### `znz_p_field` — Status: Admitted
+### `znz_p_field` — Status: Complete (previously Admitted)
 
-- 課題: `field_inv` の型不整合
-  - `ring_carrier = Z` だが `znz_units_inv_val` が期待する型は
-    `{x : Z | 0 <= x < p /\ gcd(x,p) = 1}` (sigma 型)
-  - 修正方針: carrier を `{x : Z | 0 <= x < Z.of_nat p}` (= `znz_group` の carrier) に変更するか、
-    `epsilon` を使った Z → Z の逆元関数を別途定義する
+- 旧課題: `field_inv` の型不整合 (carrier = Z と sigma 型の不整合)
+- 解決: carrier を `{x : Z | 0 <= x < Z.of_nat p}` に変更
+- 重要な落とし穴:
+  - `proj1_sig (exist _ (znz_field_inv_val p x) ...)` は `cbn [proj1_sig]` で簡約必要
+  - `f_equal proj1_sig` は implicit 引数の問題で失敗 → `assert H; rewrite Heq` を使う
+  - `rewrite Z.mod_add` 後のゴールは `1 mod p = 1 mod p` なので `reflexivity`（`apply Z.mod_small` ではない）
+  - `field_mul_comm` のゴールは already `(a*b) mod p = (b*a) mod p` なので `rewrite Z.mul_comm; reflexivity`
 
 ## TODO
-- [ ] `znz_p_field`: carrier 型を `znz_group` の sigma 型に合わせて再実装
+- なし（全証明完了）
