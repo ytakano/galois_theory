@@ -4627,3 +4627,91 @@ Proof.
   intros p Hp f a x.
   apply poly_remainder_theorem.
 Qed.
+
+(** 線形因子による可除性:
+    多項式 f が (x - a) で割り切れるとは、商多項式 q が存在して
+      ∀ x, f(x) = (x - a) * q(x)
+    が成り立つことと定義する。  *)
+Definition poly_divides_linear (F : Field)
+    (f : list (ring_carrier F)) (a : ring_carrier F) : Prop :=
+  exists q : list (ring_carrier F),
+    forall x : ring_carrier F,
+      poly_eval F f x =
+      ring_mul F (ring_add F x (ring_neg F a)) (poly_eval F q x).
+
+(** 補題: 根があれば線形因子で割り切れる
+    f(a) = 0 ならば (x - a) | f(x)
+
+    証明の方針:
+      剰余定理より f(x) = (x - a) * q(x) + f(a)。
+      f(a) = 0 を代入し ring_add_zero_r で末尾の 0 を消去すると
+        f(x) = (x - a) * q(x)
+      を得る。商の証拠は poly_synthetic_div F f a。  *)
+Lemma poly_factor_of_root :
+  forall (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F),
+    poly_eval F f a = ring_zero F ->
+    poly_divides_linear F f a.
+Proof.
+  intros F f a Hroot.
+  unfold poly_divides_linear.
+  exists (poly_synthetic_div F f a).
+  intros x.
+  rewrite (poly_remainder_theorem F f a x).
+  rewrite Hroot.
+  apply ring_add_zero_r.
+Qed.
+
+(** 補題: 線形因子で割り切れれば根が存在する
+    (x - a) | f(x) ならば f(a) = 0
+
+    証明の方針:
+      仮定から ∃ q, ∀ x, f(x) = (x - a) * q(x) を取り出す。
+      x := a を代入すると f(a) = (a - a) * q(a)。
+      ring_add_neg_r より a - a = 0、ring_mul_zero_l より 0 * q(a) = 0。  *)
+Lemma poly_root_of_factor :
+  forall (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F),
+    poly_divides_linear F f a ->
+    poly_eval F f a = ring_zero F.
+Proof.
+  intros F f a [q Hq].
+  rewrite (Hq a).
+  rewrite ring_add_neg_r.
+  apply ring_mul_zero_l.
+Qed.
+
+(** 主定理: 体上の多項式の因数定理
+    任意の体 F 上の多項式 f と元 a に対して次は同値:
+      (1) f(x) が (x - a) で割り切れる  (poly_divides_linear F f a)
+      (2) f(a) = 0
+      (3) a が f(x) = 0 の解
+    (2) と (3) は同じ命題。(1) ↔ (2) を示す。
+
+    証明の方針:
+      → は poly_root_of_factor、← は poly_factor_of_root を使う。  *)
+Theorem factor_theorem :
+  forall (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F),
+    poly_divides_linear F f a <-> poly_eval F f a = ring_zero F.
+Proof.
+  intros F f a.
+  split.
+  - apply poly_root_of_factor.
+  - apply poly_factor_of_root.
+Qed.
+
+(** 系: Fp 上の多項式の因数定理
+    素数 p のとき Fp = Z/pZ 上の多項式 f と元 a に対して次は同値:
+      (1) f(x) が (x - a) で割り切れる
+      (2) f(a) = 0
+      (3) a が f(x) = 0 の解
+
+    証明の方針: factor_theorem を znz_p_field p Hp に適用。  *)
+Corollary fp_factor_theorem :
+  forall (p : nat) (Hp : prime (Z.of_nat p))
+         (f : list (ring_carrier (znz_p_field p Hp)))
+         (a : ring_carrier (znz_p_field p Hp)),
+    poly_divides_linear (znz_p_field p Hp) f a <->
+    poly_eval (znz_p_field p Hp) f a = ring_zero (znz_p_field p Hp).
+Proof.
+  intros p Hp f a.
+  apply factor_theorem.
+Qed.

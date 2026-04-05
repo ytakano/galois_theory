@@ -859,3 +859,91 @@
 - **Key Tactics**: `apply poly_remainder_theorem`
 - **Dependencies**: `poly_remainder_theorem`, `znz_p_field`
 - **Date**: 2026-04-05
+
+---
+
+### `poly_divides_linear`
+- **Type**: Definition
+- **Statement**:
+  ```coq
+  Definition poly_divides_linear (F : Field)
+      (f : list (ring_carrier F)) (a : ring_carrier F) : Prop :=
+    exists q : list (ring_carrier F),
+      forall x : ring_carrier F,
+        poly_eval F f x =
+        ring_mul F (ring_add F x (ring_neg F a)) (poly_eval F q x).
+  ```
+- **Proof Strategy**: 命題の定義。∃ q による可除性の定式化。
+- **Key Tactics**: N/A (定義)
+- **Dependencies**: `poly_eval`, `ring_mul`, `ring_add`, `ring_neg`
+- **Notes**: 商多項式の存在を命題として持つ。証人として `poly_synthetic_div` を使うことが多い。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_factor_of_root`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_factor_of_root :
+    forall (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F),
+      poly_eval F f a = ring_zero F ->
+      poly_divides_linear F f a.
+  ```
+- **Proof Strategy**: 商の証人は `poly_synthetic_div F f a`。`poly_remainder_theorem` を `rewrite` し `Hroot` で代入、`ring_add_zero_r` で末尾 0 を消去。
+- **Key Tactics**: `exists`, `rewrite poly_remainder_theorem`, `rewrite Hroot`, `apply ring_add_zero_r`
+- **Dependencies**: `poly_remainder_theorem`, `ring_add_zero_r`, `poly_synthetic_div`
+- **Notes**: 証人を明示的に与えるので `unfold poly_divides_linear` + `exists` が必要。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_root_of_factor`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_root_of_factor :
+    forall (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F),
+      poly_divides_linear F f a ->
+      poly_eval F f a = ring_zero F.
+  ```
+- **Proof Strategy**: `[q Hq]` でパターンマッチ、`Hq a` で x=a を代入、`ring_add_neg_r` と `ring_mul_zero_l` を適用。
+- **Key Tactics**: `intros F f a [q Hq]`, `rewrite (Hq a)`, `rewrite ring_add_neg_r`, `apply ring_mul_zero_l`
+- **Dependencies**: `ring_add_neg_r`, `ring_mul_zero_l`
+- **Notes**: `a - a = 0` には `ring_add_neg_r` を使う（`ring_add_neg_l` は逆順なので注意）。
+- **Date**: 2026-04-05
+
+---
+
+### `factor_theorem`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem factor_theorem :
+    forall (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F),
+      poly_divides_linear F f a <-> poly_eval F f a = ring_zero F.
+  ```
+- **Proof Strategy**: `split` して各方向に `poly_root_of_factor` / `poly_factor_of_root` を適用するだけ。
+- **Key Tactics**: `split`, `apply poly_root_of_factor`, `apply poly_factor_of_root`
+- **Dependencies**: `poly_factor_of_root`, `poly_root_of_factor`
+- **Notes**: 証明自体は非常に短い。基盤となる補題を正しく証明するこ
+- **Date**: 2026-04-05
+
+---
+
+### `fp_factor_theorem`
+- **Type**: Corollary
+- **Statement**:
+  ```coq
+  Corollary fp_factor_theorem :
+    forall (p : nat) (Hp : prime (Z.of_nat p))
+           (f : list (ring_carrier (znz_p_field p Hp)))
+           (a : ring_carrier (znz_p_field p Hp)),
+      poly_divides_linear (znz_p_field p Hp) f a <->
+      poly_eval (znz_p_field p Hp) f a = ring_zero (znz_p_field p Hp).
+  ```
+- **Proof Strategy**: `factor_theorem` を `znz_p_field p Hp` に適用するだけ。
+- **Key Tactics**: `apply factor_theorem`
+- **Dependencies**: `factor_theorem`, `znz_p_field`
+- **Notes**: Fp への特殊化。`factor_theorem` の一行適用で終わる。
+- **Date**: 2026-04-05
