@@ -667,3 +667,73 @@
 - **Dependencies**: `znz_p_ring`, `znz_field_inv_val`, `znz_field_inv_spec`, `sig_eq`
 : 1775132645:1;rocq compile integer.: `simpl` だけでは `proj1_sig (exist _ val ...)` が `val` に簡約されないことがある。
 - **Date**: 2026-04-05
+
+---
+
+### `field_linear_eq_solution`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma field_linear_eq_solution : forall (F : Field) (a b : ring_carrier F),
+    a <> ring_zero F ->
+    ring_add F (ring_mul F a (ring_neg F (ring_mul F (field_inv F a) b))) b = ring_zero F.
+  ```
+- **Proof Strategy**: `ring_neg_mul_r` で右辺の neg を外に出し、`← ring_mul_assoc` で `(a * inv(a)) * b` に変形、`field_inv_r` で 1*b に、`ring_mul_one_l` で b に、`ring_add_neg_l` で 0 に。
+- **Key Tactics**: `rewrite ring_neg_mul_r`, `rewrite <- ring_mul_assoc`, `rewrite field_inv_r by exact Ha`, `rewrite ring_mul_one_l`, `apply ring_add_neg_l`
+- **Dependencies**: `ring_neg_mul_r`, `ring_mul_assoc`, `field_inv_r`, `ring_mul_one_l`, `ring_add_neg_l`
+- **Notes**: ⚠️ Dead end: `rewrite <- ring_neg_mul_l` を途中に入れると `field_inv_r` のパターンが見つからなくなる。neg の移動は `ring_neg_mul_r` だけで十分。
+- **Date**: 2026-04-05
+
+---
+
+### `field_linear_eq_unique`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma field_linear_eq_unique : forall (F : Field) (a b x y : ring_carrier F),
+    a <> ring_zero F ->
+    ring_add F (ring_mul F a x) b = ring_zero F ->
+    ring_add F (ring_mul F a y) b = ring_zero F ->
+    x = y.
+  ```
+- **Proof Strategy**: `field_mul_cancel_l` で a を消去する。そのために `ring_add_cancel_l` で b を消去して `a*x = a*y` を導く--- `b + (a*x)` の形にしてから `Hx`, `Hy` で書き換える。
+- **Key Tactics**: `apply field_mul_cancel_l`, `apply ring_add_cancel_l`, `rewrite (ring_add_comm F b)`, `rewrite Hx, Hy`
+- **Dependencies**: `field_mul_cancel_l`, `ring_add_cancel_l`, `ring_add_comm`
+- **Notes**: `ring_add_cancel_l` の引数は消去したい項 (b) を最初に渡す。両辺を `b + ...` の形に揃えるため `ring_add_comm` を2回使う。
+- **Date**: 2026-04-05
+
+---
+
+### `field_linear_eq_unique_solution`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem field_linear_eq_unique_solution : forall (F : Field) (a b : ring_carrier F),
+    a <> ring_zero F ->
+    exists! x : ring_carrier F,
+      ring_add F (ring_mul F a x) b = ring_zero F.
+  ```
+- **Proof Strategy**: witness = `ring_neg F (ring_mul F (field_inv F a) b)`. `split` して存在は `field_linear_eq_solution`、一意性は `field_linear_eq_unique`。
+- **Key Tactics**: `exists (ring_neg F ...)`, `split`, `apply field_linear_eq_solution`, `apply field_linear_eq_unique`
+- **Dependencies**: `field_linear_eq_solution`, `field_linear_eq_unique`
+- **Notes**: `exists!` は `unique` の略記。`split` で `P x₀` と `∀ y, P y → y = x₀` に分解される。
+- **Date**: 2026-04-05
+
+---
+
+### `fp_linear_eq_unique_solution`
+- **Type**: Corollary
+- **Statement**:
+  ```coq
+  Corollary fp_linear_eq_unique_solution :
+    forall (p : nat) (Hp : prime (Z.of_nat p))
+           (a b : ring_carrier (znz_p_field p Hp)),
+    a <> ring_zero (znz_p_field p Hp) ->
+    exists! x : ring_carrier (znz_p_field p Hp),
+      ring_add (znz_p_field p Hp) (ring_mul (znz_p_field p Hp) a x) b =
+      ring_zero (znz_p_field p Hp).
+  ```
+- **Proof Strategy**: `field_linear_eq_unique_solution` を `znz_p_field p Hp` に直接適用するだけ。
+- **Key Tactics**: `apply field_linear_eq_unique_solution`
+- **Dependencies**: `field_linear_eq_unique_solution`, `znz_p_field`
+- **Date**: 2026-04-05

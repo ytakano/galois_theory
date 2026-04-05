@@ -4278,3 +4278,94 @@ Proof.
     rewrite Z.mod_small in H by lia.
     lia.
 Defined.
+
+(** =====================================================================
+    体上の1次方程式の唯一解定理
+    =====================================================================
+
+    体 F 上の1次方程式 ax + b = 0 (a ≠ 0) はちょうど1つの解を持つ。
+    特に、Fp = Z/pZ (p 素数) に適用することで Fp 上の命題を得る。  *)
+
+(** 補題: 解の構成
+    a ≠ 0 のとき x₀ = -(inv(a) * b) は a*x₀ + b = 0 を満たす。
+
+    証明の方針:
+      a * (-(inv(a) * b)) + b
+      = -(a * (inv(a) * b)) + b    [ring_neg_mul_l]
+      = -((a * inv(a)) * b) + b    [← ring_mul_assoc]
+      = -(1 * b) + b               [field_inv_r]
+      = -b + b                     [ring_mul_one_l]
+      = 0                          [ring_add_neg_l]  *)
+Lemma field_linear_eq_solution : forall (F : Field) (a b : ring_carrier F),
+  a <> ring_zero F ->
+  ring_add F (ring_mul F a (ring_neg F (ring_mul F (field_inv F a) b))) b = ring_zero F.
+Proof.
+  intros F a b Ha.
+  rewrite ring_neg_mul_r.
+  rewrite <- ring_mul_assoc.
+  rewrite field_inv_r by exact Ha.
+  rewrite ring_mul_one_l.
+  apply ring_add_neg_l.
+Qed.
+
+(** 補題: 解の一意性
+    a ≠ 0 かつ a*x + b = 0 かつ a*y + b = 0 ならば x = y。
+
+    証明の方針:
+      1. a*x + b = 0 = a*y + b なので ring_add_cancel_l で b を消去: a*x = a*y
+      2. field_mul_cancel_l で a を消去: x = y  *)
+Lemma field_linear_eq_unique : forall (F : Field) (a b x y : ring_carrier F),
+  a <> ring_zero F ->
+  ring_add F (ring_mul F a x) b = ring_zero F ->
+  ring_add F (ring_mul F a y) b = ring_zero F ->
+  x = y.
+Proof.
+  intros F a b x y Ha Hx Hy.
+  apply (field_mul_cancel_l F a).
+  - exact Ha.
+  - apply (ring_add_cancel_l F b).
+    rewrite (ring_add_comm F b), (ring_add_comm F b).
+    rewrite Hx, Hy.
+    reflexivity.
+Qed.
+
+(** 主定理: 体上の1次方程式の唯一解
+    体 F 上の方程式 ax + b = 0 (a ≠ 0) はちょうど1つの解を持つ。
+
+    証明の方針:
+      - 解 x₀ = -(inv(a) * b) を witness として exists! に渡す
+      - 存在: field_linear_eq_solution
+      - 一意性: field_linear_eq_unique  *)
+Theorem field_linear_eq_unique_solution : forall (F : Field) (a b : ring_carrier F),
+  a <> ring_zero F ->
+  exists! x : ring_carrier F,
+    ring_add F (ring_mul F a x) b = ring_zero F.
+Proof.
+  intros F a b Ha.
+  exists (ring_neg F (ring_mul F (field_inv F a) b)).
+  split.
+  - apply field_linear_eq_solution. exact Ha.
+  - intros y Hy.
+    apply (field_linear_eq_unique F a b).
+    + exact Ha.
+    + apply field_linear_eq_solution. exact Ha.
+    + exact Hy.
+Qed.
+
+(** 系: Fp 上の1次方程式の唯一解
+    素数 p のとき Fp = Z/pZ 上の方程式 ax + b = 0 (a ≠ 0) は
+    ちょうど1つの解を持つ。
+
+    証明の方針: field_linear_eq_unique_solution を znz_p_field に適用。  *)
+Corollary fp_linear_eq_unique_solution :
+  forall (p : nat) (Hp : prime (Z.of_nat p))
+         (a b : ring_carrier (znz_p_field p Hp)),
+  a <> ring_zero (znz_p_field p Hp) ->
+  exists! x : ring_carrier (znz_p_field p Hp),
+    ring_add (znz_p_field p Hp) (ring_mul (znz_p_field p Hp) a x) b =
+    ring_zero (znz_p_field p Hp).
+Proof.
+  intros p Hp a b Ha.
+  apply field_linear_eq_unique_solution.
+  exact Ha.
+Qed.
