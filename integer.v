@@ -3572,6 +3572,57 @@ Proof.
     apply Z.coprime_pow_r. lia. exact Hgcd_one.
 Qed.
 
+(** 補助補題: (p * m + r) mod p = r (0 < p, r < p のとき)。
+    mod_add の性質を使って直接示す。 *)
+Lemma mod_add_mul_small : forall p r m : nat,
+  (0 < p)%nat -> (r < p)%nat -> ((p * m + r) mod p = r)%nat.
+Proof.
+  intros p r m Hp Hr.
+  rewrite Nat.mul_comm, Nat.add_comm. rewrite Nat.Div0.mod_add.
+  apply Nat.mod_small. exact Hr.
+Qed.
+
+(** 補助補題: すべての要素で述語が偽なら filter は空リストを返す。 *)
+Lemma filter_false_forall :
+  forall (A : Type) (f : A -> bool) (l : list A),
+    List.Forall (fun x => f x = false) l ->
+    List.filter f l = [].
+Proof.
+  intros A f l H. induction H as [| x xs Hx Hxs IH].
+  - reflexivity.
+  - cbn [List.filter]. rewrite Hx. exact IH.
+Qed.
+
+(** 補助補題: seq (p*m) p をフィルタすると [p*m] のみが残る。
+    つまり区間 [p*m, p*m+p) 中の p の倍数は p*m (1つだけ) である。 *)
+Lemma filter_window_single_multiple :
+  forall (p m : nat),
+    (0 < p)%nat ->
+    List.filter (fun k => Nat.eqb (Nat.modulo k p) 0) (List.seq (p * m) p) = [(p * m)%nat].
+Proof.
+  intros p m Hp.
+  destruct p as [| p']. { lia. }
+  (* seq (S p' * m) (S p') = (S p' * m) :: seq (S(S p' * m)) p' *)
+  cbn [List.seq].
+  (* filter の先頭要素を取り出す *)
+  cbn [List.filter].
+  assert (Hhead : Nat.eqb ((S p' * m) mod (S p')) 0 = true).
+  { apply Nat.eqb_eq. rewrite Nat.mul_comm. apply Nat.Div0.mod_mul. }
+  rewrite Hhead.
+  (* 残要素のフィルタ: S(S p' * m) から p' 個の中に S p' の倍数はない *)
+  assert (Htail : List.filter (fun k => Nat.eqb (Nat.modulo k (S p')) 0)
+                    (List.seq (S (S p' * m)) p') = []).
+  { apply filter_false_forall.
+    apply List.Forall_forall. intros k Hk_in.
+    apply List.in_seq in Hk_in. destruct Hk_in as [Hlo Hhi].
+    apply Nat.eqb_neq.
+    assert (Hr1 : (1 <= k - S p' * m)%nat) by lia.
+    assert (Hr2 : (k - S p' * m <= p')%nat) by lia.
+    assert (Hk_eq : (k = S p' * m + (k - S p' * m))%nat) by lia.
+    rewrite Hk_eq. rewrite mod_add_mul_small; lia. }
+  rewrite Htail. reflexivity.
+Qed.
+
 (** 補助補題: [0, p*m) 中の p の倍数の個数は m である。
     証明は帰納法: seq 0 (p*(m+1)) = seq 0 (p*m) ++ seq (p*m) p の分割を使い、
     後者の中に p の倍数は p*m (1つだけ) があることを示す。 *)
@@ -3579,7 +3630,17 @@ Lemma count_multiples_in_range :
   forall (p m : nat),
     (0 < p)%nat ->
     List.length (List.filter (fun k => Nat.eqb (k mod p) 0) (List.seq 0 (p * m))) = m.
-Admitted.
+Proof.
+  intros p m Hp.
+  induction m as [| m' IHm'].
+  - rewrite Nat.mul_0_r. reflexivity.
+  - replace (p * S m')%nat with (p * m' + p)%nat by lia.
+    rewrite (List.seq_app (p * m') p 0).
+    rewrite List.filter_app, List.app_length, IHm'.
+    replace (0 + p * m')%nat with (p * m')%nat by lia.
+    rewrite filter_window_single_multiple. 2: exact Hp.
+    simpl. lia.
+Qed.
 
 (** 素数冪のオイラー関数:
     prime p かつ 1 ≤ e のとき phi(p^e) = p^(e-1) * (p-1)。
@@ -3647,7 +3708,39 @@ Lemma prime_pow_coprime_distinct :
     prime (Z.of_nat q) ->
     p <> q ->
     Nat.gcd (p ^ e) (q ^ f) = 1%nat.
-Admitted.
+Proof.
+  intros p q e f Hpp Hpq Hpne.
+  (* Step 1: Z.gcd (Z.of_nat p) (Z.of_nat q) = 1 *)
+  assert (Hcop_pq : Z.gcd (Z.of_nat p) (Z.of_nat q) = 1).
+  { assert (Hnotdvd : ~ (Z.of_nat p | Z.of_nat q)).
+    { intro Hdvd.
+      destruct (prime_divisors _ Hpq _ Hdvd) as [H | [H | [H | H]]].
+      - apply prime_ge_2 in Hpp. lia.
+      - apply prime_ge_2 in Hpp. lia.
+      - apply Nat2Z.inj in H. exact (Hpne H).
+      - apply prime_ge_2 in Hpp. apply prime_ge_2 in Hpq. lia. }
+    apply Zis_gcd_gcd. { lia. }
+    apply prime_rel_prime; assumption. }
+  (* Step 2: Z.gcd (Z.of_nat (p^e)) (Z.of_nat (q^f)) = 1 *)
+  assert (Hcop_pow : Z.gcd (Z.of_nat (p ^ e)) (Z.of_nat (q ^ f)) = 1).
+  { rewrite Nat2Z.inj_pow, Nat2Z.inj_pow.
+    apply Z.coprime_pow_l. { apply Nat2Z.is_nonneg. }
+    apply Z.coprime_pow_r. { apply Nat2Z.is_nonneg. }
+    exact Hcop_pq. }
+  (* Step 3: Nat.gcd (p^e) (q^f) = 1 *)
+  assert (Hd_dvd_l : (Z.of_nat (Nat.gcd (p^e) (q^f)) | Z.of_nat (p^e))).
+  { destruct (Nat.gcd_divide_l (p^e) (q^f)) as [k Hk].
+    exists (Z.of_nat k). rewrite <- Nat2Z.inj_mul. f_equal. lia. }
+  assert (Hd_dvd_r : (Z.of_nat (Nat.gcd (p^e) (q^f)) | Z.of_nat (q^f))).
+  { destruct (Nat.gcd_divide_r (p^e) (q^f)) as [k Hk].
+    exists (Z.of_nat k). rewrite <- Nat2Z.inj_mul. f_equal. lia. }
+  assert (Hd_dvd_1 : (Z.of_nat (Nat.gcd (p^e) (q^f)) | 1)).
+  { rewrite <- Hcop_pow. apply Z.gcd_greatest; [exact Hd_dvd_l | exact Hd_dvd_r]. }
+  apply Nat2Z.inj. simpl.
+  destruct (Z.divide_1_r _ Hd_dvd_1) as [H | H].
+  - exact H.
+  - pose proof (Nat2Z.is_nonneg (Nat.gcd (p^e) (q^f))). lia.
+Qed.
 
 (** 補助補題: gcd(a,c)=1 かつ gcd(b,c)=1 ならば gcd(a*b,c)=1 (Nat レベル)。
     証明: d = gcd(a*b,c) とおき、d | b を Gauss の補題で導き、d | gcd(b,c)=1 を示す。 *)

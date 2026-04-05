@@ -1,9 +1,9 @@
 # Proof Progress: euler_phi (Euler's Totient Function)
 
 ## Status Overview
-- Overall: Complete (main theorem proven, some sub-lemmas Admitted)
-- Complete Lemmas: 11/12 (T1-T10, T11b, T12)
-- Unproven (Admitted): `count_multiples_in_range`, `prime_pow_coprime_distinct`
+- Overall: **Complete** (all lemmas proven, no Admitted)
+- Complete Lemmas: 12/12 (T1-T12, including all sub-lemmas)
+- Unproven (Admitted): none
 - Failed/Abandoned Items: none
 
 ## Completed Lemmas
@@ -32,20 +32,36 @@ Proven. `Nat.gcd p q = 1 → euler_phi(p*q) = euler_phi(p) * euler_phi(q)` via T
 ### T8: `prime_pow_coprime_iff`
 Proven. `Z.gcd(k, p^e) = 1 ↔ k mod p ≠ 0` for prime p and e ≥ 1.
 
-### T9: `count_multiples_in_range` — ADMITTED
-Counts multiples of d in {0,...,n-1} when d|n. Too complex for current session.
+### T9 sub-lemmas (new): `mod_add_mul_small`, `filter_false_forall`, `filter_window_single_multiple`
+
+**`mod_add_mul_small`**: `0 < p → r < p → (p * m + r) mod p = r`
+- Proof: `Nat.mul_comm + Nat.add_comm + Nat.Div0.mod_add + Nat.mod_small`
+
+**`filter_false_forall`**: `Forall (fun x => f x = false) l → filter f l = []`
+- Proof: induction on Forall with `cbn [List.filter]`
+
+**`filter_window_single_multiple`**: `0 < p → filter (k mod p =? 0) (seq (p*m) p) = [p*m]`
+- Proof: `destruct p as [| p']`; use `cbn [List.seq]; cbn [List.filter]`; head passes (mod_mul), tail filtered out via `filter_false_forall` + `mod_add_mul_small`
+
+### T9: `count_multiples_in_range`
+Proven. `0 < p → length (filter (k mod p =? 0) (seq 0 (p*m))) = m`
+- Proof: induction on m; split `seq 0 (p*S m') = seq 0 (p*m') ++ seq (p*m') p` via `seq_app`; use `filter_window_single_multiple` for the window; IH for the prefix.
 
 ### T10: `euler_phi_prime_pow`
-Proven (depending on T9 Admitted). `euler_phi(p^e) = p^(e-1) * (p-1)` for prime p and e ≥ 1.
+Proven. `euler_phi(p^e) = p^(e-1) * (p-1)` for prime p and e ≥ 1 (now fully admitted-free).
 
-### T11: `prime_pow_coprime_distinct` — ADMITTED
-`prime p → prime q → p ≠ q → Nat.gcd(p^e, q^f) = 1`. Admitted pending stdlib research.
+### T11: `prime_pow_coprime_distinct`
+Proven. `prime p → prime q → p ≠ q → Nat.gcd(p^e, q^f) = 1`
+- Proof (3 steps):
+  1. `Z.gcd(p, q) = 1` via `prime_divisors` + `prime_ge_2` + `Zis_gcd_gcd` + `prime_rel_prime`
+  2. `Z.gcd(p^e, q^f) = 1` via `Nat2Z.inj_pow` + `Z.coprime_pow_l` + `Z.coprime_pow_r`
+  3. `Nat.gcd(p^e, q^f) = 1` via `Z.gcd_greatest` + `Z.divide_1_r` + `Nat2Z.inj`
 
 ### T11b: `nat_gcd_mul_coprime`
 Proven. `Nat.gcd a c = 1 → Nat.gcd b c = 1 → Nat.gcd(a*b, c) = 1` via Gauss's lemma.
 
 ### T12: `euler_phi_three_prime_powers` — MAIN THEOREM
-Proven (depending on T9, T11 Admitted).
+Proven (now fully admitted-free).
 ```coq
 Theorem euler_phi_three_prime_powers :
   forall (p q r e f g : nat),
@@ -58,14 +74,9 @@ Theorem euler_phi_three_prime_powers :
 
 ## Proof Attempts & Diagnostics
 
-### `prime_pow_coprime_distinct`
-- Attempt 1: Tried proving via Z-level `prime_rel_prime` → `Zis_gcd_gcd` → `Nat2Z.inj_gcd`, but
-  `Nat2Z.inj_gcd` doesn't exist. After getting `Nat.gcd p q = 1`, failed to prove `Nat.gcd(p^e, q^f) = 1`.
-- Current status: Admitted. Needs `Z.coprime_pow_l/r` + nat/Z gcd conversion.
-
-### `count_multiples_in_range`
-- Admitted due to complexity of induction proof over filter/seq.
+(all issues resolved — see history for past attempts)
 
 ## TODO
-- [ ] Prove `count_multiples_in_range` (makes `euler_phi_prime_pow` fully admitted-free)
+(all done)
+
 - [ ] Prove `prime_pow_coprime_distinct` (makes `euler_phi_three_prime_powers` fully admitted-free)

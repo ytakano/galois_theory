@@ -406,3 +406,78 @@
 - **Dependencies**: `prime_pow_coprime_distinct` (Admitted), `count_multiples_in_range` (Admitted via euler_phi_prime_pow), `nat_gcd_mul_coprime`, `euler_phi_mul`, `euler_phi_prime_pow`
 - **Notes**: ⚠️ `ring` does not work for nat (no ring structure declared); use `nia` instead. ⚠️ `Nat.one_lt_pow` doesn't exist; use `Nat.pow_le_mono_r` + `Nat.pow_1_r`. ⚠️ `Nat.Coprime.coprime_mul_l_iff` doesn't exist; prove `nat_gcd_mul_coprime` manually. ⚠️ `p^1` in Z scope parses as Z.pow; annotate `(p^1)%nat`. ⚠️ Do NOT use `rewrite <- Nat.mul_assoc` before `euler_phi_mul` as it changes the goal form.
 - **Date**: 2026-04-14
+
+### `mod_add_mul_small`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma mod_add_mul_small : forall p r m : nat,
+    (0 < p)%nat -> (r < p)%nat -> ((p * m + r) mod p = r)%nat.
+  ```
+- **Proof Strategy**: `Nat.mul_comm + Nat.add_comm` to rewrite to `(r + m * p) mod p`, then `Nat.Div0.mod_add` to get `r mod p`, then `Nat.mod_small`.
+- **Key Tactics**: `rewrite Nat.mul_comm, Nat.add_comm`, `rewrite Nat.Div0.mod_add`, `apply Nat.mod_small`
+- **Dependencies**: `Nat.Div0.mod_add`, `Nat.mod_small`
+- **Notes**: `Nat.Div0.mod_add : (a + b * c) mod c = a mod c`. The `Div0` variant avoids divisibility side conditions.
+- **Date**: 2026-04-15
+
+### `filter_false_forall`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma filter_false_forall :
+    forall (A : Type) (f : A -> bool) (l : list A),
+      List.Forall (fun x => f x = false) l ->
+      List.filter f l = [].
+  ```
+- **Proof Strategy**: Induction on the Forall proof; unfold one filter step with `cbn [List.filter]`.
+- **Key Tactics**: `induction H`, `cbn [List.filter]`, `rewrite Hx`
+- **Dependencies**: none
+- **Notes**: `simpl` on `List.filter` may unfold arithmetic inside predicates; use `cbn [List.filter]` instead to unfold only the filter step.
+- **Date**: 2026-04-15
+
+### `filter_window_single_multiple`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma filter_window_single_multiple :
+    forall (p m : nat),
+      (0 < p)%nat ->
+      List.filter (fun k => Nat.eqb (Nat.modulo k p) 0) (List.seq (p * m) p) = [(p * m)%nat].
+  ```
+- **Proof Strategy**: `destruct p as [| p']`. In Z_scope, annotate the singleton list as `[(p * m)%nat]`. Use `cbn [List.seq]; cbn [List.filter]` to expose head element. Prove head passes with `Nat.mul_comm + Nat.Div0.mod_mul`. Prove tail is filtered out via `filter_false_forall + Forall_forall + in_seq + mod_add_mul_small`.
+- **Key Tactics**: `destruct p as [| p']`, `cbn [List.seq]`, `cbn [List.filter]`, `Nat.eqb_eq`, `Nat.Div0.mod_mul`, `filter_false_forall`, `List.Forall_forall`, `List.in_seq`
+- **Dependencies**: `mod_add_mul_small`, `filter_false_forall`
+- **Notes**: ⚠️ `change (S p') with (1 + p') at 3` fails in Z_scope. ⚠️ `simpl` expands Nat.modulo into divmod form; use `cbn [List.filter]` instead. ⚠️ Do NOT use `simpl in Hhi` after `in_seq` destructuring — this unfolds multiplication making `lia` unable to reason. ⚠️ `assert (Hk_eq : k = S p' * m + (k - S p' * m)) by lia` needs `%nat` annotation in Z_scope. ⚠️ The result list `[p * m]` must be annotated `[(p * m)%nat]` in Z_scope.
+- **Date**: 2026-04-15
+
+### `count_multiples_in_range`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma count_multiples_in_range :
+    forall (p m : nat),
+      (0 < p)%nat ->
+      List.length (List.filter (fun k => Nat.eqb (k mod p) 0) (List.seq 0 (p * m))) = m.
+  ```
+- **Proof Strategy**: Induction on m. Base: `rewrite Nat.mul_0_r`. Step: split `seq 0 (p*(m'+1))` = `seq 0 (p*m') ++ seq (p*m') p` via `List.seq_app`; apply `filter_window_single_multiple` for the window; combine with IH via `app_length`.
+- **Key Tactics**: `induction m`, `Nat.mul_0_r`, `List.seq_app`, `List.filter_app`, `List.app_length`, `filter_window_single_multiple`
+- **Dependencies**: `filter_window_single_multiple`
+- **Notes**: `rewrite Nat.mul_0_r` needed for base case (not `simpl`). Use `replace (p * S m') with (p * m' + p) by lia` to expose the split point. `replace (0 + p * m') with (p * m') by lia` to normalize seq start.
+- **Date**: 2026-04-15
+
+### `prime_pow_coprime_distinct`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma prime_pow_coprime_distinct :
+    forall (p q e f : nat),
+      prime (Z.of_nat p) ->
+      prime (Z.of_nat q) ->
+      p <> q ->
+      Nat.gcd (p ^ e) (q ^ f) = 1%nat.
+  ```
+- **Proof Strategy**: 3 steps: (1) `Z.gcd(p,q) = 1` via `prime_divisors + prime_ge_2` to show `¬(p|q)`, then `prime_rel_prime + Zis_gcd_gcd`; (2) extend to powers via `Nat2Z.inj_pow + Z.coprime_pow_l + Z.coprime_pow_r`; (3) convert Nat.gcd to 1 via `Z.gcd_greatest + Z.divide_1_r + Nat2Z.inj`.
+- **Key Tactics**: `prime_divisors`, `prime_ge_2`, `prime_rel_prime`, `Zis_gcd_gcd`, `Nat2Z.inj_pow`, `Z.coprime_pow_l`, `Z.coprime_pow_r`, `Z.gcd_greatest`, `Z.divide_1_r`, `Nat2Z.inj`
+- **Dependencies**: `Znumtheory`, `Zdivisibility`, `Nat2Z`
+- **Notes**: ⚠️ `integer.v` uses old `prime` (not `Z.prime`), so use `prime_rel_prime/prime_ge_2/prime_divisors` not their `Z.*` replacements. ⚠️ `Nat2Z.inj_1` doesn't exist; use `simpl` after `apply Nat2Z.inj` to reduce `Z.of_nat 1`. ⚠️ `Z.divide_1_r : (n|1) → n=1 ∨ n=-1`; case split and use `Nat2Z.is_nonneg` + `lia` to eliminate `n=-1`. ⚠️ `Nat.gcd_divide_l/r` returns `Nat.divide` (∃ k, n = k*d), not `∃ k, n = d*k`; use `lia` to flip: `rewrite <- Nat2Z.inj_mul; f_equal; lia`.
+- **Date**: 2026-04-15
