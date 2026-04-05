@@ -3830,3 +3830,321 @@ Proof.
   rewrite (euler_phi_prime_pow r g Hrprime Hg).
   nia.
 Qed.
+
+(* ===================================================================== *)
+(*  環 (Ring) と体 (Field) の定義                                          *)
+(* ===================================================================== *)
+
+(** 環 (Ring):
+    集合 R に加法、乗法の二項演算と零元 0、加法逆元、乗法単位元 1 が
+    定義されており、以下の公理を満たすとき R を環という。
+
+    加法公理 (可換群):
+      - 結合律: a+b+c = a+(b+c)
+      - 可換律: a+b = b+a
+      - 左単位元: 0+a = a
+      - 左逆元: -a+a = 0
+
+    乗法公理 (モノイド):
+      - 結合律: a*b*c = a*(b*c)
+      - 左単位元: 1*a = a
+      - 右単位元: a*1 = a
+
+    分配法則:
+      - 左分配: a*(b+c) = a*b + a*c
+      - 右分配: (a+b)*c = a*c + b*c
+
+    注意: 右単位元・右逆元は導出可能だが、使いやすさのため右単位元は公理に含める。
+    加法右逆元 a+(-a)=0 は補題 ring_add_neg_r で証明する。  *)
+
+Record Ring : Type := {
+  ring_carrier : Type;
+
+  ring_add : ring_carrier -> ring_carrier -> ring_carrier;
+  ring_zero : ring_carrier;
+  ring_neg  : ring_carrier -> ring_carrier;
+
+  ring_mul  : ring_carrier -> ring_carrier -> ring_carrier;
+  ring_one  : ring_carrier;
+
+  (* 加法公理: 可換群 *)
+  ring_add_assoc : forall a b c : ring_carrier,
+    ring_add (ring_add a b) c = ring_add a (ring_add b c);
+  ring_add_comm  : forall a b : ring_carrier,
+    ring_add a b = ring_add b a;
+  ring_add_zero_l : forall a : ring_carrier,
+    ring_add ring_zero a = a;
+  ring_add_neg_l  : forall a : ring_carrier,
+    ring_add (ring_neg a) a = ring_zero;
+
+  (* 乗法公理: モノイド *)
+  ring_mul_assoc : forall a b c : ring_carrier,
+    ring_mul (ring_mul a b) c = ring_mul a (ring_mul b c);
+  ring_mul_one_l : forall a : ring_carrier,
+    ring_mul ring_one a = a;
+  ring_mul_one_r : forall a : ring_carrier,
+    ring_mul a ring_one = a;
+
+  (* 分配法則 *)
+  ring_distr_l : forall a b c : ring_carrier,
+    ring_mul a (ring_add b c) = ring_add (ring_mul a b) (ring_mul a c);
+  ring_distr_r : forall a b c : ring_carrier,
+    ring_mul (ring_add a b) c = ring_add (ring_mul a c) (ring_mul b c)
+}.
+
+(** 環の基本補題: 加法右単位元
+    証明: 可換律と左単位元から。 *)
+Lemma ring_add_zero_r : forall (R : Ring) (a : ring_carrier R),
+  ring_add R a (ring_zero R) = a.
+Proof.
+  intros R a.
+  rewrite ring_add_comm.
+  apply ring_add_zero_l.
+Qed.
+
+(** 環の基本補題: 加法右逆元
+    証明: 可換律と左逆元から。 *)
+Lemma ring_add_neg_r : forall (R : Ring) (a : ring_carrier R),
+  ring_add R a (ring_neg R a) = ring_zero R.
+Proof.
+  intros R a.
+  rewrite ring_add_comm.
+  apply ring_add_neg_l.
+Qed.
+
+(** 環の基本補題: 左キャンセル則
+    a+b = a+c → b = c
+    証明: 両辺の左から (-a) を加える。 *)
+Lemma ring_add_cancel_l : forall (R : Ring) (a b c : ring_carrier R),
+  ring_add R a b = ring_add R a c -> b = c.
+Proof.
+  intros R a b c H.
+  assert (Hbc : ring_add R (ring_neg R a) (ring_add R a b) =
+                ring_add R (ring_neg R a) (ring_add R a c)).
+  { rewrite H. reflexivity. }
+  rewrite <- ring_add_assoc, <- ring_add_assoc in Hbc.
+  rewrite ring_add_neg_l, ring_add_zero_l, ring_add_zero_l in Hbc.
+  exact Hbc.
+Qed.
+
+(** 環の基本補題: 零元の乗法吸収 (左)
+    0 * a = 0
+    証明: 0*a + 0*a = (0+0)*a = 0*a+0 より、左キャンセル則で 0*a = 0。 *)
+Lemma ring_mul_zero_l : forall (R : Ring) (a : ring_carrier R),
+  ring_mul R (ring_zero R) a = ring_zero R.
+Proof.
+  intros R a.
+  apply (ring_add_cancel_l R (ring_mul R (ring_zero R) a)).
+  rewrite <- ring_distr_r.
+  rewrite ring_add_zero_l.
+  rewrite ring_add_zero_r.
+  reflexivity.
+Qed.
+
+(** 環の基本補題: 零元の乗法吸収 (右)
+    a * 0 = 0
+    証明: a*0 + a*0 = a*(0+0) = a*0+0 より、左キャンセル則で a*0 = 0。 *)
+Lemma ring_mul_zero_r : forall (R : Ring) (a : ring_carrier R),
+  ring_mul R a (ring_zero R) = ring_zero R.
+Proof.
+  intros R a.
+  apply (ring_add_cancel_l R (ring_mul R a (ring_zero R))).
+  rewrite <- ring_distr_l.
+  rewrite ring_add_zero_l.
+  rewrite ring_add_zero_r.
+  reflexivity.
+Qed.
+
+(** 環の基本補題: 加法逆元の冪等性
+    -(-a) = a
+    証明: (-(-a)) + (-a) = 0 = a + (-a) より、左キャンセル則を適用。 *)
+Lemma ring_neg_neg : forall (R : Ring) (a : ring_carrier R),
+  ring_neg R (ring_neg R a) = a.
+Proof.
+  intros R a.
+  apply (ring_add_cancel_l R (ring_neg R a)).
+  rewrite ring_add_neg_r.
+  rewrite ring_add_neg_l.
+  reflexivity.
+Qed.
+
+(** 環の基本補題: 加法逆元と乗法 (左)
+    (-a) * b = -(a * b)
+    証明: (-a)*b + a*b = ((-a)+a)*b = 0*b = 0 より、逆元の一意性から。 *)
+Lemma ring_neg_mul_l : forall (R : Ring) (a b : ring_carrier R),
+  ring_mul R (ring_neg R a) b = ring_neg R (ring_mul R a b).
+Proof.
+  intros R a b.
+  apply (ring_add_cancel_l R (ring_mul R a b)).
+  rewrite ring_add_neg_r.
+  rewrite <- ring_distr_r.
+  rewrite ring_add_neg_r.
+  apply ring_mul_zero_l.
+Qed.
+
+(** 環の基本補題: 加法逆元と乗法 (右)
+    a * (-b) = -(a * b)
+    証明: a*(-b) + a*b = a*((-b)+b) = a*0 = 0 より、逆元の一意性から。 *)
+Lemma ring_neg_mul_r : forall (R : Ring) (a b : ring_carrier R),
+  ring_mul R a (ring_neg R b) = ring_neg R (ring_mul R a b).
+Proof.
+  intros R a b.
+  apply (ring_add_cancel_l R (ring_mul R a b)).
+  rewrite ring_add_neg_r.
+  rewrite <- ring_distr_l.
+  rewrite ring_add_neg_r.
+  apply ring_mul_zero_r.
+Qed.
+
+(** 体 (Field):
+    体とは可換環であって、零元以外のすべての元が乗法逆元を持つものをいう。
+
+    具体的には、環 R に対して以下の条件を追加したもの:
+      1. 乗法可換律: ∀ a b, a * b = b * a
+      2. 非零元の乗法逆元の存在: ∀ x ≠ 0, ∃ inv(x) s.t. inv(x) * x = 1
+      3. 零元と単位元の相異: 1 ≠ 0
+
+    Rocq 実装の方針:
+      - field_inv は全域関数として定義 (field_inv 0 は任意の値)
+      - 逆元の性質は非零の仮定のもとで述べる
+      - `:>` により Field を Ring として直接使用できる  *)
+
+Record Field : Type := {
+  field_ring :> Ring;
+
+  field_inv : ring_carrier field_ring -> ring_carrier field_ring;
+
+  (* 乗法可換律 *)
+  field_mul_comm : forall a b : ring_carrier field_ring,
+    ring_mul field_ring a b = ring_mul field_ring b a;
+
+  (* 非零元の左逆元 *)
+  field_inv_l : forall x : ring_carrier field_ring,
+    x <> ring_zero field_ring ->
+    ring_mul field_ring (field_inv x) x = ring_one field_ring;
+
+  (* 単位元と零元の相異 *)
+  field_one_ne_zero : ring_one field_ring <> ring_zero field_ring
+}.
+
+(** 体の基本補題: 右逆元
+    x ≠ 0 → x * inv(x) = 1
+    証明: 可換律と左逆元から。 *)
+Lemma field_inv_r : forall (F : Field) (x : ring_carrier F),
+  x <> ring_zero F ->
+  ring_mul F x (field_inv F x) = ring_one F.
+Proof.
+  intros F x Hx.
+  rewrite field_mul_comm.
+  apply field_inv_l.
+  exact Hx.
+Qed.
+
+(** 体の基本補題: 逆元の非零性
+    x ≠ 0 → inv(x) ≠ 0
+    証明: inv(x) = 0 と仮定すると inv(x)*x = 0*x = 0 だが、
+    field_inv_l より inv(x)*x = 1。1 ≠ 0 に矛盾。 *)
+Lemma field_inv_nonzero : forall (F : Field) (x : ring_carrier F),
+  x <> ring_zero F ->
+  field_inv F x <> ring_zero F.
+Proof.
+  intros F x Hx Hinv.
+  pose proof (field_inv_l F x Hx) as H.
+  rewrite Hinv in H.
+  rewrite ring_mul_zero_l in H.
+  exact (field_one_ne_zero F (eq_sym H)).
+Qed.
+
+(** 体の基本補題: 零因子なし
+    a * b = 0 → a = 0 ∨ b = 0
+    証明: a ≠ 0 を仮定し、両辺の左から inv(a) を掛けると
+    inv(a)*(a*b) = (inv(a)*a)*b = 1*b = b = inv(a)*0 = 0。 *)
+Lemma field_no_zero_divisors : forall (F : Field) (a b : ring_carrier F),
+  ring_mul F a b = ring_zero F ->
+  a = ring_zero F \/ b = ring_zero F.
+Proof.
+  intros F a b Hab.
+  destruct (classic (a = ring_zero F)) as [Ha | Ha].
+  - left. exact Ha.
+  - right.
+    pose proof (field_inv_l F a Ha) as Hinva.
+    assert (H : ring_mul F (field_inv F a) (ring_mul F a b) = ring_zero F).
+    { rewrite Hab. apply ring_mul_zero_r. }
+    rewrite <- ring_mul_assoc in H.
+    rewrite Hinva in H.
+    rewrite ring_mul_one_l in H.
+    exact H.
+Qed.
+
+(** 体の基本補題: 乗法左キャンセル則
+    a ≠ 0 → a*b = a*c → b = c
+    証明: a*b - a*c = 0 → a*(b-c) = 0 → b-c = 0 → b = c。
+    ここでは field_no_zero_divisors を直接使う。 *)
+Lemma field_mul_cancel_l : forall (F : Field) (a b c : ring_carrier F),
+  a <> ring_zero F ->
+  ring_mul F a b = ring_mul F a c ->
+  b = c.
+Proof.
+  intros F a b c Ha Hbc.
+  pose proof (field_inv_l F a Ha) as Hinva.
+  assert (H1 : ring_mul F (field_inv F a) (ring_mul F a b) =
+               ring_mul F (field_inv F a) (ring_mul F a c)).
+  { rewrite Hbc. reflexivity. }
+  rewrite <- ring_mul_assoc, <- ring_mul_assoc in H1.
+  rewrite Hinva, ring_mul_one_l, ring_mul_one_l in H1.
+  exact H1.
+Qed.
+
+(** 体における除法:
+    a / b := a * inv(b)
+    b ≠ 0 のときのみ意味を持つ (全域関数として定義)。 *)
+Definition field_div (F : Field) (a b : ring_carrier F) : ring_carrier F :=
+  ring_mul F a (field_inv F b).
+
+(** =====================================================================
+    具体例: Z/pZ は素数 p のとき体である (znz_p_field)
+    =====================================================================
+
+    証明の方針:
+      - 加法: znz_group p が Ring の加法構造を与える
+      - 乗法: Z 上の乗法 mod p を定義し、結合律・分配法則を示す
+      - 逆元: p が素数なら gcd(a, p) = 1 (a ≢ 0) なので
+              znz_coprime_bezout_inv より Bezout 係数が逆元になる
+      - 1 ≠ 0: p ≥ 2 なので 1 mod p ≠ 0 mod p  *)
+
+(** 補助補題: 素数 p に対して gcd(a mod p, p) = 1 (a mod p ≠ 0)。
+    証明: Znumtheory の prime_rel_prime を使い、
+    a ≢ 0 (mod p) ならば p ∤ a → gcd(a, p) = 1。 *)
+Lemma znz_prime_nonzero_coprime : forall (p : nat) (a : Z),
+  prime (Z.of_nat p) ->
+  a mod Z.of_nat p <> 0 ->
+  Z.gcd (a mod Z.of_nat p) (Z.of_nat p) = 1.
+Proof.
+  intros p a Hprime Hne.
+  set (r := a mod Z.of_nat p).
+  assert (Hp2 : (2 <= p)%nat) by (apply prime_ge_2 in Hprime; lia).
+  assert (Hbound : 0 <= r /\ r < Z.of_nat p).
+  { unfold r. split; apply Z.mod_pos_bound; lia. }
+  destruct Hbound as [Hr_pos Hr_lt].
+  apply Zis_gcd_gcd. { lia. }
+  apply Zis_gcd_sym.
+  apply (prime_rel_prime (Z.of_nat p) Hprime).
+  intro Hdvd.
+  apply Hne.
+  destruct Hdvd as [k Hk].
+  assert (k = 0) by nia.
+  lia.
+Qed.
+
+(** 素数 p のとき Z/pZ は体である。
+    証明方針:
+      - 台集合: carrier = Z (mod p 演算で正規化)
+      - 加法: (Z, +, 0, neg) mod p で加法群
+      - 乗法: mul = fun a b => a*b mod p、単位元 = 1 mod p
+      - 逆元: p が素数なら a ≢ 0 (mod p) → gcd(a,p)=1 → Bezout 係数が逆元
+      - 1 ≠ 0: p ≥ 2 なので 1 mod p = 1 ≠ 0
+
+    TODO: refine による実装は field_inv の型 (Z → Z vs sigma 型) の整合を
+    znz_units_inv_val と合わせる必要がある。現在は Admitted。  *)
+Definition znz_p_field (p : nat) (Hp : prime (Z.of_nat p)) : Field.
+Admitted.

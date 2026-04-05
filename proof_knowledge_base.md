@@ -481,3 +481,127 @@
 - **Dependencies**: `Znumtheory`, `Zdivisibility`, `Nat2Z`
 - **Notes**: ⚠️ `integer.v` uses old `prime` (not `Z.prime`), so use `prime_rel_prime/prime_ge_2/prime_divisors` not their `Z.*` replacements. ⚠️ `Nat2Z.inj_1` doesn't exist; use `simpl` after `apply Nat2Z.inj` to reduce `Z.of_nat 1`. ⚠️ `Z.divide_1_r : (n|1) → n=1 ∨ n=-1`; case split and use `Nat2Z.is_nonneg` + `lia` to eliminate `n=-1`. ⚠️ `Nat.gcd_divide_l/r` returns `Nat.divide` (∃ k, n = k*d), not `∃ k, n = d*k`; use `lia` to flip: `rewrite <- Nat2Z.inj_mul; f_equal; lia`.
 - **Date**: 2026-04-15
+
+---
+
+### `Ring` Record
+- **Type**: Record (定義)
+- **Statement**:
+  ```coq
+  Record Ring : Type := {
+    ring_carrier : Type;
+    ring_add / ring_zero / ring_neg / ring_mul / ring_one : ...;
+    (* 加法可換群公理 4 + 乗法モノイド公理 3 + 分配法則 2 = 計 9 公理 *)
+    ring_add_assoc / ring_add_comm / ring_add_zero_l / ring_add_neg_l : ...;
+    ring_mul_assoc / ring_mul_one_l / ring_mul_one_r : ...;
+    ring_distr_l / ring_distr_r : ...
+  }.
+  ```
+- **Proof Strategy**: Record 定義のみ。公理は使用者が提供する。
+- **Key Tactics**: N/A
+- **Dependencies**: なし
+: 1775132645:1;rocq compile integer.v integer.vo integer.vok Integer.vos 
+- **Date**: 2026-04-05
+
+---
+
+### `ring_add_zero_r` / `ring_add_neg_r`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma ring_add_zero_r : forall (R : Ring) (a : ring_carrier R),
+    ring_add R a (ring_zero R) = a.
+  Lemma ring_add_neg_r : forall (R : Ring) (a : ring_carrier R),
+    ring_add R a (ring_neg R a) = ring_zero R.
+  ```
+- **Proof Strategy**: どちらも `ring_add_comm` + 左バリアントの公理 (`ring_add_zero_l`, `ring_add_neg_l`) から直ちに得られる。
+- **Key Tactics**: `rewrite ring_add_comm`, `apply ring_add_zero_l / ring_add_neg_l`
+- **Dependencies**: `ring_add_comm`, `ring_add_zero_l`, `ring_add_neg_l`
+- **Notes**: なし
+- **Date**: 2026-04-05
+
+---
+
+### `ring_mul_zero_l` / `ring_mul_zero_r`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma ring_mul_zero_l : forall (R : Ring) (a : ring_carrier R),
+    ring_mul R (ring_zero R) a = ring_zero R.
+  Lemma ring_mul_zero_r : forall (R : Ring) (a : ring_carrier R),
+    ring_mul R a (ring_zero R) = ring_zero R.
+  ```
+- **Proof Strategy**: `ring_add_cancel_l` + 分配法則。`0*a + 0*a = (0+0)*a = 0*a = 0*a + 0` → キャンセル則で `0*a = 0`。
+- **Key Tactics**: `apply ring_add_cancel_l`, `rewrite ring_distr_r/l`, `rewrite ring_add_zero_l/r`
+- **Dependencies**: `ring_add_cancel_l`, `ring_distr_r` (zero_l の場合), `ring_distr_l` (zero_r の場合)
+- **Notes**: なし
+- **Date**: 2026-04-05
+
+---
+
+### `field_no_zero_divisors`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma field_no_zero_divisors : forall (F : Field) (a b : ring_carrier F),
+    ring_mul F a b = ring_zero F ->
+    a = ring_zero F \/ b = ring_zero F.
+  ```
+- **Proof Strategy**: `classic` で `a = 0 ∨ a ≠ 0` の場合分け。`a ≠ 0` のとき `assert (H : inv(a)*(a*b) = 0)` を作り、`ring_mul_assoc` + `field_inv_l` + `ring_mul_one_l` で `b = 0` を導く。
+- **Key Tactics**: `destruct (classic ...)`, `assert`, `rewrite <- ring_mul_assoc`, `rewrite field_inv_l`, `rewrite ring_mul_one_l`
+- **Dependencies**: `Classic` (from Stdlib), `field_inv_l`, `ring_mul_assoc`, `ring_mul_one_l`, `ring_mul_zero_r`
+- **Notes**: `rewrite <- ring_mul_assoc in H` パターンで `H : inv(a)*(a*b)` を `(inv(a)*a)*b` に変形する。
+- **Date**: 2026-04-05
+
+---
+
+### `field_mul_cancel_l`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma field_mul_cancel_l : forall (F : Field) (a b c : ring_carrier F),
+    a <> ring_zero F -> ring_mul F a b = ring_mul F a c -> b = c.
+  ```
+- **Proof Strategy**: `assert (H1 : inv(a)*(a*b) = inv(a)*(a*c))` → `rewrite <- ring_mul_assoc` × 2 → `rewrite field_inv_l, ring_mul_one_l` × 2。
+- **Key Tactics**: `assert`, `rewrite <- ring_mul_assoc ... in H1`, `rewrite field_inv_l, ring_mul_one_l`
+- **Dependencies**: `field_inv_l`, `ring_mul_assoc`, `ring_mul_one_l`
+- **Notes**: ⚠️ Dead end: `ring_add_cancel_l` + `ring_neg_mul_r` + `ring_distr_l` を使った証明は途中で `ring_add_zero_r` の引数型エラーが出る。`inv(a)` を直接掛ける方が明快。
+- **Date**: 2026-04-05
+
+---
+
+### `znz_prime_nonzero_coprime`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma znz_prime_nonzero_coprime : forall (p : nat) (a : Z),
+    prime (Z.of_nat p) ->
+    a mod Z.of_nat p <> 0 ->
+    Z.gcd (a mod Z.of_nat p) (Z.of_nat p) = 1.
+  ```
+- **Proof Strategy**: `Zis_gcd_gcd` + `Zis_gcd_sym` + `prime_rel_prime`。`prime_rel_prime (Z.of_nat p) : ¬(p | r) → rel_prime r p` を適用し、仮定 `¬(p | r)` は `r ≠ 0 ∧ 0 ≤ r < p → r = k*p → k = 0 → r = 0` という矛盾で示す。
+- **Key Tactics**: `apply Zis_gcd_gcd`, `apply Zis_gcd_sym`, `apply prime_rel_prime`, `destruct Hdvd as [k Hk]`, `assert (k=0) by nia`, `lia`
+- **Dependencies**: `Zis_gcd_gcd`, `Zis_gcd_sym`, `prime_rel_prime`, `Z.mod_pos_bound`
+- **Notes**: ⚠️ Dead end: `Z.eq_le_incl` を使った証明は型が合わない (型は `a = b → a ≤ b`)。⚠️ Dead end: `Z.mod_nonneg` は Rocq 9.1 に存在しない → `Z.mod_pos_bound` で `0 ≤ r < p` を一度に得る。⚠️ Dead end: `lra` は Import なしでは使えない → `lia` を使う。
+- **Date**: 2026-04-05
+
+---
+
+### `Field` Record
+- **Type**: Record (定義)
+- **Statement**:
+  ```coq
+  Record Field : Type := {
+    field_ring :> Ring;
+    field_inv : ring_carrier field_ring -> ring_carrier field_ring;
+    field_mul_comm : forall a b, ring_mul field_ring a b = ring_mul field_ring b a;
+    field_inv_l : forall x, x <> ring_zero field_ring ->
+      ring_mul field_ring (field_inv x) x = ring_one field_ring;
+    field_one_ne_zero : ring_one field_ring <> ring_zero field_ring
+  }.
+  ```
+- **Proof Strategy**: Record `field_inv` は全域関数として定義し、非零の条件は公理の仮定として与える。定義の
+- **Key Tactics**: N/A
+- **Dependencies**: `Ring` Record
+- **Notes**: `field_inv` を sigma 型 `{x | P x}` ではなく全域 `Z → Z` にすることで、具体例の定義が柔軟になる。ただし `znz_units_inv_val` は sigma 型を期待するので、具体例 `znz_p_field` では独立した epsilon ベース逆元関数が必要。
+- **Date**: 2026-04-05
