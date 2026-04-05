@@ -3996,6 +3996,32 @@ Proof.
   apply ring_mul_zero_r.
 Qed.
 
+(** 環の基本補題: 差がゼロ ↔ 等しい
+    a - b = 0 ↔ a = b  (ここで a - b は ring_add R a (ring_neg R b))
+
+    証明の方針:
+      ← : a = b に代入して ring_add_neg_r を適用。
+      → : 両辺に b を加算。ring_add_assoc, ring_add_neg_l, ring_add_zero_r,
+          ring_add_zero_l で a = b を導く。  *)
+Lemma ring_sub_zero_iff_eq : forall (R : Ring) (a b : ring_carrier R),
+  ring_add R a (ring_neg R b) = ring_zero R <-> a = b.
+Proof.
+  intros R a b.
+  split.
+  - intros H.
+    assert (H2 : ring_add R (ring_add R a (ring_neg R b)) b =
+                 ring_add R (ring_zero R) b).
+    { rewrite H. reflexivity. }
+    rewrite ring_add_assoc in H2.
+    rewrite ring_add_neg_l in H2.
+    rewrite ring_add_zero_r in H2.
+    rewrite ring_add_zero_l in H2.
+    exact H2.
+  - intros H.
+    subst.
+    apply ring_add_neg_r.
+Qed.
+
 (** 体 (Field):
     体とは可換環であって、零元以外のすべての元が乗法逆元を持つものをいう。
 
@@ -4433,6 +4459,20 @@ Proof.
   intros F c cs x. reflexivity.
 Qed.
 
+(** 補題: poly_eval の単一係数ケース
+    poly_eval F [c] x = c
+
+    証明の方針: poly_eval_cons, poly_eval_nil, ring_mul_zero_r, ring_add_zero_r を順に適用。  *)
+Lemma poly_eval_single : forall (F : Field) (c x : ring_carrier F),
+  poly_eval F [c] x = c.
+Proof.
+  intros F c x.
+  rewrite poly_eval_cons.
+  rewrite poly_eval_nil.
+  rewrite ring_mul_zero_r.
+  apply ring_add_zero_r.
+Qed.
+
 (** 補題: poly_synthetic_div の空リストケース
     証明: 定義から直ちに。 *)
 Lemma poly_synthetic_div_nil : forall (F : Field) (a : ring_carrier F),
@@ -4458,6 +4498,78 @@ Lemma poly_synthetic_div_cons : forall (F : Field) (c c' : ring_carrier F)
     poly_eval F (c' :: cs) a :: poly_synthetic_div F (c' :: cs) a.
 Proof.
   intros F c c' cs a. reflexivity.
+Qed.
+
+(** 補題: 合成除算後の長さ
+    (c :: cs) を (x - a) で割ったときの商の長さは cs の長さと等しい。
+      length (poly_synthetic_div F (c :: cs) a) = length cs
+
+    証明の方針: cs の構造帰納法。
+      - cs = [] : poly_synthetic_div_singleton より商は [] ✓
+      - cs = c' :: cs' : poly_synthetic_div_cons + change + f_equal + IH ✓  *)
+Lemma poly_synthetic_div_length :
+  forall (F : Field) (c : ring_carrier F) (cs : list (ring_carrier F))
+         (a : ring_carrier F),
+    length (poly_synthetic_div F (c :: cs) a) = length cs.
+Proof.
+  intros F c cs a.
+  induction cs as [| c' cs' IH].
+  - reflexivity.
+  - rewrite poly_synthetic_div_cons.
+    (* simpl length は poly_synthetic_div を展開してしまうので change を使う *)
+    change (S (length (poly_synthetic_div F (c' :: cs') a)) = S (length cs')).
+    f_equal. exact IH.
+Qed.
+
+(** 補題: リストの last の再帰則 (非空テール)
+    t ≠ [] のとき last (h :: t) d = last t d
+
+    証明の方針: t を destruct して、空の場合は矛盾、非空の場合は定義から直ちに。  *)
+Lemma last_cons_nonempty :
+  forall (A : Type) (h : A) (t : list A) (d : A),
+    t <> [] ->
+    last (h :: t) d = last t d.
+Proof.
+  intros A h t d Ht.
+  destruct t.
+  - contradiction.
+  - reflexivity.
+Qed.
+
+(** 補題: 合成除算は先頭係数 (last 要素) を保存する
+    length f ≥ 2 のとき last (poly_synthetic_div F f a) d = last f d
+
+    証明の方針: f の長さに関する帰納法。
+      - length 2 (f = [c, c']): poly_synthetic_div_cons と poly_eval_single から
+          last [poly_eval F [c'] a] d = poly_eval F [c'] a = c' = last [c, c'] d
+      - length n+1 ≥ 3 (f = c :: c' :: cs, cs ≠ []):
+          poly_synthetic_div_cons より商は nonempty で、
+          last_cons_nonempty と帰納法仮定から示す。  *)
+Lemma poly_synthetic_div_last :
+  forall (F : Field) (f : list (ring_carrier F)) (a d : ring_carrier F),
+    (2 <= length f)%nat ->
+    last (poly_synthetic_div F f a) d = last f d.
+Proof.
+  intros F f a d.
+  induction f as [| c cs IH].
+  - intro Hlen. simpl in Hlen. lia.
+  - destruct cs as [| c' cs'].
+    + intro Hlen. simpl in Hlen. lia.
+    + intros Hlen.
+      rewrite poly_synthetic_div_cons.
+      destruct cs' as [| c'' cs''].
+      * (* cs' = [], f = [c, c'] *)
+        simpl.
+        apply poly_eval_single.
+      * (* cs' = c'' :: cs'', length f ≥ 3 *)
+        assert (Hlen2 : (2 <= length (c' :: c'' :: cs''))%nat) by (simpl; lia).
+        assert (Hdiv_nonempty : poly_synthetic_div F (c' :: c'' :: cs'') a <> []).
+        { intro Hempty.
+          pose proof (poly_synthetic_div_length F c' (c'' :: cs'') a) as Hk.
+          rewrite Hempty in Hk. simpl in Hk. lia. }
+        rewrite last_cons_nonempty by exact Hdiv_nonempty.
+        rewrite IH by exact Hlen2.
+        reflexivity.
 Qed.
 
 (** 補題 A: (x - a) * e + a * e = x * e
@@ -4714,4 +4826,192 @@ Corollary fp_factor_theorem :
 Proof.
   intros p Hp f a.
   apply factor_theorem.
+Qed.
+
+(** ============================================================
+    体上の多項式の根の個数の上界 (Roots Bound for Polynomials over a Field)
+    ============================================================
+
+    主定理: 体 F 上の先頭係数非零の多項式 f (長さ n+1, すなわち n 次多項式) の
+    の n 個である。
+
+    証明の概略:
+      length f に関する強帰納法。
+      - 定数 (長さ 1): 先頭係数非零ならば根がない。
+      - 長さ n+1 (n ≥ 1): 根 a を一つ取り、因数定理よ
+          f(x) = (x - a) * q(x)  (q = poly_synthetic_div F f a)
+        と分解する。q の長さは n, 先頭係数も非零。
+        残りの根 rest は  length rest < n。の根であり、帰先頭係数も非零。先頭係数も非零。
+        よって length (a :: rest) ≤ n < n + 1 = length f。  *)
+
+(** 定義: 先頭係数非零の多項式
+    多項式 f が空でなく、かつ最高次係数 (last 要素) が非零であることを表す。  *)
+Definition poly_nonzero_leading (F : Field) (f : list (ring_carrier F)) : Prop :=
+  f <> [] /\ last f (ring_zero F) <> ring_zero F.
+
+(** 補題: 合成除算後も先頭係数非零が保たれる
+    poly_nonzero_leading F f かつ length f ≥ 2 ならば
+    poly_nonzero_leading F (poly_synthetic_div F f a)
+
+    証明の方針:
+      - 空でないことは poly_synthetic_div_length から示す。
+      - 先頭係数の保存は poly_synthetic_div_last から示す。  *)
+Lemma poly_nonzero_leading_div :
+  forall (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F),
+    poly_nonzero_leading F f ->
+    (2 <= length f)%nat ->
+    poly_nonzero_leading F (poly_synthetic_div F f a).
+Proof.
+  intros F f a [Hne Hlast] Hlen.
+  split.
+  - (* poly_synthetic_div F f a ≠ [] *)
+    intro Hempty.
+    destruct f as [| c cs]. { contradiction. }
+    pose proof (poly_synthetic_div_length F c cs a) as Hk.
+    rewrite Hempty in Hk. simpl in Hk.
+    simpl in Hlen. lia.
+  - (* last (poly_synthetic_div F f a) (ring_zero F) ≠ ring_zero F *)
+    rewrite poly_synthetic_div_last by exact Hlen.
+    exact Hlast.
+Qed.
+
+(** 補題: 非零定数多項式は根を持たない
+    c ≠ ring_zero F ならば poly_eval F [c] x ≠ ring_zero F
+
+    証明の方針: poly_eval_single で rewrite して仮定と同じ形にする。  *)
+Lemma poly_const_nonzero_no_root :
+  forall (F : Field) (c x : ring_carrier F),
+    c <> ring_zero F ->
+    poly_eval F [c] x <> ring_zero F.
+Proof.
+  intros F c x Hc.
+  rewrite poly_eval_single.
+  exact Hc.
+Qed.
+
+(** 補題: 異なる根の分離
+    f(a) = 0, f(b) = 0, b ≠ a ならば (poly_synthetic_div F f a)(b) = 0
+
+: 1775132645:1;rocq compile integer.v
+      1. poly_remainder_theorem: f(b) = (b - a) * q(b) + f(a) より
+            ring_zero F = (b - a) * q(b) を得る (f(a)=0, f(b)=0 を代入)。
+      2. b ≠ a ⟹ ring_sub_zero_iff_eq の対偶より b - a ≠ 0。
+      3. field_no_zero_divisors: (b-a)*q(b) = 0 ∧ b-a ≠ 0 ⟹ q(b) = 0。  *)
+Lemma poly_div_root :
+  forall (F : Field) (f : list (ring_carrier F)) (a b : ring_carrier F),
+    poly_eval F f a = ring_zero F ->
+    poly_eval F f b = ring_zero F ->
+    b <> a ->
+    poly_eval F (poly_synthetic_div F f a) b = ring_zero F.
+Proof.
+  intros F f a b Ha Hb Hne.
+  pose proof (poly_remainder_theorem F f a b) as Hremainder.
+  rewrite Hb, Ha, ring_add_zero_r in Hremainder.
+  symmetry in Hremainder.
+  apply field_no_zero_divisors in Hremainder.
+  destruct Hremainder as [Habs | Hq].
+  - exfalso. apply Hne. apply ring_sub_zero_iff_eq. exact Habs.
+  - exact Hq.
+Qed.
+
+(** 主定理: 体上の多項式の根の個数の上界
+    体 F 上の先頭係数非零の多項式 f に対して、
+    f(a) = 0 を満たす互いに相異なる元のリスト roots が存在するとき、
+      length roots < length f
+    が成り立つ。言い換えれば f の根はたかだか (length f - 1) = (次 個。
+
+    証明の方針: length f の値 n に関する帰納法 (≤ 版強帰納法)。
+      n = 0: f = [] で poly_nonzero_leading の前提に矛盾。
+      n = S n': f = c :: cs とする。
+        roots = []: 0 < length f なので自明。
+        roots = a :: rest:
+          a が f の根 ⟹ f = (x-a)*q (因数定理), q = poly_synthetic_div F f a。
+          cs = [] (f が定数) のとき: c = f(a) = 0 で Hlast に矛盾。
+          cs = c' :: cs' のとき:
+            poly_nonzero_leading F q (poly_nonzero_leading_div)
+            rest の各元は q の根 (poly_div_root)
+            IH より length rest < length q = length cs
+            ∴ length (a :: rest) = 1 + length rest < 1 + length cs = length f ✓  *)
+Theorem poly_roots_bound :
+  forall (F : Field) (f : list (ring_carrier F)),
+    poly_nonzero_leading F f ->
+    forall (roots : list (ring_carrier F)),
+      NoDup roots ->
+      (forall a, In a roots -> poly_eval F f a = ring_zero F) ->
+      (length roots < length f)%nat.
+Proof.
+  intros F.
+  assert (Hmain : forall n (f : list (ring_carrier F)),
+    (length f <= n)%nat ->
+    poly_nonzero_leading F f ->
+    forall (roots : list (ring_carrier F)),
+      NoDup roots ->
+      (forall a, In a roots -> poly_eval F f a = ring_zero F) ->
+      (length roots < length f)%nat).
+  2: { intros f Hpnl. exact (Hmain (length f) f (le_n _) Hpnl). }
+  intros n.
+  induction n as [| n' IHn]; intros f Hlen [Hne Hlast] roots Hnd Hroots.
+  - (* n = 0: length f = 0, f ≠ [] に矛盾 *)
+    destruct f.
+    + contradiction.
+    + simpl in Hlen. lia.
+  - (* n = S n': length f ≤ S n' *)
+    destruct f as [| c cs].
+    { contradiction. }
+    destruct roots as [| a rest].
+    + (* roots = [] *)
+      simpl. lia.
+    + (* roots = a :: rest *)
+      assert (Ha : poly_eval F (c :: cs) a = ring_zero F).
+      { apply Hroots. left. reflexivity. }
+      set (q := poly_synthetic_div F (c :: cs) a).
+      assert (Hlq : length q = length cs).
+      { unfold q. apply poly_synthetic_div_length. }
+      assert (Hlen_cs : (length cs <= n')%nat) by (simpl in Hlen; lia).
+      assert (Hlq_le : (length q <= n')%nat) by lia.
+      destruct cs as [| c' cs'].
+      * (* cs = [], f = [c]: c ≠ 0 だが f(a) = 0 なので矛盾 *)
+        exfalso. apply Hlast.
+        simpl.
+        rewrite <- (poly_eval_single F c a). exact Ha.
+      * (* cs = c' :: cs', length f ≥ 2 *)
+        assert (Hpnl_q : poly_nonzero_leading F q).
+        { apply poly_nonzero_leading_div.
+          - split; [discriminate | exact Hlast].
+          - simpl. lia. }
+        assert (Hnd_rest : NoDup rest).
+        { inversion Hnd; assumption. }
+        assert (Hnotin : ~ In a rest).
+        { inversion Hnd; assumption. }
+        assert (Hroots_q : forall b, In b rest -> poly_eval F q b = ring_zero F).
+        { intros b Hb.
+          unfold q.
+          apply (poly_div_root F (c :: c' :: cs') a b Ha).
+          - apply Hroots. right. exact Hb.
+          - intros Heq. subst b. exact (Hnotin Hb). }
+        assert (Hlen_rest : (length rest < length q)%nat).
+        { exact (IHn q Hlq_le Hpnl_q rest Hnd_rest Hroots_q). }
+        rewrite Hlq in Hlen_rest.
+        simpl length in Hlen_rest.
+        simpl length.
+        lia.
+Qed.
+
+(** 系: Fp 上の多項式の根の個数の上界
+: 1775132645:1;rocq compile integer.v (次数) 個。
+
+    証明の方針: poly_roots_bound を znz_p_field p Hp に適用。  *)
+Corollary fp_poly_roots_bound :
+  forall (p : nat) (Hp : prime (Z.of_nat p))
+         (f : list (ring_carrier (znz_p_field p Hp))),
+    poly_nonzero_leading (znz_p_field p Hp) f ->
+    forall (roots : list (ring_carrier (znz_p_field p Hp))),
+      NoDup roots ->
+      (forall a, In a roots ->
+        poly_eval (znz_p_field p Hp) f a =
+        ring_zero (znz_p_field p Hp)) ->
+      (length roots < length f)%nat.
+Proof.
+  intros p Hp f Hpnl roots Hnd Hroots.
+  apply poly_roots_bound; assumption.
 Qed.

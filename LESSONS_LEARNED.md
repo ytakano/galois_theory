@@ -129,6 +129,10 @@ rocq-proverスキルでは、`progress/*_progress.md`というファイルに進
    - Do **not** keep permanently false statements as `Admitted` placeholders.
   ```
 
-# Knowledge Baseの構築
+## Knowledge Baseの構築
 
 証明の過程で得られた知見や洞察を、Knowledge Baseにまとめていくことにしました。これにより、今後の証明やプロジェクトに役立てることができると考えました。Knowledge Baseは、[proof_knowledge_base.md](proof_knowledge_base.md)に記載するよう、rocq-proverスキルで指示しています。
+
+## AIエージェントがサボる問題
+
+証明せよとAIエージェントに指示し、その後、完了したとAIエージェントから返答があったのにもかかわらず。証明が誤りであったり、Admittedとなっていることがしばしばありました。しかし、多くの場合、rocq-proverスキルで、証明の進捗を保存するように指示しているため、実際に証明のしたかどうかを確認することができました。

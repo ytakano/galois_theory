@@ -947,3 +947,177 @@
 - **Dependencies**: `factor_theorem`, `znz_p_field`
 - **Notes**: Fp への特殊化。`factor_theorem` の一行適用で終わる。
 - **Date**: 2026-04-05
+
+---
+
+### `ring_sub_zero_iff_eq`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma ring_sub_zero_iff_eq : forall (R : Ring) (a b : ring_carrier R),
+    ring_add R a (ring_neg R b) = ring_zero R <-> a = b.
+  ```
+- **Proof Strategy**: ← は `subst` + `ring_add_neg_r`。→ は両辺に b を加えて `ring_add_assoc`, `ring_add_neg_l`, `ring_add_zero_r`, `ring_add_zero_l` で整理。
+- **Key Tactics**: `split`, `intros`, `assert`, `rewrite ring_add_assoc`, `ring_add_neg_l`, `ring_add_zero_r`, `ring_add_zero_l`, `subst`, `apply ring_add_neg_r`
+- **Dependencies**: `ring_add_assoc`, `ring_add_neg_l`, `ring_add_zero_r`, `ring_add_zero_l`, `ring_add_neg_r`
+- **Notes**: `poly_div_root` で `b ≠ a → b - a ≠ 0` を導くときにこの補題の対偶を使う。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_eval_single`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_eval_single : forall (F : Field) (c x : ring_carrier F),
+    poly_eval F [c] x = c.
+  ```
+- **Proof Strategy**: `poly_eval_cons` + `poly_eval_nil` + `ring_mul_zero_r` + `ring_add_zero_r`
+- **Key Tactics**: `rewrite poly_eval_cons`, `rewrite poly_eval_nil`, `rewrite ring_mul_zero_r`, `apply ring_add_zero_r`
+- **Dependencies**: `poly_eval_cons`, `poly_eval_nil`, `ring_mul_zero_r`, `ring_add_zero_r`
+- **Notes**: 定数多項式評価の基本補題。`poly_synthetic_div_last` と `poly_const_nonzero_no_root` で使用。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_synthetic_div_length`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_synthetic_div_length :
+    forall (F : Field) (c : ring_carrier F) (cs : list (ring_carrier F))
+           (a : ring_carrier F),
+      length (poly_synthetic_div F (c :: cs) a) = length cs.
+  ```
+- **Proof Strategy**: `cs` に関する構造帰納法。コンスケースは `poly_synthetic_div_cons` + `change` + `f_equal`。
+- **Key Tactics**: `induction cs`, `rewrite poly_synthetic_div_cons`, `change`, `f_equal`, `exact IH`
+- **Dependencies**: `poly_synthetic_div_cons`
+- **Notes**:
+  - ⚠️ 元の形式 `length (poly_synthetic_div F f a) = length f - 1` は Z スコープが open の場合に型エラー。`length cs` に変更して nat 減算を回避。
+  - ⚠ `simpl length` は transparent な Fixpoint `poly_synthetic_div` を展開してしまう。`change` タクティクで代替。
+  - `poly_nonzero_leading_div` と `poly_roots_bound` で `apply poly_synthetic_div_length` として使用。
+- **Date**: 2026-04-05
+
+---
+
+### `last_cons_nonempty`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma last_cons_nonempty :
+    forall (A : Type) (h : A) (t : list A) (d : A),
+      t <> [] -> last (h :: t) d = last t d.
+  ```
+- **Proof Strategy**: `destruct t`。空なら矛盾、非空なら定義から直ちに。
+- **Key Tactics**: `destruct t`, `contradiction`, `reflexivity`
+- **Dependencies**: なし
+- **Notes**: `poly_synthetic_div_last` の帰納ステップで `last (h :: t) = last t` を示すために使用。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_synthetic_div_last`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_synthetic_div_last :
+    forall (F : Field) (f : list (ring_carrier F)) (a d : ring_carrier F),
+      (2 <= length f)%nat -> last (poly_synthetic_div F f a) d = last f d.
+  ```
+- **Proof Strategy**: `f` に関する構造帰納法。length=2 は `poly_eval_single`、length≥3 は `last_cons_nonempty` + IH + `poly_synthetic_div_length`（空でないことの証明）。
+- **Key Tactics**: `induction f`, `intro Hlen; simpl in Hlen; lia`, `poly_synthetic_div_cons`, `poly_eval_single`, `last_cons_nonempty`, `poly_synthetic_div_length`
+- **Dependencies**: `poly_synthetic_div_cons`, `poly_eval_single`, `last_cons_nonempty`, `poly_synthetic_div_length`
+- **Notes**:
+  - base case で `- simpl. lia.` は NG（`simpl` がゴールを閉じてしまう場合がある）。`intro Hlen; simpl in Hlen; lia` が正しい。
+  - ⚠️ `omega` は未インポート。`lia` を使うこと。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_nonzero_leading` (定義)
+- **Type**: Definition
+- **Statement**:
+  ```coq
+  Definition poly_nonzero_leading (F : Field) (f : list (ring_carrier F)) : Prop :=
+    f <> [] /\ last f (ring_zero F) <> ring_zero F.
+  ```
+- **Proof Strategy**: 定義のみ
+- **Notes**: 先頭係数非零の多項式述語。`poly_roots_bound` の仮定として使用。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_nonzero_leading_div`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_nonzero_leading_div :
+    forall (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F),
+      poly_nonzero_leading F f -> (2 <= length f)%nat ->
+      poly_nonzero_leading F (poly_synthetic_div F f a).
+  ```
+- **Proof Strategy**: 空でないことは `poly_synthetic_div_length` から矛盾導出。先頭係数保存は `poly_synthetic_div_last` の直接適用。
+- **Key Tactics**: `split`, `destruct f`, `poly_synthetic_div_length`, `poly_synthetic_div_last`
+- **Dependencies**: `poly_synthetic_div_length`, `poly_synthetic_div_last`
+- **Notes**: `poly_roots_bound` の帰納ステップで商の `poly_nonzero_leading` を保証するために使用。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_div_root`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_div_root :
+    forall (F : Field) (f : list (ring_carrier F)) (a b : ring_carrier F),
+      poly_eval F f a = ring_zero F -> poly_eval F f b = ring_zero F ->
+      b <> a -> poly_eval F (poly_synthetic_div F f a) b = ring_zero F.
+  ```
+- **Proof Strategy**: `poly_remainder_theorem` で `f(b) = (b-a)*q(b) + f(a)` を得る。`f(a)=f(b)=0` で `0 = (b-a)*q(b)`。`ring_sub_zero_iff_eq` の対偶で `b-a ≠ 0`。`field_no_zero_divisors` で `q(b) = 0`。
+- **Key Tactics**: `pose proof poly_remainder_theorem`, `rewrite Hb Ha ring_add_zero_r`, `symmetry`, `apply field_no_zero_divisors`, `destruct`, `apply ring_sub_zero_iff_eq`
+- **Dependencies**: `poly_remainder_theorem`, `ring_sub_zero_iff_eq`, `field_no_zero_divisors`, `ring_add_zero_r`
+- **Notes**: b ≠ a の条件が必須。`ring_sub_zero_iff_eq` と `field_no_zero_divisors` の組み合わせが核心。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_roots_bound`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem poly_roots_bound :
+    forall (F : Field) (f : list (ring_carrier F)),
+      poly_nonzero_leading F f ->
+      forall (roots : list (ring_carrier F)),
+        NoDup roots -> (forall a, In a roots -> poly_eval F f a = ring_zero F) ->
+        (length roots < length f)%nat.
+  ```
+- **Proof Strategy**: `length f ≤ n` の ≤ 版強帰納法を `cut` + `induction n` で実現。定数の場合は `poly_eval_single` + `Hlast` で矛盾。n≥1 の場合は `poly_div_root` + `poly_nonzero_leading_div` で IH を適用。
+- **Key Tactics**: `cut`, `induction n`, `destruct f`, `set (q := poly_synthetic_div ...)`, `apply poly_synthetic_div_length`, `poly_nonzero_leading_div`, `poly_div_root`, `inversion Hnd`
+- **Dependencies**: `poly_synthetic_div_length`, `poly_nonzero_leading_div`, `poly_div_root`, `poly_eval_single`, `factor_theorem`
+- **Notes**:
+  - ⚠️ `simpl. lia.` 末尾は NG。`rewrite Hlq in Hlen_rest; simpl length in Hlen_rest; simpl length; lia` が必要（`simpl` がゴールと仮説で非対称に展開するため）。
+  - ⚠️ `omega` は未インポート。`lia` を使うこと。
+  - 強帰納法の実現パターン: `assert Hmain ... by { ... }; 2: { exact (Hmain (length f) ...) }; induction n` 。
+- **Date**: 2026-04-05
+
+---
+
+### `fp_poly_roots_bound`
+- **Type**: Corollary
+- **Statement**:
+  ```coq
+  Corollary fp_poly_roots_bound :
+    forall (p : nat) (Hp : prime (Z.of_nat p))
+           (f : list (ring_carrier (znz_p_field p Hp))),
+      poly_nonzero_leading (znz_p_field p Hp) f ->
+      forall (roots : list (ring_carrier (znz_p_field p Hp))),
+        NoDup roots ->
+        (forall a, In a roots -> poly_eval (znz_p_field p Hp) f a = ring_zero (znz_p_field p Hp)) ->
+        (length roots < length f)%nat.
+  ```
+- **Proof Strategy**: `poly_roots_bound` を `znz_p_field p Hp` に適用。`assumption` で全仮定を渡す。
+- **Key Tactics**: `apply poly_roots_bound; assumption`
+- **Dependencies**: `poly_roots_bound`, `znz_p_field`
+- **Notes**: Fp への特殊化。一行で終わる。
+- **Date**: 2026-04-05
