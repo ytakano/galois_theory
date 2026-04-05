@@ -1121,3 +1121,103 @@
 - **Dependencies**: `poly_roots_bound`, `znz_p_field`
 - **Notes**: Fp への特殊化。一行で終わる。
 - **Date**: 2026-04-05
+
+---
+
+### `element_has_finite_period`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma element_has_finite_period :
+    forall (G : Group) (m : nat) (a : carrier G),
+      (0 < m)%nat -> GroupOrder G m ->
+      exists d : nat, (0 < d)%nat /\ gpow G a (Z.of_nat d) = e G.
+  ```
+- **Proof Strategy**: `GroupOrder G m` から単射 `f` を得て `pigeonhole_Fin` を `fun k => f (gpow_nat G a k)` に適用。`f` の単射性で `a^i = a^j`、`equal_powers_imply_period` で `a^(j-i) = e`。
+- **Key Tactics**: `destruct Hord as [f [Hinj Hsurj]]`, `pigeonhole_Fin`, `equal_powers_imply_period`, `rewrite !gpow_of_nat`
+- **Dependencies**: `pigeonhole_Fin`, `equal_powers_imply_period`, `gpow_of_nat`
+- **Notes**: `gpow_nat` と `gpow` の変換は `rewrite !gpow_of_nat` で行う。
+- **Date**: 2026-04-05
+
+---
+
+### `mult_order` / `mult_order_exists` / `mult_order_spec`
+- **Type**: Definition + Lemmas
+- **Statement**:
+  ```coq
+  Definition mult_order (G : Group) (m : nat) (Hm : GroupOrder G m) (a : carrier G) : nat :=
+    epsilon (inhabits 0%nat) (fun d => (0 < d)%nat /\ gpow G a (Z.of_nat d) = e G /\
+      forall d', (0 < d')%nat -> gpow G a (Z.of_nat d') = e G -> (d <= d')%nat).
+  ```
+- **Proof Strategy**: `element_has_finite_period` + `well_ordering_nat` で最小周期の存在を示し `epsilon` で値を取り出す。`epsilon_spec` + `mult_order_exists` で仕様を証明。
+- **Key Tactics**: `epsilon_spec`, `well_ordering_nat`, `classic (d' < d)`
+- **Dependencies**: `element_has_finite_period`, `well_ordering_nat`, `group_order_pos`, `epsilon`, `epsilon_spec`
+- **Notes**: ⚠️ `apply mult_order_exists` は `epsilon_spec` 後に `m` が推論できず失敗。`exact (mult_order_exists G m Hm a)` で明示する。
+- **Date**: 2026-04-05
+
+---
+
+### `gpow_nat_period_cancel`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma gpow_nat_period_cancel :
+    forall (G : Group) (a : carrier G) (d k r : nat),
+      gpow_nat G a d = e G -> gpow_nat G a (d * k + r) = gpow_nat G a r.
+  ```
+- **Proof Strategy**: `gpow_nat_add` → `gpow_nat_mul` → `rewrite Hd` → `gpow_nat_e` → `id_left`。
+- **Key Tactics**: `rewrite gpow_nat_add`, `rewrite gpow_nat_mul`, `rewrite gpow_nat_e`, `apply id_left`
+- **Dependencies**: `gpow_nat_add`, `gpow_nat_mul`, `gpow_nat_e`, `id_left`
+- **Notes**: `gpow_nat_mul G a d k = gpow_nat G (gpow_nat G a d) k`（引数の順序に注意）。
+- **Date**: 2026-04-05
+
+---
+
+### `mult_order_divides` (定理2: a^x = e ⟺ ord | x)
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem mult_order_divides :
+    forall (G : Group) (m : nat) (Hm : GroupOrder G m) (a : carrier G) (x : nat),
+      gpow_nat G a x = e G <-> Nat.divide (mult_order G m Hm a) x.
+  ```
+- **Proof Strategy**: ← `gpow_nat_mul + gpow_nat_e`。→ `set (q := (x/d)%nat)` + `set (r := (x mod d)%nat)` で nat 演算を強制、`gpow_nat_period_cancel` で `a^r = e`、`Nat.eq_dec r 0` で場合分け、r > 0 なら最小性に矛盾。
+- **Key Tactics**: `set (q := (x/d)%nat)`, `Nat.div_mod`, `Nat.eq_dec`, `Nat.mod_upper_bound`, `gpow_nat_period_cancel`
+- **Dependencies**: `mult_order_spec`, `gpow_nat_period_cancel`, `gpow_of_nat`
+- **Notes**: ⚠️ Z_scope で `(d | x)%nat` 記法は失敗 → `Nat.divide d x` を使う。⚠️ `set (q := (x/d)%nat)` パターン必須（Z_scope との衝突回避）。
+- **Date**: 2026-04-05
+
+---
+
+### `mult_order_powers_distinct` (定理1: a^0,...,a^(ord-1) が相異なる)
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem mult_order_powers_distinct :
+    forall (G : Group) (m : nat) (Hm : GroupOrder G m) (a : carrier G) (i j : nat),
+      (i < mult_order G m Hm a)%nat -> (j < mult_order G m Hm a)%nat ->
+      i <> j -> gpow_nat G a i <> gpow_nat G a j.
+  ```
+- **Proof Strategy**: `classic (i < j)` で対称な2ケース。`equal_powers_imply_period` で `a^(j-i) = e` を得て、`mult_order_spec` の最小性から `d ≤ j-i` と `j-i < d` の矛盾を `lia` で導く。
+- **Key Tactics**: `classic`, `equal_powers_imply_period`, `rewrite !gpow_of_nat`, `(j-i)%nat` annotation
+- **Dependencies**: `mult_order_spec`, `equal_powers_imply_period`, `gpow_of_nat`
+- **Notes**: ⚠️ `Hd_min (j - i)` は Z_scope で失敗。`(j - i)%nat` と明示する。
+- **Date**: 2026-04-05
+
+---
+
+### `euler_phi_prime` / `prime_units_group_order` / `mult_order_p`
+- **Type**: Lemma / Lemma / Definition
+- **Statements**:
+  ```coq
+  Lemma euler_phi_prime : forall p, prime (Z.of_nat p) -> euler_phi p = (p-1)%nat.
+  Lemma prime_units_group_order : forall p (Hp : (1 < p)%nat), prime (Z.of_nat p) ->
+    GroupOrder (znz_units_group p Hp) (p - 1).
+  Definition mult_order_p p Hp Hprime a :=
+    mult_order (znz_units_group p Hp) (p-1) (prime_units_group_order p Hp Hprime) a.
+  ```
+- **Proof Strategy**: `euler_phi_prime_pow p 1` + `Nat.pow_1_r` + `lia` → `euler_phi p = p-1`。`euler_phi_group_order` + `rewrite euler_phi_prime` で GroupOrder。
+- **Key Tactics**: `euler_phi_prime_pow`, `Nat.pow_1_r`, `simpl`, `lia`, `euler_phi_group_order`, `rewrite euler_phi_prime`
+- **Dependencies**: `euler_phi_prime_pow`, `euler_phi_group_order`
+- **Notes**: ⚠ corollary では `m, Hm` が結論から推論不可。`exact (mult_order_... G m Hm a ...)` で明示的引数を渡す。
+- **Date**: 2026-04-05

@@ -5015,3 +5015,324 @@ Proof.
   intros p Hp f Hpnl roots Hnd Hroots.
   apply poly_roots_bound; assumption.
 Qed.
+
+(** ===================================================================== *)
+(** 元の位数 (Element Order in a Finite Group)                            *)
+(**                                                                        *)
+(** 有限群 G において、元 a の位数 (element order) とは                   *)
+(**   ord(a) = min { d ∈ ℕ | d > 0 ∧ a^d = e }                          *)
+(**                                                                        *)
+(** 主定理:                                                                *)
+(**   (1) a^0, a^1, ..., a^(ord(a)-1) はすべて異なる                     *)
+(**   (2) a^x = e ⟺ ord(a) | x                                           *)
+(**                                                                        *)
+(** さらに素数 p に対して (Z/pZ)* の乗法位数 mult_order_p を定義し、     *)
+(** 定理 (1)(2) の系として乗法位数の性質を形式化する。                   *)
+(** ===================================================================== *)
+
+(** フェーズ1: 有限群の元は有限の周期を持つ
+
+    GroupOrder G m （位数 m の有限群）のとき、任意の元 a は
+    正の自然数 d ≤ m で a^d = e となるものが存在する。
+
+    証明の方針:
+      GroupOrder G m から単射 f : carrier G → Fin.t m を取り出す。
+      写像 h(k) := f(a^k) を鳩ノ巣原理 (pigeonhole_Fin) に適用すると
+      i < j ≤ m かつ f(a^i) = f(a^j) となる i, j が存在する。
+      f の単射性から a^i = a^j (自然数冪)。
+      equal_powers_imply_period から a^(j-i) = e が得られる。
+      d = j - i > 0 が求める周期である。  *)
+Lemma element_has_finite_period :
+  forall (G : Group) (m : nat) (a : carrier G),
+    (0 < m)%nat ->
+    GroupOrder G m ->
+    exists d : nat, (0 < d)%nat /\ gpow G a (Z.of_nat d) = e G.
+Proof.
+  intros G m a Hm Hord.
+  destruct Hord as [f [Hinj Hsurj]].
+  destruct (pigeonhole_Fin m (fun k => f (gpow_nat G a k)))
+    as [i [j [Hij [Hjm Heq]]]].
+  assert (Hpow : gpow_nat G a i = gpow_nat G a j).
+  { apply Hinj. exact Heq. }
+  exists (j - i)%nat.
+  split.
+  - lia.
+  - apply equal_powers_imply_period.
+    + exact Hij.
+    + rewrite !gpow_of_nat. exact Hpow.
+Qed.
+
+(** 最小周期の存在:
+    有限群 G の元 a に対して、正の周期の集合は空でない。
+    整列原理 (well_ordering_nat) を適用すると最小の正の周期 d が存在する。
+    この d が元の位数の候補となる。
+
+    証明の方針:
+      element_has_finite_period で存在を示す。
+      well_ordering_nat に述語 P d := (0 < d) ∧ (a^d = e) を渡す。
+      最小元 d を得て、それが minimality 条件も満たすことを示す。  *)
+Lemma mult_order_exists :
+  forall (G : Group) (m : nat) (Hm : GroupOrder G m) (a : carrier G),
+    exists d : nat,
+      (0 < d)%nat /\
+      gpow G a (Z.of_nat d) = e G /\
+      forall d' : nat,
+        (0 < d')%nat -> gpow G a (Z.of_nat d') = e G -> (d <= d')%nat.
+Proof.
+  intros G m Hm a.
+  pose proof (group_order_pos G m Hm) as Hm_pos.
+  pose proof (element_has_finite_period G m a Hm_pos Hm) as [d0 [Hd0_pos Hd0_e]].
+  set (P := fun d => (0 < d)%nat /\ gpow G a (Z.of_nat d) = e G).
+  assert (HP : exists n, P n) by (exists d0; split; assumption).
+  destruct (well_ordering_nat P HP) as [d [HPd Hmin]].
+  destruct HPd as [Hd_pos Hd_e].
+  exists d.
+  split. { exact Hd_pos. }
+  split. { exact Hd_e. }
+  intros d' Hd'_pos Hd'_e.
+  destruct (classic (d' < d)%nat) as [Hlt | Hnlt].
+  - exfalso. exact (Hmin d' Hlt (conj Hd'_pos Hd'_e)).
+  - lia.
+Qed.
+
+(** 元の位数の定義 (Element Order):
+    有限群 G の元 a に対して、元の位数 mult_order G m Hm a を
+    「最小の正の周期 d」として epsilon（古典論理の選択関数）で定義する。
+
+    epsilon の仕様: epsilon spec P = v s.t. P v ならば P (epsilon spec P)
+
+    mult_order_exists が「最小周期を満たす値が存在する」ことを保証する。
+    epsilon_spec を使って mult_order_spec でその仕様を証明する。  *)
+Definition mult_order (G : Group) (m : nat) (Hm : GroupOrder G m)
+    (a : carrier G) : nat :=
+  epsilon (inhabits 0%nat) (fun d =>
+    (0 < d)%nat /\
+    gpow G a (Z.of_nat d) = e G /\
+    forall d' : nat,
+      (0 < d')%nat -> gpow G a (Z.of_nat d') = e G -> (d <= d')%nat).
+
+(** 元の位数の仕様:
+    mult_order G m Hm a は以下を満たす:
+      (1) mult_order G m Hm a > 0（正）
+      (2) a^(mult_order G m Hm a) = e（単位元に戻る）
+      (3) 最小性: 他の正の周期 d' に対して mult_order ≤ d'
+
+    証明の方針: epsilon_spec と mult_order_exists を組み合わせる。  *)
+Lemma mult_order_spec :
+  forall (G : Group) (m : nat) (Hm : GroupOrder G m) (a : carrier G),
+    let d := mult_order G m Hm a in
+    (0 < d)%nat /\
+    gpow G a (Z.of_nat d) = e G /\
+    forall d' : nat,
+      (0 < d')%nat -> gpow G a (Z.of_nat d') = e G -> (d <= d')%nat.
+Proof.
+  intros G m Hm a.
+  unfold mult_order.
+  apply epsilon_spec.
+  exact (mult_order_exists G m Hm a).
+Qed.
+
+(** フェーズ2: 元の位数の主要性質 *)
+
+(** 周期キャンセル補題:
+    a^d = e ならば a^(d*k + r) = a^r
+
+    証明の方針:
+      gpow_nat_add で a^(d*k+r) = a^(d*k) * a^r に分解。
+      gpow_nat_mul で a^(d*k) = (a^d)^k に変換。
+      a^d = e（仮定 Hd）を代入して e^k = e（gpow_nat_e）。
+      e * a^r = a^r（id_left）。  *)
+Lemma gpow_nat_period_cancel :
+  forall (G : Group) (a : carrier G) (d k r : nat),
+    gpow_nat G a d = e G ->
+    gpow_nat G a (d * k + r) = gpow_nat G a r.
+Proof.
+  intros G a d k r Hd.
+  rewrite gpow_nat_add.
+  rewrite gpow_nat_mul.
+  rewrite Hd.
+  rewrite gpow_nat_e.
+  apply id_left.
+Qed.
+
+(** 定理2: a^x = e ⟺ ord(a) | x
+
+    有限群 G の元 a とその位数 d = mult_order G m Hm a に対して、
+      gpow_nat G a x = e G  ⟺  (d | x)%nat
+    が成り立つ。
+
+    証明の方針:
+    ← 方向: x = d * k のとき、gpow_nat_period_cancel（r=0）から a^x = a^0 = e。
+    → 方向: x = d*(x/d) + (x mod d) と書いて gpow_nat_period_cancel を適用。
+      a^(x mod d) = e が得られる。
+      もし x mod d > 0 なら 0 < x mod d < d で a^(x mod d) = e、最小性に矛盾。
+      よって x mod d = 0、すなわち d | x。  *)
+Theorem mult_order_divides :
+  forall (G : Group) (m : nat) (Hm : GroupOrder G m)
+         (a : carrier G) (x : nat),
+    gpow_nat G a x = e G <-> Nat.divide (mult_order G m Hm a) x.
+Proof.
+  intros G m Hm a x.
+  pose proof (mult_order_spec G m Hm a) as [Hord_pos [Hord_e Hord_min]].
+  set (d := mult_order G m Hm a).
+  assert (Hd_nat : gpow_nat G a d = e G).
+  { rewrite <- gpow_of_nat. exact Hord_e. }
+  split.
+  - (* → 方向: a^x = e → d | x *)
+    intros Hx.
+    set (q := (x / d)%nat).
+    set (r := (x mod d)%nat).
+    assert (Hdiv : (x = d * q + r)%nat).
+    { unfold q, r. pose proof (Nat.div_mod x d ltac:(lia)). lia. }
+    assert (Hr_lt : (r < d)%nat).
+    { unfold r. apply Nat.mod_upper_bound. lia. }
+    assert (Hcancel : gpow_nat G a (d * q + r) = gpow_nat G a r).
+    { apply gpow_nat_period_cancel. exact Hd_nat. }
+    assert (Har_e : gpow_nat G a r = e G).
+    { rewrite <- Hcancel. rewrite <- Hdiv. exact Hx. }
+    destruct (Nat.eq_dec r 0) as [Hr0 | Hr_ne].
+    + exists q. rewrite Nat.mul_comm. lia.
+    + exfalso.
+      assert (Hrpos : (0 < r)%nat) by lia.
+      assert (Hle : (d <= r)%nat).
+      { apply Hord_min.
+        - exact Hrpos.
+        - rewrite gpow_of_nat. exact Har_e. }
+      lia.
+  - (* ← 方向: Nat.divide d x → a^x = e *)
+    intros [k Hk].
+    rewrite Hk.
+    rewrite Nat.mul_comm.
+    rewrite gpow_nat_mul.
+    rewrite Hd_nat.
+    apply gpow_nat_e.
+Qed.
+
+(** 定理1: a^0, ..., a^(ord-1) はすべて異なる
+
+    有限群 G の元 a とその位数 d = mult_order G m Hm a に対して、
+    0 ≤ i, j < d かつ i ≠ j ならば a^i ≠ a^j。
+
+    証明の方針:
+      対称性より i < j の場合のみ示せばよい。
+      a^i = a^j を仮定すると equal_powers_imply_period から a^(j-i) = e。
+      0 < j-i < d なので最小性（mult_order_spec）に矛盾。  *)
+Theorem mult_order_powers_distinct :
+  forall (G : Group) (m : nat) (Hm : GroupOrder G m)
+         (a : carrier G) (i j : nat),
+    (i < mult_order G m Hm a)%nat ->
+    (j < mult_order G m Hm a)%nat ->
+    i <> j ->
+    gpow_nat G a i <> gpow_nat G a j.
+Proof.
+  intros G m Hm a i j Hi Hj Hne Heq.
+  set (d := mult_order G m Hm a).
+  pose proof (mult_order_spec G m Hm a) as [Hd_pos [Hd_e Hd_min]].
+  destruct (classic (i < j)%nat) as [Hij | Hji].
+  - (* i < j の場合 *)
+    assert (Hperiod : gpow G a (Z.of_nat (j - i)) = e G).
+    { apply equal_powers_imply_period.
+      - exact Hij.
+      - rewrite !gpow_of_nat. exact Heq. }
+    assert (Hpos : (0 < j - i)%nat) by lia.
+    assert (Hlt  : (j - i < d)%nat) by lia.
+    pose proof (Hd_min (j - i)%nat Hpos Hperiod) as Hle.
+    lia.
+  - (* j < i の場合 *)
+    assert (Hji' : (j < i)%nat) by lia.
+    assert (Hperiod : gpow G a (Z.of_nat (i - j)) = e G).
+    { apply equal_powers_imply_period.
+      - exact Hji'.
+      - rewrite !gpow_of_nat. exact (eq_sym Heq). }
+    assert (Hpos : (0 < i - j)%nat) by lia.
+    assert (Hlt  : (i - j < d)%nat) by lia.
+    pose proof (Hd_min (i - j)%nat Hpos Hperiod) as Hle.
+    lia.
+Qed.
+
+(** フェーズ3: (Z/pZ)* への適用 (Multiplicative Order mod p) *)
+
+(** euler_phi p = p - 1 for prime p
+
+    証明の方針:
+      euler_phi_prime_pow を e=1 で適用:
+        euler_phi (p^1) = p^(1-1) * (p-1) = p^0 * (p-1) = 1 * (p-1) = p-1
+      Nat.pow_1_r で p^1 = p を得て rewrite する。  *)
+Lemma euler_phi_prime :
+  forall (p : nat),
+    prime (Z.of_nat p) ->
+    euler_phi p = (p - 1)%nat.
+Proof.
+  intros p Hp.
+  pose proof (euler_phi_prime_pow p 1 Hp (Nat.le_refl 1)) as H.
+  rewrite Nat.pow_1_r in H.
+  simpl in H.
+  lia.
+Qed.
+
+(** (Z/pZ)* の群位数は p-1 (for prime p)
+
+    証明の方針:
+      euler_phi_group_order: GroupOrder (znz_units_group p Hp) (euler_phi p)
+      euler_phi_prime: euler_phi p = p-1
+      を組み合わせる。  *)
+Lemma prime_units_group_order :
+  forall (p : nat) (Hp : (1 < p)%nat),
+    prime (Z.of_nat p) ->
+    GroupOrder (znz_units_group p Hp) (p - 1).
+Proof.
+  intros p Hp Hprime.
+  pose proof (euler_phi_group_order p Hp) as H.
+  rewrite euler_phi_prime in H by exact Hprime.
+  exact H.
+Qed.
+
+(** 乗法位数 (Multiplicative Order mod p) の定義:
+    素数 p と a ∈ (Z/pZ)* に対して、乗法位数 mult_order_p p Hp Hprime a を
+    一般群の元の位数 mult_order を (Z/pZ)* に適用して定義する。  *)
+Definition mult_order_p (p : nat) (Hp : (1 < p)%nat)
+    (Hprime : prime (Z.of_nat p))
+    (a : carrier (znz_units_group p Hp)) : nat :=
+  mult_order (znz_units_group p Hp) (p - 1)
+             (prime_units_group_order p Hp Hprime) a.
+
+(** (Z/pZ)* における定理1の系:
+    a^0, a^1, ..., a^(ord_p(a)-1) はすべて異なる
+
+    証明の方針: mult_order_powers_distinct を znz_units_group に特化。  *)
+Corollary mult_order_p_powers_distinct :
+  forall (p : nat) (Hp : (1 < p)%nat)
+         (Hprime : prime (Z.of_nat p))
+         (a : carrier (znz_units_group p Hp))
+         (i j : nat),
+    (i < mult_order_p p Hp Hprime a)%nat ->
+    (j < mult_order_p p Hp Hprime a)%nat ->
+    i <> j ->
+    gpow_nat (znz_units_group p Hp) a i <>
+    gpow_nat (znz_units_group p Hp) a j.
+Proof.
+  intros p Hp Hprime a i j Hi Hj Hne.
+  unfold mult_order_p in *.
+  exact (mult_order_powers_distinct (znz_units_group p Hp) (p - 1)
+           (prime_units_group_order p Hp Hprime) a i j Hi Hj Hne).
+Qed.
+
+(** (Z/pZ)* における定理2の系:
+    a^x ≡ 1 (mod p) ⟺ ord_p(a) | x
+
+    証明の方針: mult_order_divides を znz_units_group に特化。  *)
+Corollary mult_order_p_divides :
+  forall (p : nat) (Hp : (1 < p)%nat)
+         (Hprime : prime (Z.of_nat p))
+         (a : carrier (znz_units_group p Hp))
+         (x : nat),
+    gpow_nat (znz_units_group p Hp) a x =
+      e (znz_units_group p Hp)
+    <->
+    Nat.divide (mult_order_p p Hp Hprime a) x.
+Proof.
+  intros p Hp Hprime a x.
+  unfold mult_order_p.
+  exact (mult_order_divides (znz_units_group p Hp) (p - 1)
+           (prime_units_group_order p Hp Hprime) a x).
+Qed.
