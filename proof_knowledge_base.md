@@ -737,3 +737,125 @@
 - **Key Tactics**: `apply field_linear_eq_unique_solution`
 - **Dependencies**: `field_linear_eq_unique_solution`, `znz_p_field`
 - **Date**: 2026-04-05
+
+---
+
+### `poly_eval` / `poly_synthetic_div`
+- **Type**: Definition (Fixpoint)
+- **Statement**:
+  ```coq
+  Fixpoint poly_eval (F : Field) (f : list (ring_carrier F)) (x : ring_carrier F)
+    : ring_carrier F :=
+    match f with
+    | [] => ring_zero F
+    | c :: cs => ring_add F c (ring_mul F x (poly_eval F cs x))
+    end.
+
+  Fixpoint poly_synthetic_div (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F)
+    : list (ring_carrier F) :=
+    match f with
+    | [] => []
+    | _ :: cs =>
+      match cs with
+      | [] => []
+      | _ => poly_eval F cs a :: poly_synthetic_div F cs a
+      end
+    end.
+  ```
+- **Proof Strategy**: ホーナー法 (Horner) による評価と合成除算 (synthetic division)。`Field` を引数にとるため乗法可換律 `field_mul_comm` が定理で使える。
+- **Key Tactics**: 定義のみ（証明なし）
+- **Notes**: `Field :> Ring` コアーションにより Ring の補題も直接適用可能。`simpl poly_eval at 1` 後に `destruct` すると、Rocq が `poly_eval F [] x` を iota-reduction で自動的に `ring_zero F` に簡約してしまい、後続の `rewrite poly_eval_nil` が失敗することがある。回避策: `cbn [poly_eval poly_synthetic_div]` を使う。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_remainder_alg_A`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_remainder_alg_A : forall (F : Field) (a x e : ring_carrier F),
+    ring_add F (ring_mul F (ring_add F x (ring_neg F a)) e) (ring_mul F a e)
+    = ring_mul F x e.
+  ```
+- **Proof Strategy**: `ring_distr_r` → `ring_neg_mul_l` → `ring_add_assoc` (forward) → `ring_add_neg_l` → `ring_add_zero_r`.
+- **Key Tactics**: `ring_distr_r`, `ring_neg_mul_l`, `ring_add_assoc`, `ring_add_neg_l`, `ring_add_zero_r`
+- **Dependencies**: `ring_distr_r`, `ring_neg_mul_l`, `ring_add_assoc`, `ring_add_neg_l`, `ring_add_zero_r`
+- **Notes**: ⚠️ `ring_add_assoc` は FORWARD 方向 (`(a+b)+c → a+(b+c)`) を使う。Backward (`<-`) は失敗する。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_remainder_alg_B`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_remainder_alg_B : forall (F : Field) (a x q : ring_carrier F),
+    ring_mul F x (ring_mul F (ring_add F x (ring_neg F a)) q)
+    = ring_mul F (ring_add F x (ring_neg F a)) (ring_mul F x q).
+  ```
+- **Proof Strategy**: `← ring_mul_assoc` → `field_mul_comm x (x-a)` → `ring_mul_assoc`.
+- **Key Tactics**: `ring_mul_assoc`, `field_mul_comm`
+- **Dependencies**: `ring_mul_assoc`, `field_mul_comm`
+- **Date**: 2026-04-05
+
+---
+
+### `poly_remainder_core`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma poly_remainder_core : forall (F : Field) (a x e q : ring_carrier F),
+    ring_add F
+      (ring_mul F (ring_add F x (ring_neg F a)) (ring_add F e (ring_mul F x q)))
+      (ring_mul F a e)
+    = ring_mul F x (ring_add F e (ring_mul F (ring_add F x (ring_neg F a)) q)).
+  ```
+- **Proof Strategy**: `transitivity (x*e + xa*(x*q))`. 前半は `ring_distr_l` + `ring_add_assoc` + `ring_add_comm` + `poly_remainder_alg_A`. 後半は `symmetry` + `ring_distr_l` + `f_equal` + `poly_remainder_alg_B`。
+- **Key Tactics**: `transitivity`, `ring_distr_l`, `ring_add_assoc`, `ring_add_comm`, `poly_remainder_alg_A`, `poly_remainder_alg_B`, `symmetry`, `f_equal`
+- **Notes**: ⚠️ 後半 (RHS から canonical form) では `symmetry` を先に適用してから `ring_distr_l` + `f_equal` + `apply poly_remainder_alg_B` の順にすること。`apply poly_remainder_alg_B` の前に `symmetry` を忘れると unification error が出る。
+- **Date**: 2026-04-05
+
+---
+
+### `poly_remainder_theorem`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem poly_remainder_theorem :
+    forall (F : Field) (f : list (ring_carrier F)) (a x : ring_carrier F),
+      poly_eval F f x =
+      ring_add F
+        (ring_mul F (ring_add F x (ring_neg F a))
+                    (poly_eval F (poly_synthetic_div F f a) x))
+        (poly_eval F f a).
+  ```
+- **Proof Strategy**: `f` に対するリスト帰納法（3ケース: `[]`, `[c]`, `c :: c' :: cs'`）。
+  - `[]`: `ring_mul_zero_r` + `ring_add_zero_l` + `reflexivity`。
+  - `[c]`: `cbn [poly_eval poly_synthetic_div]` + `repeat ring_mul_zero_r` + `ring_add_zero_l` + `reflexivity`。
+  - `c :: c' :: cs'`: `rewrite poly_eval_cons` + `poly_synthetic_div_cons` + 明示的 `poly_eval_cons` × 2 + `IHcs` + `set` + `ring_add_comm` + `transitivity` + `poly_remainder_core` + `ring_add_assoc` × 2 + `ring_add_comm`。
+- **Key Tactics**: `induction`, `destruct`, `cbn`, `rewrite poly_eval_cons/poly_synthetic_div_cons`, `set`, `transitivity`, `poly_remainder_core`, `ring_add_assoc`, `ring_add_comm`
+- **Dependencies**: `poly_eval_cons`, `poly_synthetic_div_cons`, `poly_remainder_core`, `ring_mul_zero_r`, `ring_add_zero_l`, `ring_add_assoc`, `ring_add_comm`
+- **Notes**: ⚠️ `simpl poly_eval at 1` + `destruct` `destruct` 時の iota-reduction で `poly_eval F [] x` が `ring_zero F` に自動簡約され、後続の `rewrite poly_eval_nil` や `rewrite ring_add_zero_r` が失敗する。`cbn [poly_eval poly_synthetic_div]` が安全。⚠️ singleton ケースは `cbn` + `ring_add_zero_l` + `reflexivity` のみで閉じる（`ring_add_zero_r` 2回は不要）。⚠️ `poly_eval_cons` で展開する際は、誤った occurrence を書き換えないよう引数を明示すること（例: `rewrite (poly_eval_cons F (poly_eval F (c'::cs') a) (poly_synthetic_div F (c'::cs') a) x)`）。⚠️ `set` で定義した変数（`xa` など）は `rewrite` のパターンマッチで opaque になるため、`xa` を `set` するとその後の `rewrite poly_remainder_core` が失敗する。`xa` は `set` せず `ring_add F x (ring_neg F a)` のまま使う。の組み合わせは
+- **Date**: 2026-04-05
+
+---
+
+### `fp_remainder_theorem`
+- **Type**: Corollary
+- **Statement**:
+  ```coq
+  Corollary fp_remainder_theorem :
+    forall (p : nat) (Hp : prime (Z.of_nat p))
+           (f : list (ring_carrier (znz_p_field p Hp)))
+           (a x : ring_carrier (znz_p_field p Hp)),
+      poly_eval (znz_p_field p Hp) f x =
+      ring_add (znz_p_field p Hp)
+        (ring_mul (znz_p_field p Hp)
+          (ring_add (znz_p_field p Hp) x (ring_neg (znz_p_field p Hp) a))
+          (poly_eval (znz_p_field p Hp) (poly_synthetic_div (znz_p_field p Hp) f a) x))
+        (poly_eval (znz_p_field p Hp) f a).
+  ```
+- **Proof Strategy**: `poly_remainder_theorem` を `znz_p_field p Hp` に適用するだけ。
+- **Key Tactics**: `apply poly_remainder_theorem`
+- **Dependencies**: `poly_remainder_theorem`, `znz_p_field`
+- **Date**: 2026-04-05

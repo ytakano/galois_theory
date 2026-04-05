@@ -4369,3 +4369,261 @@ Proof.
   apply field_linear_eq_unique_solution.
   exact Ha.
 Qed.
+
+(** =====================================================================
+    体上の多項式と剰余の定理 (Polynomial Remainder Theorem over a Field)
+    =====================================================================
+
+    多項式の表現: 係数リスト（小端表現）
+      [c0, c1, ..., cn] = c0 + c1*x + c2*x^2 + ... + cn*x^n
+
+    ホーナー法:
+      eval [] x       = 0
+      eval (c::cs) x  = c + x * eval cs x
+
+    剰余の定理:
+      任意の多項式 f と体の元 a に対し、商多項式 q が存在して
+        f(x) = (x - a) * q(x) + f(a)
+    が恒等的に成立する。
+
+    証明の方針:
+      合成除算 (synthetic division) によって商多項式 q を陽に定義し、
+      リスト帰納法でこの等式を証明する。                                     *)
+
+(** ホーナー法による多項式評価
+    体 F 上の多項式 f を点 x で評価する。
+    eval [] x       = 0
+    eval (c::cs) x  = c + x * eval cs x  *)
+Fixpoint poly_eval (F : Field) (f : list (ring_carrier F)) (x : ring_carrier F)
+  : ring_carrier F :=
+  match f with
+  | [] => ring_zero F
+  | c :: cs => ring_add F c (ring_mul F x (poly_eval F cs x))
+  end.
+
+(** 合成除算：f を (x - a) で割ったときの商多項式を返す。
+    div [] a      = []
+    div [c] a     = []
+    div (c::cs) a = eval cs a :: div cs a   (cs が空でない場合)  *)
+Fixpoint poly_synthetic_div (F : Field) (f : list (ring_carrier F)) (a : ring_carrier F)
+  : list (ring_carrier F) :=
+  match f with
+  | [] => []
+  | _ :: cs =>
+    match cs with
+    | [] => []
+    | _ => poly_eval F cs a :: poly_synthetic_div F cs a
+    end
+  end.
+
+(** 補題: poly_eval の空リストケース
+    証明: 定義から直ちに。 *)
+Lemma poly_eval_nil : forall (F : Field) (x : ring_carrier F),
+  poly_eval F [] x = ring_zero F.
+Proof.
+  intros F x. reflexivity.
+Qed.
+
+(** 補題: poly_eval のコンスケース
+    証明: 定義から直ちに。 *)
+Lemma poly_eval_cons : forall (F : Field) (c : ring_carrier F)
+    (cs : list (ring_carrier F)) (x : ring_carrier F),
+  poly_eval F (c :: cs) x = ring_add F c (ring_mul F x (poly_eval F cs x)).
+Proof.
+  intros F c cs x. reflexivity.
+Qed.
+
+(** 補題: poly_synthetic_div の空リストケース
+    証明: 定義から直ちに。 *)
+Lemma poly_synthetic_div_nil : forall (F : Field) (a : ring_carrier F),
+  poly_synthetic_div F [] a = [].
+Proof.
+  intros F a. reflexivity.
+Qed.
+
+(** 補題: poly_synthetic_div の1要素リストケース
+    証明: 定義から直ちに。 *)
+Lemma poly_synthetic_div_singleton : forall (F : Field) (c a : ring_carrier F),
+  poly_synthetic_div F [c] a = [].
+Proof.
+  intros F c a. reflexivity.
+Qed.
+
+(** 補題: poly_synthetic_div のコンスケース（cs が空でない場合）
+    div (c :: c' :: cs) a = eval (c' :: cs) a :: div (c' :: cs) a
+    証明: 定義から直ちに。 *)
+Lemma poly_synthetic_div_cons : forall (F : Field) (c c' : ring_carrier F)
+    (cs : list (ring_carrier F)) (a : ring_carrier F),
+  poly_synthetic_div F (c :: c' :: cs) a =
+    poly_eval F (c' :: cs) a :: poly_synthetic_div F (c' :: cs) a.
+Proof.
+  intros F c c' cs a. reflexivity.
+Qed.
+
+(** 補題 A: (x - a) * e + a * e = x * e
+    証明:
+      (x + (-a)) * e + a * e
+      = x*e + (-a)*e + a*e    [ring_distr_r, ring_add_assoc]
+      = x*e + -(a*e) + a*e    [ring_neg_mul_l]
+      = x*e + 0               [ring_add_neg_l]
+      = x*e                   [ring_add_zero_r]  *)
+Lemma poly_remainder_alg_A : forall (F : Field) (a x e : ring_carrier F),
+  ring_add F
+    (ring_mul F (ring_add F x (ring_neg F a)) e)
+    (ring_mul F a e)
+  = ring_mul F x e.
+Proof.
+  intros F a x e.
+  rewrite ring_distr_r.
+  rewrite ring_neg_mul_l.
+  rewrite ring_add_assoc.
+  rewrite ring_add_neg_l.
+  rewrite ring_add_zero_r.
+  reflexivity.
+Qed.
+
+(** 補題 B: x * ((x - a) * q) = (x - a) * (x * q)
+    証明:
+      x * ((x-a) * q)
+      = (x * (x-a)) * q    [← ring_mul_assoc]
+      = ((x-a) * x) * q    [field_mul_comm]
+      = (x-a) * (x * q)    [ring_mul_assoc]  *)
+Lemma poly_remainder_alg_B : forall (F : Field) (a x q : ring_carrier F),
+  ring_mul F x (ring_mul F (ring_add F x (ring_neg F a)) q)
+  = ring_mul F (ring_add F x (ring_neg F a)) (ring_mul F x q).
+Proof.
+  intros F a x q.
+  rewrite <- ring_mul_assoc.
+  rewrite (field_mul_comm F x (ring_add F x (ring_neg F a))).
+  rewrite ring_mul_assoc.
+  reflexivity.
+Qed.
+
+(** 補題 CORE: 剰余定理の代数的核心
+    (x-a)*(e + x*q) + a*e = x*(e + (x-a)*q)
+    が恒等的に成立する。
+
+    証明の方針:
+      両辺が x*e + (x-a)*(x*q) に等しいことを示す。
+      LHS: ring_distr_l, ring_add_assoc, ring_add_comm, poly_remainder_alg_A
+      RHS: ring_distr_l, poly_remainder_alg_B  *)
+Lemma poly_remainder_core : forall (F : Field) (a x e q : ring_carrier F),
+  ring_add F
+    (ring_mul F (ring_add F x (ring_neg F a)) (ring_add F e (ring_mul F x q)))
+    (ring_mul F a e)
+  = ring_mul F x (ring_add F e (ring_mul F (ring_add F x (ring_neg F a)) q)).
+Proof.
+  intros F a x e q.
+  transitivity (ring_add F (ring_mul F x e)
+                           (ring_mul F (ring_add F x (ring_neg F a)) (ring_mul F x q))).
+  - (* LHS = x*e + (x-a)*(x*q) *)
+    rewrite ring_distr_l.
+    rewrite ring_add_assoc.
+    rewrite (ring_add_comm F
+               (ring_mul F (ring_add F x (ring_neg F a)) (ring_mul F x q))
+               (ring_mul F a e)).
+    rewrite <- ring_add_assoc.
+    rewrite poly_remainder_alg_A.
+    reflexivity.
+  - (* x*e + (x-a)*(x*q) = RHS *)
+    symmetry.
+    rewrite ring_distr_l.
+    f_equal.
+    apply poly_remainder_alg_B.
+Qed.
+
+(** 主定理: 体上の多項式の剰余定理
+    任意の体 F 上の多項式 f と元 a, x に対し、
+      f(x) = (x - a) * q(x) + f(a)
+    が成立する。ここで q = poly_synthetic_div F f a。
+
+    証明の方針:
+      f に対するリスト帰納法。
+      - 空リスト: 両辺とも 0。
+      - 1要素リスト [c]: 両辺とも c。
+      - [c, c', ...]: 帰納法仮定と poly_remainder_core で示す。  *)
+Theorem poly_remainder_theorem :
+  forall (F : Field) (f : list (ring_carrier F)) (a x : ring_carrier F),
+    poly_eval F f x =
+    ring_add F
+      (ring_mul F (ring_add F x (ring_neg F a))
+                  (poly_eval F (poly_synthetic_div F f a) x))
+      (poly_eval F f a).
+Proof.
+  intros F f a x.
+  induction f as [| c cs IHcs].
+  - (* f = [] *)
+    simpl.
+    rewrite ring_mul_zero_r.
+    rewrite ring_add_zero_l.
+    reflexivity.
+  - (* f = c :: cs *)
+    (* destruct 前に poly_eval を展開しない: auto-reduction を避けるため *)
+    destruct cs as [| c' cs'].
+    + (* cs = [], f = [c] *)
+      (* cbn で poly_eval と poly_synthetic_div を展開して代入 *)
+      cbn [poly_eval poly_synthetic_div].
+      (* すべての ? * 0 を 0 に簡約 *)
+      repeat rewrite ring_mul_zero_r.
+      (* c + 0 = 0 + (c + 0) → ring_add_zero_l で 0 + X → X → c + 0 = c + 0 *)
+      rewrite ring_add_zero_l.
+      reflexivity.
+    + (* cs = c' :: cs', f = c :: c' :: cs' *)
+      (* LHS: poly_eval F (c :: c'::cs') x → c + x * poly_eval F (c'::cs') x *)
+      rewrite poly_eval_cons.
+      (* poly_synthetic_div F (c :: c'::cs') a = eval(c'::cs') a :: div(c'::cs') a *)
+      rewrite poly_synthetic_div_cons.
+      (* poly_eval F (eval(c'::cs') a :: div(c'::cs') a) x
+           = eval(c'::cs') a + x * poly_eval F (div(c'::cs') a) x *)
+      rewrite (poly_eval_cons F (poly_eval F (c' :: cs') a)
+                                (poly_synthetic_div F (c' :: cs') a) x).
+      (* poly_eval F (c :: c'::cs') a = c + a * poly_eval F (c'::cs') a *)
+      rewrite (poly_eval_cons F c (c' :: cs') a).
+      (* 帰納法仮定を適用: poly_eval F (c'::cs') x = (x-a)*q + e *)
+      rewrite IHcs.
+      (* e と q を set で簡略化 *)
+      set (e := poly_eval F (c' :: cs') a).
+      set (q := poly_eval F (poly_synthetic_div F (c' :: cs') a) x).
+      (* 目標: c + x*((x-a)*q + e) = (x-a)*(e + x*q) + (c + a*e) *)
+      (* (x-a)*q + e → e + (x-a)*q に並び替える *)
+      rewrite (ring_add_comm F (ring_mul F (ring_add F x (ring_neg F a)) q) e).
+      (* 目標: c + x*(e + (x-a)*q) = (x-a)*(e + x*q) + (c + a*e) *)
+      (* 中間形 c + ((x-a)*(e + x*q) + a*e) に transitivity *)
+      transitivity (ring_add F c
+                     (ring_add F
+                       (ring_mul F (ring_add F x (ring_neg F a))
+                                   (ring_add F e (ring_mul F x q)))
+                       (ring_mul F a e))).
+      * (* c + x*(e + (x-a)*q) = c + ((x-a)*(e+x*q) + a*e) *)
+        (* poly_remainder_core: (x-a)*(e+x*q) + a*e = x*(e + (x-a)*q) *)
+        rewrite poly_remainder_core.
+        reflexivity.
+      * (* c + ((x-a)*(e+x*q) + a*e) = (x-a)*(e+x*q) + (c + a*e) *)
+        rewrite <- ring_add_assoc.
+        rewrite (ring_add_comm F c
+                   (ring_mul F (ring_add F x (ring_neg F a))
+                               (ring_add F e (ring_mul F x q)))).
+        rewrite ring_add_assoc.
+        reflexivity.
+Qed.
+
+(** 系: Fp 上の多項式の剰余定理
+    素数 p のとき Fp = Z/pZ 上の多項式 f と元 a, x に対し、
+      f(x) = (x - a) * q(x) + f(a)
+    が成立する。
+
+    証明の方針: poly_remainder_theorem を znz_p_field p Hp に適用。  *)
+Corollary fp_remainder_theorem :
+  forall (p : nat) (Hp : prime (Z.of_nat p))
+         (f : list (ring_carrier (znz_p_field p Hp)))
+         (a x : ring_carrier (znz_p_field p Hp)),
+    poly_eval (znz_p_field p Hp) f x =
+    ring_add (znz_p_field p Hp)
+      (ring_mul (znz_p_field p Hp)
+        (ring_add (znz_p_field p Hp) x (ring_neg (znz_p_field p Hp) a))
+        (poly_eval (znz_p_field p Hp) (poly_synthetic_div (znz_p_field p Hp) f a) x))
+      (poly_eval (znz_p_field p Hp) f a).
+Proof.
+  intros p Hp f a x.
+  apply poly_remainder_theorem.
+Qed.
