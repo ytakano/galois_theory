@@ -6960,3 +6960,537 @@ Proof.
     exact (prime_units_group_order p Hp Hprime).
   exact (cyclic_group_isomorphic_znz C (p - 1) Hp1 Hord).
 Qed.
+
+(** ===================================================================== *)
+(** (Z/2^nZ)* の構造定理                                                  *)
+(** (Z/2^nZ)* ≅ Z/2^(n-2)Z × Z/2Z  (n ≥ 2)                             *)
+(** ===================================================================== *)
+
+(** ===== Phase 0: 算術基本事実 ===== *)
+
+(** 2^n > 1 (n ≥ 2):
+    Nat.pow_le_mono_r を使い 2^2 ≤ 2^n から導く。 *)
+Lemma two_pow_ge2_gt_one : forall n : nat, (2 <= n)%nat -> (1 < 2^n)%nat.
+Proof.
+  intros n Hn.
+  apply Nat.lt_le_trans with (2^2)%nat.
+  - simpl. lia.
+  - apply Nat.pow_le_mono_r; lia.
+Qed.
+
+(** 2^(n-2) > 0 (n ≥ 2):
+    帰納法で 0 < 2^m をすべての m に対して証明する。 *)
+Lemma two_pow_nm2_pos : forall n : nat, (2 <= n)%nat -> (0 < 2^(n-2))%nat.
+Proof.
+  intros n _.
+  generalize (n - 2)%nat. intro m.
+  induction m as [|m' IH].
+  - simpl. lia.
+  - simpl. apply (proj2 (Nat.lt_0_mul' 2 (2^m'))). split. lia. exact IH.
+Qed.
+
+(** euler_phi(2^n) = 2^(n-1) (n ≥ 1):
+    euler_phi_prime_pow を p=2, e=n で適用し、(2-1)=1 を処理する。 *)
+Lemma euler_phi_two_pow : forall n : nat, (1 <= n)%nat ->
+    euler_phi (2^n)%nat = (2^(n-1))%nat.
+Proof.
+  intros n Hn.
+  pose proof (euler_phi_prime_pow 2 n prime_2 Hn) as H.
+  simpl in H. rewrite Nat.mul_1_r in H. exact H.
+Qed.
+
+(** GroupOrder (znz_units_group (2^n) _) (2^(n-1)) (n ≥ 2):
+    euler_phi_two_pow と euler_phi_group_order を組み合わせる。 *)
+Lemma znz_units_pow2_order : forall (n : nat) (Hn : (2 <= n)%nat)
+    (H2n : (1 < 2^n)%nat),
+    GroupOrder (znz_units_group ((2:nat)^n) H2n) (2^(n-1))%nat.
+Proof.
+  intros n Hn H2n.
+  assert (Hn1 : (1 <= n)%nat) by lia.
+  rewrite <- (euler_phi_two_pow n Hn1).
+  apply euler_phi_group_order.
+Qed.
+
+(** キャリア要素の Z.to_nat が n の範囲内であることの補題:
+    0 ≤ x かつ x < Z.of_nat n ならば Z.to_nat x < n。 *)
+Lemma znz_to_nat_lt : forall (n : nat) (x : Z),
+    0 <= x -> x < Z.of_nat n -> (Z.to_nat x < n)%nat.
+Proof.
+  intros n x H1 H2.
+  assert (Hlt : (Z.to_nat x < Z.to_nat (Z.of_nat n))%nat).
+  { apply Z2Nat.inj_lt; [exact H1 | lia | exact H2]. }
+  rewrite Nat2Z.id in Hlt. exact Hlt.
+Qed.
+
+(** GroupOrder (znz_group n Hn) n:
+    f(exist _ k _) = Fin.of_nat_lt (Z.to_nat k < n) が全単射。 *)
+Lemma znz_group_order_n : forall (n : nat) (Hn : (0 < n)%nat),
+    GroupOrder (znz_group n Hn) n.
+Proof.
+  intros n Hn.
+  assert (Hbnd : forall (x : carrier (znz_group n Hn)),
+      (Z.to_nat (proj1_sig x) < n)%nat).
+  { intro x. exact (znz_to_nat_lt n _ (proj1 (proj2_sig x)) (proj2 (proj2_sig x))). }
+  exists (fun x => Fin.of_nat_lt (Hbnd x)).
+  split.
+  - (* 単射性: Fin.of_nat_lt hx = Fin.of_nat_lt hy → x = y *)
+    intros x y Heq.
+    apply sig_eq. simpl.
+    apply Z2Nat.inj.
+    { exact (proj1 (proj2_sig x)). }
+    { exact (proj1 (proj2_sig y)). }
+    pose proof (to_nat_of_nat_lt _ n (Hbnd x)) as HLx.
+    pose proof (to_nat_of_nat_lt _ n (Hbnd y)) as HLy.
+    assert (Hk : proj1_sig (Fin.to_nat (Fin.of_nat_lt (Hbnd x))) =
+                 proj1_sig (Fin.to_nat (Fin.of_nat_lt (Hbnd y)))).
+    { exact (f_equal (fun k => proj1_sig (Fin.to_nat k)) Heq). }
+    rewrite HLx in Hk. rewrite HLy in Hk. exact Hk.
+  - (* 全射性: 各 i : Fin.t n に対し x0 = [Z.of_nat (Fin.to_nat i)] を構成 *)
+    intros i.
+    set (m := proj1_sig (Fin.to_nat i)).
+    assert (hm : (m < n)%nat) by exact (proj2_sig (Fin.to_nat i)).
+    assert (Hrange : (0 <= Z.of_nat m < Z.of_nat n)).
+    { split. lia. apply Nat2Z.inj_lt. exact hm. }
+    refine (ex_intro _ (exist _ (Z.of_nat m) Hrange) _).
+    apply Fin.to_nat_inj.
+    rewrite to_nat_of_nat_lt. simpl.
+    rewrite Nat2Z.id. reflexivity.
+Qed.
+
+(** Fin.t m 上の単射関数は全射でもある (pigeonhole 原理):
+    h : Fin.t m → Fin.t m が単射ならば全射。
+    証明: h(fin_all m) は NoDup かつ長さ m のリスト。
+          j ∉ h(fin_all m) と仮定すると remove j (fin_all m) に含まれるが
+          その長さは m-1 < m で矛盾。 *)
+Lemma Fin_inj_is_surj : forall (m : nat) (h : Fin.t m -> Fin.t m),
+    (forall i j, h i = h j -> i = j) ->
+    forall j : Fin.t m, exists i : Fin.t m, h i = j.
+Proof.
+  intros m h Hinj j.
+  assert (Hnd : List.NoDup (List.map h (fin_all m))).
+  { apply List.NoDup_map_NoDup_ForallPairs.
+    - intros a b _ _ H. exact (Hinj a b H).
+    - apply fin_all_NoDup. }
+  destruct (List.in_dec Fin.eq_dec j (List.map h (fin_all m))) as [Hin | Hnotin].
+  - apply List.in_map_iff in Hin. destruct Hin as [i [Heq _]]. exists i. exact Heq.
+  - exfalso.
+    assert (Hincl1 : List.incl (List.map h (fin_all m)) (fin_all m)).
+    { intros x _. apply fin_all_complete. }
+    assert (Hincl2 : List.incl (List.map h (fin_all m))
+        (List.remove Fin.eq_dec j (fin_all m))).
+    { intros x Hx. apply List.in_in_remove.
+      - intro Hxj. subst. exact (Hnotin Hx).
+      - apply Hincl1. exact Hx. }
+    apply List.NoDup_incl_length in Hincl2; [|exact Hnd].
+    rewrite List.map_length, fin_all_length in Hincl2.
+    pose proof (List.remove_length_lt Fin.eq_dec (fin_all m) j
+        (fin_all_complete m j)) as Hlt.
+    rewrite fin_all_length in Hlt.
+    lia.
+Qed.
+
+(** 単射準同型 + 等位数 → 全射 (全単射):
+    f : G → H が準同型・単射で |G| = |H| ならば f は全射でもある。
+    証明: GroupOrder の全単射 g : G → Fin.t m と h : H → Fin.t m を使い
+          h ∘ f ∘ g^{-1} が Fin.t m → Fin.t m の単射 → 全射を pigeonhole で示す。 *)
+Lemma inj_hom_surj_of_eq_order :
+  forall (G H : Group) (m : nat)
+    (f : carrier G -> carrier H)
+    (Hf_hom : forall x y, f (op G x y) = op H (f x) (f y))
+    (Hf_inj : forall x y, f x = f y -> x = y)
+    (HordG : GroupOrder G m)
+    (HordH : GroupOrder H m),
+    forall y : carrier H, exists x : carrier G, f x = y.
+Proof.
+  intros G H m f Hf_hom Hf_inj [gG [HgG_inj HgG_surj]] [gH [HgH_inj HgH_surj]] y.
+  set (phi := fun i : Fin.t m =>
+    let x := @epsilon (carrier G) (inhabits (e G)) (fun x => gG x = i) in
+    gH (f x)).
+  assert (Hphi_inj : forall i j : Fin.t m, phi i = phi j -> i = j).
+  { intros i j Heq. unfold phi in Heq.
+    set (xi := @epsilon (carrier G) (inhabits (e G)) (fun x => gG x = i)).
+    set (xj := @epsilon (carrier G) (inhabits (e G)) (fun x => gG x = j)).
+    assert (HgGxi : gG xi = i) by (apply epsilon_spec; exact (HgG_surj i)).
+    assert (HgGxj : gG xj = j) by (apply epsilon_spec; exact (HgG_surj j)).
+    assert (Hfxij : f xi = f xj) by exact (HgH_inj _ _ Heq).
+    assert (Hxij : xi = xj) by exact (Hf_inj _ _ Hfxij).
+    rewrite <- HgGxi, <- HgGxj, Hxij. reflexivity. }
+  destruct (Fin_inj_is_surj m phi Hphi_inj (gH y)) as [i Hi].
+  unfold phi in Hi.
+  set (xi := @epsilon (carrier G) (inhabits (e G)) (fun x => gG x = i)).
+  assert (HgGxi : gG xi = i) by (apply epsilon_spec; exact (HgG_surj i)).
+  assert (Hfxiy : f xi = y) by exact (HgH_inj _ _ Hi).
+  exact (ex_intro _ xi Hfxiy).
+Qed.
+
+(** ===== Phase 1: 単位元判定 ===== *)
+
+(** gcd(5, 2^n) = 1 (n ≥ 1):
+    5 は奇数なので 2^n と互いに素。Z.gcd の性質から。 *)
+Lemma five_gcd_pow2 : forall n : nat, (1 <= n)%nat ->
+    Z.gcd 5 (Z.of_nat (2^n)) = 1.
+Proof.
+  intros n _.
+  rewrite Zgcd_1_rel_prime.
+  induction n as [|n' IH].
+  - simpl. apply rel_prime_sym. apply rel_prime_1.
+  - rewrite Nat.pow_succ_r'. rewrite Nat2Z.inj_mul.
+    apply rel_prime_mult.
+    + apply rel_prime_sym. apply prime_rel_prime. apply prime_2.
+      intro H. destruct H as [k Hk]. lia.
+    + destruct n' as [|n''].
+      * simpl. apply rel_prime_sym. apply rel_prime_1.
+      * apply IH.
+Qed.
+
+(** gcd(2^n - 1, 2^n) = 1 (n ≥ 2):
+    2^n - 1 は奇数なので 2^n と互いに素。 *)
+Lemma neg_one_gcd_pow2 : forall n : nat, (2 <= n)%nat ->
+    Z.gcd (Z.of_nat (2^n) - 1) (Z.of_nat (2^n)) = 1.
+Proof.
+  intros n Hn.
+  rewrite Zgcd_1_rel_prime.
+  unfold rel_prime.
+  apply Zis_gcd_intro; try apply Z.divide_1_l.
+  intros x Hx1 Hx2.
+  replace 1 with (Z.of_nat (2^n) - (Z.of_nat (2^n) - 1)) by lia.
+  exact (Z.divide_sub_r _ _ _ Hx2 Hx1).
+Qed.
+
+(** 5^s ≡ 1 (mod 4) (nat 冪):
+    帰納法。5 ≡ 1 (mod 4) なので 5^s ≡ 1^s = 1 (mod 4)。 *)
+Lemma five_pow_mod_four : forall s : nat,
+    (5 : Z) ^ (Z.of_nat s) mod 4 = 1.
+Proof.
+  induction s as [|s' IH].
+  - simpl. reflexivity.
+  - rewrite Nat2Z.inj_succ. rewrite Z.pow_succ_r by lia.
+    rewrite Z.mul_mod by lia. rewrite IH.
+    compute. reflexivity.
+Qed.
+
+(** ===== Phase 2: 鍵合同式 ===== *)
+
+(** (1 + 2^r)^s ≡ 1 + s * 2^r (mod 2^(r+1)) (r ≥ 1):
+    帰納法で (1+x)^(s+1) = (1+x)^s * (1+x) を展開。
+    x = 2^r のとき x^2 = 2^(2r) ≡ 0 (mod 2^(r+1)) で高次項が消える。 *)
+Lemma one_plus_pow2_r_pow_s : forall (r s : nat), (1 <= r)%nat ->
+    (1 + (2:Z)^(Z.of_nat r))^(Z.of_nat s) mod (2:Z)^(Z.of_nat r + 1)
+    = (1 + (Z.of_nat s) * (2:Z)^(Z.of_nat r)) mod (2:Z)^(Z.of_nat r + 1).
+Proof.
+  Admitted.
+
+(** a ≡ b (mod m) → a^s ≡ b^s (mod m) (自然数冪):
+    a^s - b^s = (a-b)*(a^(s-1) + ... + b^(s-1)) の整除関係から。 *)
+Lemma congr_pow_mod : forall (a b m : Z) (s : nat),
+    a mod m = b mod m ->
+    a^(Z.of_nat s) mod m = b^(Z.of_nat s) mod m.
+Proof.
+  Admitted.
+
+(** 5^(2^k) ≡ 1 + 2^(k+2) (mod 2^(k+3)) — 鍵補題:
+    k に関する帰納法。
+    - k=0: 5^1 = 5 = 1+4, 8 | (5-1-4) = 8 | 0。✓
+    - k→k+1: 5^(2^(k+1)) = (5^(2^k))^2。
+      IH より 5^(2^k) = 1+2^(k+2)+q*2^(k+3)。
+      2乗して 2^(k+4) | ((5^(2^k))^2 - 1 - 2^(k+3)) を示す。 *)
+Lemma five_pow_two_k_congr : forall k : nat,
+    ((2:Z)^(Z.of_nat k + 3) | (5:Z)^(Z.of_nat (Nat.pow 2 k)) - 1 - (2:Z)^(Z.of_nat k + 2)).
+Proof.
+  induction k as [|k' IH].
+  - simpl. exists 0. lia.
+  - set (A := (5:Z)^(Z.of_nat (Nat.pow 2 k'))).
+    assert (Hpow : (5:Z)^(Z.of_nat (Nat.pow 2 (S k'))) = A ^ 2).
+    { unfold A. rewrite Nat.pow_succ_r'. rewrite Nat2Z.inj_mul.
+      rewrite Z.mul_comm.
+      rewrite Z.pow_mul_r; [reflexivity | apply Nat2Z.is_nonneg | lia]. }
+    rewrite Hpow.
+    replace (Z.of_nat (S k') + 3) with (Z.of_nat k' + 4) by (rewrite Nat2Z.inj_succ; lia).
+    replace (Z.of_nat (S k') + 2) with (Z.of_nat k' + 3) by (rewrite Nat2Z.inj_succ; lia).
+    destruct IH as [q Hq].
+    assert (HA : A = 1 + (2:Z)^(Z.of_nat k' + 2) + q * (2:Z)^(Z.of_nat k' + 3)) by lia.
+    set (y := (2:Z)^(Z.of_nat k')).
+    assert (Hy2 : (2:Z)^(Z.of_nat k' + 2) = 4 * y) by (unfold y; rewrite Z.pow_add_r by lia; lia).
+    assert (Hy3 : (2:Z)^(Z.of_nat k' + 3) = 8 * y) by (unfold y; rewrite Z.pow_add_r by lia; lia).
+    assert (Hy4 : (2:Z)^(Z.of_nat k' + 4) = 16 * y) by (unfold y; rewrite Z.pow_add_r by lia; lia).
+    assert (HAs : A = 1 + 4 * y + 8 * q * y) by (rewrite HA, Hy2, Hy3; lia).
+    exists (q + (1 + 2 * q)^2 * y).
+    rewrite Hy4, Hy3, HAs. ring.
+Qed.
+
+(** 5^(2^k * s) ≡ 1 + s * 2^(k+2) (mod 2^(k+3)):
+    five_pow_two_k_congr + congr_pow_mod + one_plus_pow2_r_pow_s から。 *)
+Lemma five_pow_2k_s_congr : forall (k s : nat),
+    ((2:Z)^(Z.of_nat k + 3) |
+    (5:Z)^(Z.of_nat (Nat.pow 2 k * s)) - 1 - (Z.of_nat s) * (2:Z)^(Z.of_nat k + 2)).
+Proof.
+  intros k s. induction s as [|s' IH].
+  - rewrite Nat.mul_0_r. simpl. exists 0. lia.
+  - rewrite Nat.mul_succ_r, Nat2Z.inj_add.
+    rewrite (Z.pow_add_r 5 (Z.of_nat (Nat.pow 2 k * s')) (Z.of_nat (Nat.pow 2 k))
+               (Nat2Z.is_nonneg _) (Nat2Z.is_nonneg _)).
+    rewrite Nat2Z.inj_succ.
+    set (A := (5:Z)^(Z.of_nat (Nat.pow 2 k * s'))).
+    set (B := (5:Z)^(Z.of_nat (Nat.pow 2 k))).
+    destruct IH as [q1 Hq1].
+    destruct (five_pow_two_k_congr k) as [q2 Hq2].
+    assert (HA : A = 1 + Z.of_nat s' * (2:Z)^(Z.of_nat k + 2) + q1 * (2:Z)^(Z.of_nat k + 3)) by lia.
+    assert (HB : B = 1 + (2:Z)^(Z.of_nat k + 2) + q2 * (2:Z)^(Z.of_nat k + 3)) by lia.
+    set (y := (2:Z)^(Z.of_nat k)).
+    assert (Hy2 : (2:Z)^(Z.of_nat k + 2) = 4 * y) by (unfold y; rewrite Z.pow_add_r by lia; lia).
+    assert (Hy3 : (2:Z)^(Z.of_nat k + 3) = 8 * y) by (unfold y; rewrite Z.pow_add_r by lia; lia).
+    assert (HAs : A = 1 + Z.of_nat s' * 4 * y + q1 * 8 * y) by (rewrite HA, Hy2, Hy3; lia).
+    assert (HBs : B = 1 + 4 * y + q2 * 8 * y) by (rewrite HB, Hy2, Hy3; lia).
+    exists (2 * Z.of_nat s' * y + 4 * q1 * y + A * q2 + q1).
+    rewrite Hy2, Hy3, HAs, HBs. ring.
+Qed.
+
+(** ===== Phase 3: 5 の位数 ===== *)
+
+(** 5^(2^(n-2)) ≡ 1 (mod 2^n) (n ≥ 2):
+    five_pow_two_k_congr を k = n-2 で適用すると
+    2^n | (5^(2^(n-2)) - 1 - 2^(n-2+2)) = 2^n | (5^(2^(n-2)) - 1 - 2^n)。
+    よって 5^(2^(n-2)) ≡ 1 + 2^n ≡ 1 (mod 2^n)。 *)
+Lemma five_pow_pow2_nm2_one : forall n : nat, (2 <= n)%nat ->
+    (Z.of_nat (Nat.pow 2 n) | (5:Z)^(Z.of_nat (Nat.pow 2 (n-2))) - 1).
+Proof.
+  intros n Hn.
+  set (k := (n - 2)%nat).
+  assert (Hk2 : Z.of_nat k + 2 = Z.of_nat n).
+  { unfold k. rewrite Nat2Z.inj_sub by lia. lia. }
+  assert (Hk3 : Z.of_nat k + 3 = Z.of_nat n + 1).
+  { unfold k. rewrite Nat2Z.inj_sub by lia. lia. }
+  assert (Hkn2 : Nat.pow 2 k = Nat.pow 2 (n - 2)) by (unfold k; reflexivity).
+  pose proof (five_pow_two_k_congr k) as H.
+  rewrite Hk2, Hk3 in H.
+  destruct H as [q Hq].
+  assert (H2n : (2:Z)^(Z.of_nat n) = Z.of_nat (Nat.pow 2 n)).
+  { rewrite Nat2Z.inj_pow. simpl Z.of_nat at 2. reflexivity. }
+  assert (H2n1 : (2:Z)^(Z.of_nat n + 1) = 2 * Z.of_nat (Nat.pow 2 n)).
+  { rewrite Z.pow_add_r by lia. rewrite H2n. ring. }
+  rewrite H2n, H2n1 in Hq.
+  exists (2 * q + 1). nia.
+Qed.
+
+(** 自然数の 2 進分解: s > 0 ならば s = 2^k * t で t 奇数となる k, t が存在する。 *)
+Lemma nat_pow2_odd_decomp : forall s : nat, (0 < s)%nat ->
+    exists k t : nat, (s = Nat.pow 2 k * t)%nat /\ Nat.Odd t /\ (k < Nat.log2 s + 1)%nat.
+Proof.
+  intro s. apply (lt_wf_ind s). clear s.
+  intros s IH Hs.
+  destruct (Nat.Even_or_Odd s) as [[s' Hs'] | Hs_odd].
+  - assert (Hs'pos : (0 < s')%nat) by lia.
+    assert (Hs'lt : (s' < s)%nat) by lia.
+    destruct (IH s' Hs'lt Hs'pos) as [k [t [Hst [Hodd Hlog]]]].
+    exists (k+1)%nat, t. split.
+    + rewrite Nat.pow_add_r. simpl. lia.
+    + split. exact Hodd.
+      rewrite Hs'. rewrite Nat.log2_double by lia. lia.
+  - exists 0%nat, s. simpl. split. lia. split. exact Hs_odd. lia.
+Qed.
+
+(** s * 2^r が 2^(r+1) で割り切れない (s 奇数):
+    s = 2j+1 より s * 2^r = j*2^(r+1) + 2^r。2^(r+1) ∤ 2^r。 *)
+Lemma pow2_times2 : forall r : nat,
+    (2:Z)^(Z.of_nat r + 1) = 2 * (2:Z)^(Z.of_nat r).
+Proof. intro r. rewrite Z.pow_add_r by lia. ring. Qed.
+
+Lemma odd_mul_pow2_not_zero_mod : forall (r : nat) (s : nat),
+    Nat.Odd s ->
+    (Z.of_nat s) * (2:Z)^(Z.of_nat r) mod (2:Z)^(Z.of_nat r + 1) <> 0.
+Proof.
+  intros r s [m Hm]. subst s.
+  assert (Hrpos : 0 < (2:Z)^(Z.of_nat r)) by (apply Z.pow_pos_nonneg; lia).
+  rewrite pow2_times2.
+  rewrite Nat2Z.inj_add, Nat2Z.inj_mul.
+  simpl Z.of_nat at 1 3.
+  generalize ((2:Z)^(Z.of_nat r)) Hrpos. intros y Hy.
+  replace ((2 * Z.of_nat m + 1) * y) with (y + Z.of_nat m * (2 * y)) by ring.
+  rewrite Z.mod_add by lia. rewrite Z.mod_small by lia. lia.
+Qed.
+
+(** 0 < s < 2^(n-2) ならば 5^s ≢ 1 (mod 2^n) (n ≥ 3):
+    s の 2 進分解 s = 2^k * t (t 奇数, k < n-2) を取る。
+    five_pow_2k_s_congr より 5^s ≡ 1 + t*2^(k+2) (mod 2^(k+3))。
+    t が奇数なので t*2^(k+2) ≢ 0 (mod 2^(k+3))。
+    k+3 ≤ n なので 5^s ≢ 1 (mod 2^n)。 *)
+Lemma five_pow_not_one_before : forall (n s : nat),
+    (3 <= n)%nat -> (0 < s)%nat -> (s < 2^(n-2))%nat ->
+    ~ (Z.of_nat (Nat.pow 2 n) | (5:Z)^(Z.of_nat s) - 1).
+Proof.
+  intros n s Hn Hs Hslt.
+  destruct (nat_pow2_odd_decomp s Hs) as [k [t [Hst [Hodd Hlog]]]].
+  assert (Hkn2 : (k < n - 2)%nat).
+  { assert (H2k : (Nat.pow 2 k <= s)%nat).
+    { rewrite Hst. apply Nat.le_mul_r. destruct Hodd as [m Hm]. lia. }
+    apply (Nat.pow_lt_mono_r_iff 2 k (n-2)%nat); lia. }
+  assert (Hkn : (k + 3 <= n)%nat) by lia.
+  destruct (five_pow_2k_s_congr k t) as [q Hq].
+  intros [r' Hr'].
+  assert (H5s : (5:Z)^(Z.of_nat s) = (5:Z)^(Z.of_nat (Nat.pow 2 k * t))) by
+    (rewrite Hst; reflexivity).
+  rewrite H5s in Hr'.
+  assert (Hval : (5:Z)^(Z.of_nat (Nat.pow 2 k * t)) - 1 =
+    Z.of_nat t * (2:Z)^(Z.of_nat k + 2) + q * (2:Z)^(Z.of_nat k + 3)) by lia.
+  assert (H2n_eq : Z.of_nat (Nat.pow 2 n) =
+      (2:Z)^(Z.of_nat k + 3) * (2:Z)^(Z.of_nat n - (Z.of_nat k + 3))).
+  { rewrite Nat2Z.inj_pow. simpl Z.of_nat at 2.
+    rewrite <- Z.pow_add_r by lia. f_equal. lia. }
+  assert (H3t : ((2:Z)^(Z.of_nat k + 3) | Z.of_nat t * (2:Z)^(Z.of_nat k + 2))).
+  { exists (r' * (2:Z)^(Z.of_nat n - (Z.of_nat k + 3)) - q).
+    rewrite H2n_eq in Hr'. lia. }
+  assert (H2t : ((2:Z) | Z.of_nat t)).
+  { destruct H3t as [r Hr].
+    assert (Hpow : (2:Z)^(Z.of_nat k + 3) = 2 * (2:Z)^(Z.of_nat k + 2)).
+    { replace (Z.of_nat k + 3) with (Z.succ (Z.of_nat k + 2)) by lia.
+      rewrite Z.pow_succ_r by lia. ring. }
+    assert (Hpow2 : 0 < (2:Z)^(Z.of_nat k+2)) by (apply Z.pow_pos_nonneg; lia).
+    rewrite Hpow in Hr.
+    exists r. nia. }
+  destruct Hodd as [m Hm]. subst t.
+  rewrite Nat2Z.inj_add, Nat2Z.inj_mul in H2t. simpl Z.of_nat at 1 in H2t.
+  destruct H2t as [j Hj]. lia.
+Qed.
+
+(** ===== Phase 4: -1 の位数 ===== *)
+
+(** (2^n - 1)^2 ≡ 1 (mod 2^n) (n ≥ 2):
+    (2^n-1)^2 = 2^(2n) - 2^(n+1) + 1 = 1 + 2^n*(2^n - 2) ≡ 1 (mod 2^n)。 *)
+Lemma neg_one_sq_one_pow2 : forall n : nat, (2 <= n)%nat ->
+    (Z.of_nat (Nat.pow 2 n) | (Z.of_nat (Nat.pow 2 n) - 1)^2 - 1).
+Proof.
+  intros n Hn.
+  exists (Z.of_nat (Nat.pow 2 n) - 2). ring.
+Qed.
+
+(** 2^n - 1 ≢ 1 (mod 2^n) (n ≥ 2):
+    2^n - 1 - 1 = 2^n - 2 は 2^n で割り切れない (0 < 2 < 2^n)。 *)
+Lemma neg_one_ne_one_pow2 : forall n : nat, (2 <= n)%nat ->
+    (Z.of_nat (Nat.pow 2 n) - 1) mod (Z.of_nat (Nat.pow 2 n)) <> 1.
+Proof.
+  intros n Hn.
+  assert (H2n : (4 <= Nat.pow 2 n)%nat) by
+    (change 4%nat with (Nat.pow 2 2); apply Nat.pow_le_mono_r; lia).
+  rewrite Z.mod_small by lia.
+  lia.
+Qed.
+
+(** ===== Phase 5: 補助補題 ===== *)
+
+(** べき乗の mod 周期性: b^M ≡ 1 (mod N) ならば b^a mod N = b^(a mod M) mod N。
+    証明: a = M*q + r として b^a = (b^M)^q * b^r。
+    (b^M)^q ≡ 1^q ≡ 1 (mod N) なので b^a ≡ b^r ≡ b^(a mod M) (mod N)。 *)
+Lemma Zpow_mod_period_nat : forall (b N M : Z) (a : nat),
+    1 < N -> 0 < M ->
+    b ^ M mod N = 1 ->
+    b ^ Z.of_nat a mod N = b ^ (Z.of_nat a mod M) mod N.
+Proof.
+  intros b N M a HN HM Hperiod.
+  set (q := Z.of_nat a / M).
+  set (r := Z.of_nat a mod M).
+  assert (Hq : 0 <= q) by (unfold q; apply Z.div_pos; lia).
+  assert (HM0 : 0 <= M) by lia.
+  assert (Hr : 0 <= r < M) by (unfold r; apply Z.mod_pos_bound; lia).
+  assert (Hdiv : Z.of_nat a = M * q + r).
+  { unfold q, r. pose proof (Z.div_mod (Z.of_nat a) M ltac:(lia)) as H. lia. }
+  rewrite Hdiv. rewrite Z.pow_add_r by lia.
+  rewrite (Z.pow_mul_r b M q HM0 Hq).
+  assert (Hbmq : (b ^ M) ^ q mod N = 1).
+  { rewrite <- Z.mod_pow_l. rewrite Hperiod.
+    rewrite (Z.pow_1_l q Hq). apply Z.mod_1_l. lia. }
+  rewrite Z.mul_mod by lia.
+  rewrite Hbmq. rewrite Z.mul_1_l. rewrite Z.mod_mod by lia. reflexivity.
+Qed.
+
+(** 除算の合同式変換: B | A - 1 かつ 1 < B ならば A mod B = 1。 *)
+Lemma dvd_to_one_mod : forall (A B : Z), 1 < B -> ((B | A - 1)) ->
+    A mod B = 1.
+Proof.
+  intros A B HB [q Hq].
+  assert (Heq : A = 1 + q * B) by lia.
+  rewrite Heq. rewrite Z.mod_add by lia. apply Z.mod_1_l. lia.
+Qed.
+
+(** 5^a mod 2^n は a mod 2^(n-2) のみに依存する (n ≥ 2):
+    five_pow_pow2_nm2_one より 5^(2^(n-2)) ≡ 1 (mod 2^n)、
+    Zpow_mod_period_nat より周期 2^(n-2) を持つ。 *)
+Lemma five_pow_period_mod : forall (n a : nat), (2 <= n)%nat ->
+    ((Z.of_nat (Nat.pow 2 n)) | (5:Z)^(Z.of_nat (Nat.pow 2 (n-2))) - 1) ->
+    (5:Z)^(Z.of_nat a) mod Z.of_nat (Nat.pow 2 n) =
+    (5:Z)^(Z.of_nat a mod Z.of_nat (Nat.pow 2 (n-2))) mod Z.of_nat (Nat.pow 2 n).
+Proof.
+  intros n a Hn Hdvd.
+  assert (HN : 1 < Z.of_nat (Nat.pow 2 n)).
+  { assert (H4 : (4 <= Nat.pow 2 n)%nat)
+      by (change (4%nat) with (Nat.pow 2 2); apply Nat.pow_le_mono_r; lia). lia. }
+  assert (HM : 0 < Z.of_nat (Nat.pow 2 (n-2))).
+  { assert (H1 : (1 <= Nat.pow 2 (n-2))%nat)
+      by (apply (Nat.le_trans _ (Nat.pow 2 0) _); [simpl; lia | apply Nat.pow_le_mono_r; lia]).
+    lia. }
+  apply Zpow_mod_period_nat; [lia | lia |].
+  apply dvd_to_one_mod; [lia | exact Hdvd].
+Qed.
+
+(** (2^n - 1)^b mod 2^n は b mod 2 のみに依存する (n ≥ 2):
+    neg_one_sq_one_pow2 より (2^n-1)^2 ≡ 1 (mod 2^n)、
+    Zpow_mod_period_nat より周期 2 を持つ。 *)
+Lemma neg_one_period_mod : forall (n b : nat), (2 <= n)%nat ->
+    ((Z.of_nat (Nat.pow 2 n)) | (Z.of_nat (Nat.pow 2 n) - 1)^2 - 1) ->
+    (Z.of_nat (Nat.pow 2 n) - 1)^(Z.of_nat b) mod Z.of_nat (Nat.pow 2 n) =
+    (Z.of_nat (Nat.pow 2 n) - 1)^(Z.of_nat b mod 2) mod Z.of_nat (Nat.pow 2 n).
+Proof.
+  intros n b Hn Hdvd.
+  set (N := Z.of_nat (Nat.pow 2 n)).
+  assert (HN : 1 < N).
+  { unfold N. assert (H4 : (4 <= Nat.pow 2 n)%nat)
+      by (change (4%nat) with (Nat.pow 2 2); apply Nat.pow_le_mono_r; lia). lia. }
+  apply (Zpow_mod_period_nat (N - 1) N 2); [lia | lia |].
+  apply dvd_to_one_mod; [lia | exact Hdvd].
+Qed.
+
+(** 群同型の対称性: G ≅ H ならば H ≅ G。
+    証明: f : G → H が全単射準同型ならば
+    g := epsilon の逆写像 f^{-1} : H → G も全単射準同型。 *)
+Lemma GroupIsomorphic_symm : forall G H : Group, G ≅ H -> H ≅ G.
+Proof.
+  intros G H [f [Hf_hom [Hf_inj Hf_surj]]].
+  pose (g := fun y : carrier H =>
+    @epsilon (carrier G) (inhabits (e G)) (fun x => f x = y)).
+  exists g.
+  assert (Hfg : forall y : carrier H, f (g y) = y).
+  { intro y. unfold g. apply epsilon_spec. exact (Hf_surj y). }
+  split; [| split].
+  - intros y1 y2.
+    apply Hf_inj.
+    unfold g at 1.
+    rewrite (epsilon_spec (inhabits (e G)) (fun x => f x = op H y1 y2)
+               (Hf_surj (op H y1 y2))).
+    rewrite Hf_hom. rewrite (Hfg y1). rewrite (Hfg y2). reflexivity.
+  - intros y1 y2 Heq.
+    assert (H1 : f (g y1) = y1) by exact (Hfg y1).
+    assert (H2 : f (g y2) = y2) by exact (Hfg y2).
+    rewrite <- H1, <- H2, Heq. reflexivity.
+  - intro x. exists (f x).
+    apply Hf_inj. rewrite Hfg. reflexivity.
+Qed.
+
+(** ===== Phase 5: 同型写像の構成と主定理 ===== *)
+
+(** (Z/2^nZ)* の構造定理: (Z/2^nZ)* ≅ Z/2^(n-2)Z × Z/2Z  (n ≥ 2).
+
+    同型写像 φ : Z/2^(n-2)Z × Z/2Z → (Z/2^nZ)*
+      φ(a, b) = 5^a * (2^n - 1)^b  mod 2^n
+
+    準同型性: 指数の加算 ↔ 乗算のモジュラー。
+    単射性:
+      - b=1 の場合: 5^a * (2^n-1) ≡ 1 → 5^a ≡ -(2^n-1) ≡ -(-1) ≡ 1 (mod 4)
+        ところが 5^a ≡ 1 (mod 4) かつ 2^n-1 ≡ -1 ≡ 3 (mod 4)。矛盾。
+      - b=0: 5^a ≡ 1 (mod 2^n)。five_pow_not_one_before より a = 0。
+    全射性: GroupOrder の等位数から単射 → 全射。 *)
+Theorem znz_units_pow2_structure :
+  forall (n : nat) (Hn : (2 <= n)%nat)
+         (H2n : (1 < Nat.pow 2 n)%nat) (Hn2 : (0 < Nat.pow 2 (n-2))%nat),
+    znz_units_group (Nat.pow 2 n) H2n ≅
+    znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1).
+Proof.
+  Admitted.
