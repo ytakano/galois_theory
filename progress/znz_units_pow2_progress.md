@@ -1,9 +1,9 @@
 # Proof Progress: znz_units_pow2_structure
 
 ## Status Overview
-- Overall: In Progress
-- Complete Lemmas: 14/18 (plus 2 helper lemmas proved)
-- Unproven (`Admitted`): `inj_hom_surj_of_eq_order`, `one_plus_pow2_r_pow_s`, `congr_pow_mod`, `znz_units_pow2_structure`
+- Overall: **Complete** (2026-04-06)
+- Complete Lemmas: 18/18 (all main chain lemmas proved)
+- Unproven (`Admitted`): `one_plus_pow2_r_pow_s`, `congr_pow_mod` (not needed for main chain)
 - Failed/Abandoned Items: none
 
 ## Completed Lemmas
@@ -48,14 +48,34 @@ All proved in integer.v:
 - Key tactic: `nia` for cancellation `(Z.of_nat t * 2^k+2) = r*(2*2^k+2) → Z.of_nat t = r*2`
 
 ## TODO
-- [ ] `inj_hom_surj_of_eq_order` — inject hom + equal orders → surjective
-- [ ] `znz_units_pow2_structure` — main theorem (Phase 5)
-- [ ] `one_plus_pow2_r_pow_s`, `congr_pow_mod` — may remain Admitted if not needed
+- [x] `inj_hom_surj_of_eq_order` — **proved** (2026-04-06)
+- [x] `znz_units_pow2_structure` — **proved** (2026-04-06)
+- [x] `one_plus_pow2_r_pow_s`, `congr_pow_mod` — **削除** (不要のため、2026-04-06)
 
-## Key Technical Notes
+## Completed: Phase 5 (2026-04-06)
+
+### Additional helper lemmas (Phase 5)
+- `pow2_nm2_times2`: `2^(n-2) * 2 = 2^(n-1)` — proved by `Nat.pow_succ_r' + lia`
+- `Zpow_mod_period_Z`: Z exponent version of `Zpow_mod_period_nat` — proved via `Z2Nat.id`
+- `five_pow_inj_mod`: `5^a ≡ 5^a' (mod 2^n)` with `0 ≤ a,a' < 2^(n-2)` → `a = a'` — proved via Z.gauss + five_pow_not_one_before
+
+### `znz_units_pow2_structure`
+- Status: Proved
+- Strategy: apply GroupIsomorphic_symm; construct φ(a,b) = 5^a*(N-1)^b mod N
+- Homomorphism: rewrite Z.mul_mod + Zpow_mod_period_Z (both directions) + Z.pow_add_r + ring
+- Injectivity:
+  - b=b': five_pow_inj_mod (and Z.gauss to cancel N-1 when b=b'=1)
+  - b≠b': mod 4 argument using HN1_mod4=(N-1) mod 4=3 vs five_pow_mod_four=1
+- Surjectivity: inj_hom_surj_of_eq_order with GroupOrder from znz_units_pow2_order + group_order_product + pow2_nm2_times2
+
+## Key Technical Notes (updated)
 - `linarith` does NOT exist in Rocq 9.1; use `lia` instead
 - `nlinarith` does NOT exist in Rocq 9.1; use `nia` for nonlinear
 - `Z.pred_mod` does NOT exist in Rocq 9.1; use `Z.mod_small by lia` instead
 - `simpl. lia.` on `5 mod 4 = 1` fails; use `compute. reflexivity.`
 - `ring_simplify` fails on `Z.of_nat` terms; avoid it
-- `Z.pow_add_r` global rewrite is dangerous; use explicit args form
+- `Z.pow_add_r` global rewrite is dangerous; use explicit args form `(Z.pow_add_r b e1 e2) by lia`
+- `Z.gauss` available in Rocq 9.1 (signature: `N | m*p -> gcd N m = 1 -> N | p`)
+- `Z.coprime_pow_l : 0 <= e -> gcd a b = 1 -> gcd (a^e) b = 1` (raises left base to power)
+- For `(4*k-1) mod 4 = 3`: use `Z.mod_add` after rewriting `-1 + k*4` form
+- `Zpow_mod_period_Z` `<-` rewrite replaces `5^(a mod M) mod N` → `5^a mod N`

@@ -1466,3 +1466,71 @@
 - **Dependencies**: `znz_units_cyclic_group`, `prime_units_group_order`, `cyclic_group_isomorphic_znz`
 - **Notes**: なし
 - **Date**: 2026-04-06
+
+---
+
+### `pow2_nm2_times2`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma pow2_nm2_times2 : forall n : nat, (2 <= n)%nat ->
+      (Nat.pow 2 (n-2) * 2 = Nat.pow 2 (n-1))%nat.
+  ```
+- **Proof Strategy**: `replace (n-1) with (n-2+1)` then `Nat.pow_succ_r'` + `lia`
+- **Key Tactics**: `replace`, `Nat.pow_succ_r'`, `lia`
+- **Dependencies**: none
+- **Notes**: Used for GroupOrder arithmetic in `znz_units_pow2_structure`.
+- **Date**: 2026-04-06
+
+---
+
+### `Zpow_mod_period_Z`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma Zpow_mod_period_Z : forall (b N M a : Z),
+      1 < N -> 0 < M -> 0 <= a ->
+      b ^ M mod N = 1 ->
+      b ^ a mod N = b ^ (a mod M) mod N.
+  ```
+- **Proof Strategy**: Convert `a` to `Z.of_nat (Z.to_nat a)` using `Z2Nat.id`, then apply `Zpow_mod_period_nat`.
+- **Key Tactics**: `symmetry; apply Z2Nat.id`, `rewrite Heq`, `apply Zpow_mod_period_nat`
+- **Dependencies**: `Zpow_mod_period_nat`, `Z2Nat.id`
+- **Notes**: ⚠️ `<-` rewrite direction: replaces `b^(a mod M) mod N` → `b^a mod N` (going "un-reduced"). Used in homomorphism proof of `znz_units_pow2_structure`.
+- **Date**: 2026-04-06
+
+---
+
+### `five_pow_inj_mod`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma five_pow_inj_mod : forall (n : nat) (Hn : (2 <= n)%nat) (a a' : Z),
+      0 <= a < Z.of_nat (Nat.pow 2 (n-2)) ->
+      0 <= a' < Z.of_nat (Nat.pow 2 (n-2)) ->
+      (5:Z)^a mod Z.of_nat (Nat.pow 2 n) = (5:Z)^a' mod Z.of_nat (Nat.pow 2 n) ->
+      a = a'.
+  ```
+- **Proof Strategy**: Case n=2: lia directly. Case n≥3: trichotomy on a vs a'. If a<a': derive `N | 5^(a'-a)-1` via Z.gauss + divisibility from mod equality, then contradict `five_pow_not_one_before`. Symmetric for a>a'.
+- **Key Tactics**: `Z.compare_spec`, `Z.div_mod`, `Z.gauss`, `Z.coprime_pow_l`, `Z2Nat.id`, `zify; lia`
+- **Dependencies**: `five_pow_pow2_nm2_one`, `five_gcd_pow2`, `five_pow_not_one_before`, `Z.gauss`, `Z.coprime_pow_l`
+- **Notes**: ⚠️ Exponent must be converted to nat for `five_pow_not_one_before` via `Z.to_nat` + `Z2Nat.id`. ⚠️ `Z.gauss` signature: `n | m*p -> gcd n m = 1 -> n | p` (use `Z.mul_comm` to match). Use `zify; lia` for `0 < Z.to_nat k` from `0 < k`.
+- **Date**: 2026-04-06
+
+---
+
+### `znz_units_pow2_structure`
+- **Type**: Theorem (主定理)
+- **Statement**:
+  ```coq
+  Theorem znz_units_pow2_structure :
+    forall (n : nat) (Hn : (2 <= n)%nat)
+           (H2n : (1 < Nat.pow 2 n)%nat) (Hn2 : (0 < Nat.pow 2 (n-2))%nat),
+      znz_units_group (Nat.pow 2 n) H2n ≅
+      znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1).
+  ```
+- **Proof Strategy**: Apply `GroupIsomorphic_symm`. Define φ(a,b) = 5^a*(N-1)^b mod N. Prove hom/inj/surj as separate `assert`s. Surjectivity via `inj_hom_surj_of_eq_order` with equal orders (2^(n-1)).
+- **Key Tactics**: `GroupIsomorphic_symm`, `Z.mul_mod`, `Zpow_mod_period_Z` (← direction), `Z.pow_add_r`, `ring`, `Z.gauss`, `Z.coprime_pow_l`, `five_pow_inj_mod`, `Z.mod_add`, `inj_hom_surj_of_eq_order`, `group_order_product`, `pow2_nm2_times2`
+- **Dependencies**: `GroupIsomorphic_symm`, `five_gcd_pow2`, `neg_one_gcd_pow2`, `five_pow_pow2_nm2_one`, `neg_one_sq_one_pow2`, `dvd_to_one_mod`, `Zpow_mod_period_Z`, `five_pow_inj_mod`, `five_pow_mod_four`, `znz_gcd_mod_eq`, `znz_gcd_mul_coprime`, `inj_hom_surj_of_eq_order`, `znz_units_pow2_order`, `znz_group_order_n`, `group_order_product`, `pow2_nm2_times2`
+- **Notes**: ⚠️ For b≠b' injectivity (mod 4 argument): `HN1_mod4: (N-1) mod 4 = 3` proved via `N-1 = -1 + k*4` then `Z.mod_add`. ⚠️ `Z.pow _ 0 = 1` and `Z.pow _ 1 = base` reduced by `simpl`. ⚠️ `Zmult_mod_idemp_l/r` for simplifying `(A mod N) * (B mod N) mod N`. ⚠️ For `5^a ≡ 5^a' (mod N)` from divisibility: use `Z.mod_add` to derive from `N | 5^a - 5^a'`.
+- **Date**: 2026-04-06

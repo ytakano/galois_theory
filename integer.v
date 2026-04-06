@@ -7171,22 +7171,6 @@ Qed.
 
 (** ===== Phase 2: 鍵合同式 ===== *)
 
-(** (1 + 2^r)^s ≡ 1 + s * 2^r (mod 2^(r+1)) (r ≥ 1):
-    帰納法で (1+x)^(s+1) = (1+x)^s * (1+x) を展開。
-    x = 2^r のとき x^2 = 2^(2r) ≡ 0 (mod 2^(r+1)) で高次項が消える。 *)
-Lemma one_plus_pow2_r_pow_s : forall (r s : nat), (1 <= r)%nat ->
-    (1 + (2:Z)^(Z.of_nat r))^(Z.of_nat s) mod (2:Z)^(Z.of_nat r + 1)
-    = (1 + (Z.of_nat s) * (2:Z)^(Z.of_nat r)) mod (2:Z)^(Z.of_nat r + 1).
-Proof.
-  Admitted.
-
-(** a ≡ b (mod m) → a^s ≡ b^s (mod m) (自然数冪):
-    a^s - b^s = (a-b)*(a^(s-1) + ... + b^(s-1)) の整除関係から。 *)
-Lemma congr_pow_mod : forall (a b m : Z) (s : nat),
-    a mod m = b mod m ->
-    a^(Z.of_nat s) mod m = b^(Z.of_nat s) mod m.
-Proof.
-  Admitted.
 
 (** 5^(2^k) ≡ 1 + 2^(k+2) (mod 2^(k+3)) — 鍵補題:
     k に関する帰納法。
@@ -7219,7 +7203,7 @@ Proof.
 Qed.
 
 (** 5^(2^k * s) ≡ 1 + s * 2^(k+2) (mod 2^(k+3)):
-    five_pow_two_k_congr + congr_pow_mod + one_plus_pow2_r_pow_s から。 *)
+    five_pow_two_k_congr の k に関する帰納法を s に拡張。 *)
 Lemma five_pow_2k_s_congr : forall (k s : nat),
     ((2:Z)^(Z.of_nat k + 3) |
     (5:Z)^(Z.of_nat (Nat.pow 2 k * s)) - 1 - (Z.of_nat s) * (2:Z)^(Z.of_nat k + 2)).
@@ -7476,6 +7460,90 @@ Qed.
 
 (** ===== Phase 5: 同型写像の構成と主定理 ===== *)
 
+(** 算術補題: 2^(n-2) * 2 = 2^(n-1) (n ≥ 2). *)
+Lemma pow2_nm2_times2 : forall n : nat, (2 <= n)%nat ->
+    (Nat.pow 2 (n-2) * 2 = Nat.pow 2 (n-1))%nat.
+Proof.
+  intros n Hn.
+  replace (n-1)%nat with (n-2+1)%nat by lia.
+  rewrite Nat.pow_succ_r'. lia.
+Qed.
+
+(** Zpow_mod_period の整数冪版:
+    b^M mod N = 1 かつ 0 ≤ a ならば b^a mod N = b^(a mod M) mod N。
+    証明: a = Z.of_nat (Z.to_nat a) に変換して Zpow_mod_period_nat を適用。 *)
+Lemma Zpow_mod_period_Z : forall (b N M a : Z),
+    1 < N -> 0 < M -> 0 <= a ->
+    b ^ M mod N = 1 ->
+    b ^ a mod N = b ^ (a mod M) mod N.
+Proof.
+  intros b N M a HN HM Ha Hperiod.
+  assert (Heq : a = Z.of_nat (Z.to_nat a)).
+  { symmetry. apply Z2Nat.id. exact Ha. }
+  rewrite Heq.
+  apply Zpow_mod_period_nat; [exact HN | exact HM | exact Hperiod].
+Qed.
+
+(** 5^a ≡ 5^a' (mod 2^n) かつ 0 ≤ a, a' < 2^(n-2) ならば a = a' (n ≥ 2):
+    n = 2: a, a' ∈ [0, 1) なので a = a' = 0。
+    n ≥ 3: a ≠ a' なら N | 5^|a-a'| - 1 が言えて five_pow_not_one_before と矛盾。 *)
+Lemma five_pow_inj_mod : forall (n : nat) (Hn : (2 <= n)%nat) (a a' : Z),
+    0 <= a < Z.of_nat (Nat.pow 2 (n-2)) ->
+    0 <= a' < Z.of_nat (Nat.pow 2 (n-2)) ->
+    (5:Z)^a mod Z.of_nat (Nat.pow 2 n) = (5:Z)^a' mod Z.of_nat (Nat.pow 2 n) ->
+    a = a'.
+Proof.
+  intros n Hn a a' [Ha0 Ha1] [Ha'0 Ha'1] Heq.
+  set (N := Z.of_nat (Nat.pow 2 n)).
+  (* n = 2: a, a' ∈ [0, 1) *)
+  destruct (le_or_lt 3 n) as [Hn3 | Hn2].
+  2: { assert (n = 2%nat) by lia. subst. simpl in Ha1, Ha'1. lia. }
+  (* n ≥ 3: 三分割して a ≠ a' の場合を排除 *)
+  destruct (Z.compare_spec a a') as [Heqa | Hlt | Hgt]; [exact Heqa | exfalso.. |].
+  - (* a < a': N | 5^(a'-a) - 1 を導く *)
+    assert (HN_dvd_diff : (N | (5:Z)^a' - (5:Z)^a)).
+    { exists ((5:Z)^a' / N - (5:Z)^a / N).
+      pose proof (Z.div_mod ((5:Z)^a) N ltac:(unfold N; lia)) as H1.
+      pose proof (Z.div_mod ((5:Z)^a') N ltac:(unfold N; lia)) as H2.
+      rewrite Heq in H1. lia. }
+    assert (Hfactor : (5:Z)^a' - (5:Z)^a = (5:Z)^a * ((5:Z)^(a'-a) - 1)).
+    { assert (Haa : a' = a + (a'-a)) by lia.
+      rewrite Haa, Z.pow_add_r by lia. ring. }
+    assert (HN_dvd_sub1 : (N | (5:Z)^(a'-a) - 1)).
+    { apply Z.gauss with ((5:Z)^a).
+      - rewrite Z.mul_comm. rewrite <- Hfactor. exact HN_dvd_diff.
+      - rewrite Z.gcd_comm. unfold N.
+        apply Z.coprime_pow_l; [lia | apply five_gcd_pow2; lia]. }
+    set (s := Z.to_nat (a'-a)).
+    assert (Hs_pos : (0 < s)%nat) by (unfold s; zify; lia).
+    assert (Hs_lt : (s < Nat.pow 2 (n-2))%nat) by (unfold s; zify; lia).
+    assert (Hconv : (5:Z)^(a'-a) = (5:Z)^(Z.of_nat s)).
+    { unfold s. rewrite Z2Nat.id; [reflexivity | lia]. }
+    rewrite Hconv in HN_dvd_sub1.
+    exact (five_pow_not_one_before n s Hn3 (conj Hs_pos Hs_lt) HN_dvd_sub1).
+  - (* a > a': 対称 *)
+    assert (HN_dvd_diff : (N | (5:Z)^a - (5:Z)^a')).
+    { exists ((5:Z)^a / N - (5:Z)^a' / N).
+      pose proof (Z.div_mod ((5:Z)^a) N ltac:(unfold N; lia)) as H1.
+      pose proof (Z.div_mod ((5:Z)^a') N ltac:(unfold N; lia)) as H2.
+      rewrite <- Heq in H2. lia. }
+    assert (Hfactor : (5:Z)^a - (5:Z)^a' = (5:Z)^a' * ((5:Z)^(a-a') - 1)).
+    { assert (Haa : a = a' + (a-a')) by lia.
+      rewrite Haa, Z.pow_add_r by lia. ring. }
+    assert (HN_dvd_sub1 : (N | (5:Z)^(a-a') - 1)).
+    { apply Z.gauss with ((5:Z)^a').
+      - rewrite Z.mul_comm. rewrite <- Hfactor. exact HN_dvd_diff.
+      - rewrite Z.gcd_comm. unfold N.
+        apply Z.coprime_pow_l; [lia | apply five_gcd_pow2; lia]. }
+    set (s := Z.to_nat (a-a')).
+    assert (Hs_pos : (0 < s)%nat) by (unfold s; zify; lia).
+    assert (Hs_lt : (s < Nat.pow 2 (n-2))%nat) by (unfold s; zify; lia).
+    assert (Hconv : (5:Z)^(a-a') = (5:Z)^(Z.of_nat s)).
+    { unfold s. rewrite Z2Nat.id; [reflexivity | lia]. }
+    rewrite Hconv in HN_dvd_sub1.
+    exact (five_pow_not_one_before n s Hn3 (conj Hs_pos Hs_lt) HN_dvd_sub1).
+Qed.
+
 (** (Z/2^nZ)* の構造定理: (Z/2^nZ)* ≅ Z/2^(n-2)Z × Z/2Z  (n ≥ 2).
 
     同型写像 φ : Z/2^(n-2)Z × Z/2Z → (Z/2^nZ)*
@@ -7483,9 +7551,8 @@ Qed.
 
     準同型性: 指数の加算 ↔ 乗算のモジュラー。
     単射性:
-      - b=1 の場合: 5^a * (2^n-1) ≡ 1 → 5^a ≡ -(2^n-1) ≡ -(-1) ≡ 1 (mod 4)
-        ところが 5^a ≡ 1 (mod 4) かつ 2^n-1 ≡ -1 ≡ 3 (mod 4)。矛盾。
-      - b=0: 5^a ≡ 1 (mod 2^n)。five_pow_not_one_before より a = 0。
+      - b ≠ b': 5^a ≡ 5^a' * (2^n-1)^(b'-b) (mod 2^n)。mod 4 で 1 ≡ 3 の矛盾。
+      - b = b': 5^a ≡ 5^a' → five_pow_inj_mod より a = a'。
     全射性: GroupOrder の等位数から単射 → 全射。 *)
 Theorem znz_units_pow2_structure :
   forall (n : nat) (Hn : (2 <= n)%nat)
@@ -7493,4 +7560,209 @@ Theorem znz_units_pow2_structure :
     znz_units_group (Nat.pow 2 n) H2n ≅
     znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1).
 Proof.
-  Admitted.
+  intros n Hn H2n Hn2.
+  apply GroupIsomorphic_symm.
+  (* Goal: znz_group (2^(n-2)) × znz_group 2 ≅ znz_units_group (2^n) *)
+  set (N := Z.of_nat (Nat.pow 2 n)).
+  set (M := Z.of_nat (Nat.pow 2 (n-2))).
+  assert (HN_pos : 0 < N) by (unfold N; lia).
+  assert (HN_ge4 : (4:Z) <= N).
+  { unfold N. assert (H4 : (4 <= Nat.pow 2 n)%nat) by
+      (change (4%nat) with (Nat.pow 2 2); apply Nat.pow_le_mono_r; lia). lia. }
+  assert (HM_pos : 0 < M) by (unfold M; lia).
+  (* 5 と N-1 は mod N で互いに素 *)
+  assert (H5_gcd : Z.gcd 5 N = 1).
+  { unfold N. apply five_gcd_pow2; lia. }
+  assert (HN1_gcd : Z.gcd (N-1) N = 1).
+  { unfold N. apply neg_one_gcd_pow2. exact Hn. }
+  (* 周期 M (= 2^(n-2)) と 2 に関する mod-1 事実 *)
+  assert (H5_mod1 : (5:Z)^M mod N = 1).
+  { apply dvd_to_one_mod; [lia |].
+    unfold N, M. rewrite <- Nat2Z.inj_pow.
+    exact (five_pow_pow2_nm2_one n Hn Hn2). }
+  assert (HN1_mod1 : (N-1)^2 mod N = 1).
+  { apply dvd_to_one_mod; [lia |]. exact (neg_one_sq_one_pow2 n Hn). }
+  (* 冪の互素性 *)
+  assert (H5_gcd_pow : forall a : Z, 0 <= a -> Z.gcd ((5:Z)^a) N = 1).
+  { intros a Ha. apply Z.coprime_pow_l. exact Ha. exact H5_gcd. }
+  assert (HN1_gcd_pow : forall b : Z, 0 <= b -> Z.gcd ((N-1)^b) N = 1).
+  { intros b Hb. apply Z.coprime_pow_l. exact Hb. exact HN1_gcd. }
+  (* phi の値の gcd 条件 *)
+  assert (Hphi_valid : forall (a b : Z), 0 <= a -> 0 <= b ->
+      Z.gcd ((5^a * (N-1)^b) mod N) N = 1).
+  { intros a b Ha Hb.
+    unfold N at 1. rewrite znz_gcd_mod_eq by (unfold N; lia).
+    apply znz_gcd_mul_coprime; fold N.
+    - apply H5_gcd_pow. exact Ha.
+    - apply HN1_gcd_pow. exact Hb. }
+  (* phi の定義: φ(a, b) = 5^a * (N-1)^b mod N *)
+  set (phi_val := fun (p : carrier (znz_group (Nat.pow 2 (n-2)) Hn2
+                                    ×ₒ znz_group 2 (Nat.lt_0_succ 1))) =>
+    (5^(proj1_sig (fst p)) * (N-1)^(proj1_sig (snd p))) mod N).
+  assert (Hphi_cond : forall p, 0 <= phi_val p < N /\ Z.gcd (phi_val p) N = 1).
+  { intro p.
+    set (a := proj1_sig (fst p)). set (b := proj1_sig (snd p)).
+    assert (Ha : 0 <= a) by exact (proj1 (proj2_sig (fst p))).
+    assert (Hb : 0 <= b) by exact (proj1 (proj2_sig (snd p))).
+    split.
+    - exact (Z.mod_pos_bound _ _ HN_pos).
+    - exact (Hphi_valid a b Ha Hb). }
+  set (phi := fun p => exist _ (phi_val p)
+    (conj (proj1 (Hphi_cond p)) (proj2 (Hphi_cond p)))
+    : carrier (znz_units_group (Nat.pow 2 n) H2n)).
+  (* 準同型 *)
+  assert (Hphi_hom : forall p p',
+      phi (op (znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1)) p p') =
+      op (znz_units_group (Nat.pow 2 n) H2n) (phi p) (phi p')).
+  { intros [p1 p2] [q1 q2].
+    apply sig_eq. unfold phi. simpl.
+    unfold phi_val. simpl.
+    set (a  := proj1_sig p1). set (b  := proj1_sig p2).
+    set (a' := proj1_sig q1). set (b' := proj1_sig q2).
+    assert (Ha  : 0 <= a)  by exact (proj1 (proj2_sig p1)).
+    assert (Hb  : 0 <= b)  by exact (proj1 (proj2_sig p2)).
+    assert (Ha' : 0 <= a') by exact (proj1 (proj2_sig q1)).
+    assert (Hb' : 0 <= b') by exact (proj1 (proj2_sig q2)).
+    (* LHS = 5^((a+a') mod M) * (N-1)^((b+b') mod 2) mod N *)
+    (* RHS = 5^a*(N-1)^b mod N * (5^a'*(N-1)^b' mod N) mod N *)
+    (* 両辺 = 5^(a+a') * (N-1)^(b+b') mod N *)
+    assert (HLHS : (5:Z)^((a+a') mod M) * (N-1)^((b+b') mod 2) mod N
+                   = (5:Z)^(a+a') * (N-1)^(b+b') mod N).
+    { rewrite Z.mul_mod by lia.
+      rewrite <- (Zpow_mod_period_Z 5 N M (a+a') ltac:(lia) ltac:(lia) ltac:(lia) H5_mod1).
+      rewrite <- (Zpow_mod_period_Z (N-1) N 2 (b+b') ltac:(lia) ltac:(lia) ltac:(lia) HN1_mod1).
+      rewrite <- Z.mul_mod by lia. reflexivity. }
+    assert (HRHS : (5:Z)^a * (N-1)^b mod N * ((5:Z)^a' * (N-1)^b' mod N) mod N
+                   = (5:Z)^(a+a') * (N-1)^(b+b') mod N).
+    { rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r.
+      f_equal.
+      rewrite (Z.pow_add_r 5 a a') by lia.
+      rewrite (Z.pow_add_r (N-1) b b') by lia.
+      ring. }
+    rewrite HLHS. exact (eq_sym HRHS). }
+  (* 単射 *)
+  assert (Hphi_inj : forall p p', phi p = phi p' -> p = p').
+  { intros [p1 p2] [q1 q2] Heq.
+    unfold phi in Heq.
+    assert (Hval_eq : phi_val (p1, p2) = phi_val (q1, q2)).
+    { exact (f_equal proj1_sig Heq). }
+    unfold phi_val in Hval_eq. simpl in Hval_eq.
+    set (a  := proj1_sig p1). set (b  := proj1_sig p2).
+    set (a' := proj1_sig q1). set (b' := proj1_sig q2).
+    assert (Ha  : 0 <= a)  by exact (proj1 (proj2_sig p1)).
+    assert (Hb  : 0 <= b)  by exact (proj1 (proj2_sig p2)).
+    assert (Ha' : 0 <= a') by exact (proj1 (proj2_sig q1)).
+    assert (Hb' : 0 <= b') by exact (proj1 (proj2_sig q2)).
+    assert (Hb_01 : b = 0 \/ b = 1).
+    { assert (Hb2 : b < 2) by exact (proj2 (proj2_sig p2)). lia. }
+    assert (Hb'_01 : b' = 0 \/ b' = 1).
+    { assert (Hb'2 : b' < 2) by exact (proj2 (proj2_sig q2)). lia. }
+    (* mod 4 による補助: (N-1) mod 4 = 3 *)
+    assert (H4_dvd_N : (4:Z | N)).
+    { unfold N.
+      assert (H4 : (4 | Nat.pow 2 n)%nat) by
+        (change (4%nat) with (Nat.pow 2 2); apply Nat.pow_dvd_pow; lia).
+      destruct H4 as [k Hk]. exists (Z.of_nat k).
+      rewrite Nat2Z.inj_mul in *. lia. }
+    assert (HN1_mod4 : (N-1) mod 4 = 3).
+    { destruct H4_dvd_N as [k H4k].
+      assert (Heq4 : N - 1 = -1 + k * 4) by lia.
+      rewrite Heq4, Z.mod_add by lia. reflexivity. }
+    (* b = b' を示す: b ≠ b' ならば mod 4 で矛盾 *)
+    assert (Hbb' : b = b').
+    { destruct Hb_01 as [Hb0 | Hb1]; destruct Hb'_01 as [Hb'0 | Hb'1].
+      - lia. (* b=0, b'=0 *)
+      - (* b=0, b'=1: 5^a ≡ 5^a' * (N-1) mod N, mod 4 で矛盾 *)
+        exfalso.
+        subst b b'.
+        assert (HN_dvd : (N | (5:Z)^a - (5:Z)^a' * (N-1))).
+        { exists ((5:Z)^a / N - (5:Z)^a' * (N-1) / N).
+          pose proof (Z.div_mod ((5:Z)^a) N ltac:(unfold N; lia)) as H1.
+          pose proof (Z.div_mod ((5:Z)^a' * (N-1)) N ltac:(unfold N; lia)) as H2.
+          simpl (Z.pow _ 0) in Hval_eq. simpl (Z.pow _ 1) in Hval_eq.
+          rewrite Z.mul_1_r in Hval_eq.
+          rewrite Hval_eq in H1. lia. }
+        assert (H4_dvd_diff : (4:Z | (5:Z)^a - (5:Z)^a' * (N-1))).
+        { exact (Z.divide_trans 4 N _ H4_dvd_N HN_dvd). }
+        destruct H4_dvd_diff as [k4 Hk4].
+        assert (Hmod4a : (5:Z)^a mod 4 = (5:Z)^a' * (N-1) mod 4).
+        { assert (Heqv : (5:Z)^a = 5^a' * (N-1) + k4 * 4) by lia.
+          rewrite Heqv, Z.mod_add by lia. }
+        rewrite five_pow_mod_four in Hmod4a.
+        rewrite Z.mul_mod, five_pow_mod_four, HN1_mod4 in Hmod4a by lia.
+        simpl in Hmod4a. lia.
+      - (* b=1, b'=0: 対称 *)
+        exfalso.
+        subst b b'.
+        assert (HN_dvd : (N | (5:Z)^a * (N-1) - (5:Z)^a')).
+        { exists ((5:Z)^a * (N-1) / N - (5:Z)^a' / N).
+          pose proof (Z.div_mod ((5:Z)^a * (N-1)) N ltac:(unfold N; lia)) as H1.
+          pose proof (Z.div_mod ((5:Z)^a') N ltac:(unfold N; lia)) as H2.
+          simpl (Z.pow _ 1) in Hval_eq. simpl (Z.pow _ 0) in Hval_eq.
+          rewrite Z.mul_1_r in Hval_eq.
+          rewrite <- Hval_eq in H2. lia. }
+        assert (H4_dvd_diff : (4:Z | (5:Z)^a * (N-1) - (5:Z)^a')).
+        { exact (Z.divide_trans 4 N _ H4_dvd_N HN_dvd). }
+        destruct H4_dvd_diff as [k4 Hk4].
+        assert (Hmod4a : (5:Z)^a * (N-1) mod 4 = (5:Z)^a' mod 4).
+        { assert (Heqv : (5:Z)^a * (N-1) = 5^a' + k4 * 4) by lia.
+          rewrite Heqv, Z.mod_add by lia. }
+        rewrite Z.mul_mod, five_pow_mod_four, HN1_mod4 in Hmod4a by lia.
+        rewrite five_pow_mod_four in Hmod4a.
+        simpl in Hmod4a. lia.
+      - lia. (* b=1, b'=1 *) }
+    (* a = a' を示す *)
+    assert (Haa' : a = a').
+    { destruct Hb_01 as [Hb0 | Hb1].
+      - (* b = 0: 5^a ≡ 5^a' (mod N) *)
+        subst b. rewrite Hbb' in Hval_eq.
+        simpl (Z.pow _ 0) in Hval_eq.
+        rewrite !Z.mul_1_r in Hval_eq.
+        exact (five_pow_inj_mod n Hn a a'
+          (conj Ha0 Ha1) (conj Ha'0 Ha'1)
+          (by fold N; exact Hval_eq)).
+      - (* b = 1: 5^a * (N-1) ≡ 5^a' * (N-1) (mod N), cancel (N-1) *)
+        subst b. rewrite Hbb' in Hval_eq.
+        (* N | (5^a - 5^a') * (N-1) *)
+        assert (HN_dvd_prod : (N | ((5:Z)^a - (5:Z)^a') * (N-1))).
+        { exists ((5^a * (N-1)) / N - (5^a' * (N-1)) / N).
+          pose proof (Z.div_mod ((5:Z)^a * (N-1)) N ltac:(unfold N; lia)) as H1.
+          pose proof (Z.div_mod ((5:Z)^a' * (N-1)) N ltac:(unfold N; lia)) as H2.
+          rewrite Hval_eq in H1. lia. }
+        (* N | 5^a - 5^a': gcd(N, N-1) = 1 によるガウスの定理 *)
+        assert (HN_dvd_diff : (N | (5:Z)^a - (5:Z)^a')).
+        { apply Z.gauss with (N-1).
+          - rewrite Z.mul_comm. exact HN_dvd_prod.
+          - rewrite Z.gcd_comm. exact HN1_gcd. }
+        (* 5^a ≡ 5^a' (mod N) *)
+        assert (H5_eq : (5:Z)^a mod N = (5:Z)^a' mod N).
+        { destruct HN_dvd_diff as [k Hk].
+          assert (H5a : (5:Z)^a = 5^a' + k * N) by lia.
+          rewrite H5a, Z.mod_add by (unfold N; lia). }
+        exact (five_pow_inj_mod n Hn a a'
+          (conj Ha0 Ha1) (conj Ha'0 Ha'1)
+          (by fold N; exact H5_eq)). }
+    (* 等式を組み立て *)
+    f_equal.
+    - apply sig_eq. simpl. fold a a'. exact Haa'.
+    - apply sig_eq. simpl. fold b b'. exact Hbb'. }
+  (* 全射: inj_hom_surj_of_eq_order を適用 *)
+  assert (Hord_src : GroupOrder
+      (znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1))
+      (Nat.pow 2 (n-1))).
+  { rewrite <- pow2_nm2_times2 by exact Hn.
+    apply group_order_product.
+    - exact (znz_group_order_n (Nat.pow 2 (n-2)) Hn2).
+    - exact (znz_group_order_n 2 (Nat.lt_0_succ 1)). }
+  assert (Hord_tgt : GroupOrder (znz_units_group (Nat.pow 2 n) H2n) (Nat.pow 2 (n-1))).
+  { exact (znz_units_pow2_order n Hn H2n). }
+  exists phi.
+  unfold IsIsomorphism. split; [| split].
+  - exact Hphi_hom.
+  - exact Hphi_inj.
+  - intro y. exact (inj_hom_surj_of_eq_order
+      (znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1))
+      (znz_units_group (Nat.pow 2 n) H2n)
+      (Nat.pow 2 (n-1)) phi
+      Hphi_hom Hphi_inj Hord_src Hord_tgt y).
+Qed.
