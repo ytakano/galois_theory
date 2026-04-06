@@ -6688,3 +6688,275 @@ Proof.
   exists g. exact Hg_ord.
 Qed.
 
+
+
+(** ===================================================================== *)
+(** Phase 1: (Z/pZ)* の CyclicGroup 構造                                 *)
+(** ===================================================================== *)
+
+(** 原始根による生成:
+    位数 p-1 の元 g は (Z/pZ)* の全要素を生成する。
+
+    証明:
+      任意の x ∈ (Z/pZ)* に対し、
+      フェルマーの小定理より x^(p-1) = e。
+      order_d_elements_are_powers より ∃ k < p-1, g^k = x。
+      gpow_of_nat で整数冪に変換する。  *)
+Lemma primitive_root_generates_all :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (g : carrier (znz_units_group p Hp)),
+    mult_order_p p Hp Hprime g = (p - 1)%nat ->
+    forall x : carrier (znz_units_group p Hp),
+      exists k : Z, gpow (znz_units_group p Hp) g k = x.
+Proof.
+  intros p Hp Hprime g Hg x.
+  assert (Hp1 : (0 < p - 1)%nat) by lia.
+  assert (Hx_e : gpow_nat (znz_units_group p Hp) x (p - 1) =
+                 e (znz_units_group p Hp)) by
+    exact (fermat_little_theorem p Hp Hprime x).
+  destruct (order_d_elements_are_powers p Hp Hprime g (p - 1) Hp1 Hg x Hx_e)
+    as [k [_ Heq]].
+  exists (Z.of_nat k).
+  rewrite gpow_of_nat.
+  exact Heq.
+Qed.
+
+(** (Z/pZ)* の CyclicGroup 構造:
+    primitive_root_exists で生成元 g を取り出し、
+    primitive_root_generates_all で巡回性を確認して CyclicGroup レコードを構築する。  *)
+Definition znz_units_cyclic_group (p : nat) (Hp : (1 < p)%nat)
+    (Hprime : prime (Z.of_nat p)) : CyclicGroup.
+Proof.
+  (* Prop-existential から Type の値を取り出すために epsilon を使用 *)
+  set (g := epsilon (inhabits (e (znz_units_group p Hp)))
+    (fun g => mult_order_p p Hp Hprime g = (p - 1)%nat)).
+  assert (Hg : mult_order_p p Hp Hprime g = (p - 1)%nat).
+  { unfold g. apply epsilon_spec. exact (primitive_root_exists p Hp Hprime). }
+  refine {|
+    cyclic_group := znz_units_group p Hp;
+    generator    := g
+  |}.
+  exact (primitive_root_generates_all p Hp Hprime g Hg).
+Defined.
+
+(** ===================================================================== *)
+(** Phase 2: 抽象同型定理 C ≅ Z/nZ                                       *)
+(** ===================================================================== *)
+
+(** 位数 n の巡回群の生成元の乗法位数は n に等しい:
+    mult_order_spec の最小性から d ≤ n (generator_order より g^n = e)、
+    cyclic_group_order_le_period から n ≤ d (g^d = e より)、合わせて d = n。  *)
+Lemma generator_mult_order_eq_group_order :
+  forall (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n),
+    mult_order C n Hord (generator C) = n.
+Proof.
+  intros C n Hord.
+  set (d := mult_order C n Hord (generator C)).
+  assert (Hd_spec := mult_order_spec C n Hord (generator C)).
+  fold d in Hd_spec.
+  destruct Hd_spec as [Hd_pos [Hd_period Hd_min]].
+  assert (Hd_le_n : (d <= n)%nat).
+  { apply Hd_min.
+    - exact (group_order_pos C n Hord).
+    - exact (generator_order C n Hord). }
+  assert (Hn_le_d : (n <= d)%nat).
+  { apply cyclic_group_order_le_period with (C := C) (m := n) (d := d).
+    - exact Hord.
+    - exact Hd_pos.
+    - exact Hd_period. }
+  lia.
+Qed.
+
+(** 巡回群の冪の単射性:
+    r1 < n, r2 < n, g^r1 = g^r2 ならば r1 = r2。
+    generator_mult_order_eq_group_order + mult_order_powers_distinct による。  *)
+Lemma cyclic_powers_injective :
+  forall (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n)
+         (r1 r2 : nat),
+    (r1 < n)%nat -> (r2 < n)%nat ->
+    gpow_nat C (generator C) r1 = gpow_nat C (generator C) r2 ->
+    r1 = r2.
+Proof.
+  intros C n Hord r1 r2 Hr1 Hr2 Heq.
+  destruct (Nat.eq_dec r1 r2) as [H | H].
+  - exact H.
+  - exfalso.
+    assert (Hr1' : (r1 < mult_order C n Hord (generator C))%nat).
+    { rewrite generator_mult_order_eq_group_order. exact Hr1. }
+    assert (Hr2' : (r2 < mult_order C n Hord (generator C))%nat).
+    { rewrite generator_mult_order_eq_group_order. exact Hr2. }
+    exact (mult_order_powers_distinct C n Hord (generator C) r1 r2 Hr1' Hr2' H Heq).
+Qed.
+
+(** gpow_nat の周期による簡約:
+    g^n = e ならば gpow_nat G g (k mod n) = gpow_nat G g k。
+    Nat.div_mod + gpow_nat_period_cancel による。  *)
+Lemma gpow_nat_mod :
+  forall (G : Group) (g : carrier G) (n k : nat),
+    (0 < n)%nat ->
+    gpow_nat G g n = e G ->
+    gpow_nat G g (k mod n) = gpow_nat G g k.
+Proof.
+  intros G g n k Hn Hgn.
+  set (q := (k / n)%nat).
+  set (r := (k mod n)%nat).
+  assert (Hk : k = (n * q + r)%nat).
+  { unfold q, r. apply Nat.div_mod. lia. }
+  rewrite Hk.
+  symmetry.
+  apply gpow_nat_period_cancel.
+  exact Hgn.
+Qed.
+
+(** 巡回群インデックスの定義:
+    x ∈ C に対して、gpow_nat C (generator C) r = x を満たす
+    一意の r < n を epsilon で定義する。  *)
+Definition cyc_index (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n)
+    (x : carrier C) : nat :=
+  epsilon (inhabits 0%nat) (fun r : nat =>
+    (r < n)%nat /\ gpow_nat C (generator C) r = x).
+
+(** cyc_index の仕様:
+    (1) cyc_index C n Hord x < n
+    (2) gpow_nat C (generator C) (cyc_index C n Hord x) = x
+
+    証明: epsilon_spec で存在を示す。
+      存在は generator_order + gpow_reduce_mod + gpow_of_nat による。  *)
+Lemma cyc_index_spec :
+  forall (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n)
+         (x : carrier C),
+    (cyc_index C n Hord x < n)%nat /\
+    gpow_nat C (generator C) (cyc_index C n Hord x) = x.
+Proof.
+  intros C n Hord x.
+  unfold cyc_index.
+  apply epsilon_spec.
+  assert (Hn_pos : (0 < n)%nat) by exact (group_order_pos C n Hord).
+  assert (Hgn : gpow C (generator C) (Z.of_nat n) = e C)
+    by exact (generator_order C n Hord).
+  destruct (gpow_reduce_mod C n Hn_pos Hgn x) as [r [Hr Hxr]].
+  exists r. split.
+  - exact Hr.
+  - rewrite gpow_of_nat in Hxr. exact (eq_sym Hxr).
+Qed.
+
+(** cyc_index の一意性:
+    r < n かつ gpow_nat C g r = x ならば r = cyc_index C n Hord x。
+    cyclic_powers_injective + cyc_index_spec による。  *)
+Lemma cyc_index_unique :
+  forall (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n)
+         (x : carrier C) (r : nat),
+    (r < n)%nat ->
+    gpow_nat C (generator C) r = x ->
+    r = cyc_index C n Hord x.
+Proof.
+  intros C n Hord x r Hr Heq.
+  apply (cyclic_powers_injective C n Hord r (cyc_index C n Hord x)).
+  - exact Hr.
+  - exact (proj1 (cyc_index_spec C n Hord x)).
+  - rewrite Heq.
+    exact (eq_sym (proj2 (cyc_index_spec C n Hord x))).
+Qed.
+
+(** cyc_index の準同型性:
+    cyc_index C n Hord (op C x y) = (cyc_index x + cyc_index y) mod n。
+
+    証明:
+      r = cyc_index x, s = cyc_index y として g^r = x, g^s = y。
+      g^(r+s) = x * y かつ g^((r+s) mod n) = g^(r+s) [gpow_nat_mod]。
+      (r+s) mod n < n なので cyc_index_unique より結論が得られる。  *)
+Lemma cyc_index_homo :
+  forall (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n)
+         (x y : carrier C),
+    (cyc_index C n Hord (op C x y) =
+    (cyc_index C n Hord x + cyc_index C n Hord y) mod n)%nat.
+Proof.
+  intros C n Hord x y.
+  set (g := generator C).
+  set (r := cyc_index C n Hord x).
+  set (s := cyc_index C n Hord y).
+  assert (Hgr : gpow_nat C g r = x) by exact (proj2 (cyc_index_spec C n Hord x)).
+  assert (Hgs : gpow_nat C g s = y) by exact (proj2 (cyc_index_spec C n Hord y)).
+  assert (Hn_pos : (0 < n)%nat) by exact (group_order_pos C n Hord).
+  assert (Hgn : gpow_nat C g n = e C).
+  { rewrite <- gpow_of_nat. exact (generator_order C n Hord). }
+  apply eq_sym.
+  apply (cyc_index_unique C n Hord (op C x y) ((r + s) mod n)%nat).
+  - apply Nat.mod_upper_bound. lia.
+  - rewrite <- Hgr, <- Hgs.
+    rewrite <- gpow_nat_add.
+    fold g.
+    apply gpow_nat_mod.
+    + exact Hn_pos.
+    + exact Hgn.
+Qed.
+
+(** 位数 n の巡回群は Z/nZ に同型:
+
+    同型写像 f : carrier C → carrier (znz_group n Hn)
+      f(x) = [Z.of_nat (cyc_index C n Hord x)]
+
+    準同型性: cyc_index_homo + Nat2Z.inj_mod + Nat2Z.inj_add
+    単射性:   Nat2Z.inj + cyc_index_spec
+    全射性:   gpow_nat C g (Z.to_nat k) が k の原像になる  *)
+Theorem cyclic_group_isomorphic_znz :
+  forall (C : CyclicGroup) (n : nat) (Hn : (0 < n)%nat)
+         (Hord : GroupOrder C n),
+    C ≅ znz_group n Hn.
+Proof.
+  intros C n Hn Hord.
+  exists (fun x =>
+    exist _ (Z.of_nat (cyc_index C n Hord x))
+      (conj (Nat2Z.is_nonneg _)
+            (proj1 (Nat2Z.inj_lt _ _) (proj1 (cyc_index_spec C n Hord x))))).
+  split; [| split].
+  - (* 準同型性 *)
+    intros x y.
+    apply sig_eq. simpl.
+    rewrite cyc_index_homo.
+    rewrite Nat2Z.inj_mod.
+    rewrite Nat2Z.inj_add.
+    reflexivity.
+  - (* 単射性 *)
+    intros x y Hfxy.
+    injection Hfxy as Hfxy.
+    apply Nat2Z.inj in Hfxy.
+    rewrite <- (proj2 (cyc_index_spec C n Hord x)).
+    rewrite <- (proj2 (cyc_index_spec C n Hord y)).
+    rewrite Hfxy. reflexivity.
+  - (* 全射性 *)
+    intros [k Hk].
+    exists (gpow_nat C (generator C) (Z.to_nat k)).
+    apply sig_eq. simpl.
+    assert (Hk_nat : (Z.to_nat k < n)%nat).
+    { apply (proj2 (Nat2Z.inj_lt _ _)). rewrite Z2Nat.id by lia. lia. }
+    rewrite <- (cyc_index_unique C n Hord
+      (gpow_nat C (generator C) (Z.to_nat k))
+      (Z.to_nat k) Hk_nat (eq_refl _)).
+    apply Z2Nat.id. lia.
+Qed.
+
+(** ===================================================================== *)
+(** Phase 3: 主定理 (Z/pZ)* ≅ Z/(p-1)Z                                  *)
+(** ===================================================================== *)
+
+(** 素数 p に対して (Z/pZ)* は Z/(p-1)Z に同型:
+
+    証明:
+      1. znz_units_cyclic_group で (Z/pZ)* に CyclicGroup 構造を与える。
+      2. prime_units_group_order で GroupOrder (znz_units_group p Hp) (p-1)。
+      3. cyclic_group_isomorphic_znz で CyclicGroup C ≅ znz_group (p-1) Hp1。
+      4. C の underlying Group は znz_units_group p Hp なので結論を得る。  *)
+Theorem znz_units_group_cyclic_iso :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p)),
+    exists Hp1 : (0 < p - 1)%nat,
+      znz_units_group p Hp ≅ znz_group (p - 1) Hp1.
+Proof.
+  intros p Hp Hprime.
+  assert (Hp1 : (0 < p - 1)%nat) by lia.
+  exists Hp1.
+  set (C := znz_units_cyclic_group p Hp Hprime).
+  assert (Hord : GroupOrder C (p - 1)) by
+    exact (prime_units_group_order p Hp Hprime).
+  exact (cyclic_group_isomorphic_znz C (p - 1) Hp1 Hord).
+Qed.

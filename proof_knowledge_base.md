@@ -1321,3 +1321,148 @@
 - **Dependencies**: `sum_psi_eq_p_minus_1`, `sum_phi_over_divisors`, `psi_le_phi`, `euler_phi_pos`
 - **Notes**: `rewrite Heq_p1 in Hsum_psi` is WRONG (psi(p-1) doesn't appear in the sum directly). Instead use `assert (Hpsi_pos : ...) by (rewrite Heq_p1; exact Hphi_pos)`.
 - **Date**: 2025
+
+---
+
+### `primitive_root_generates_all`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma primitive_root_generates_all :
+    forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+           (g : carrier (znz_units_group p Hp)),
+      mult_order_p p Hp Hprime g = (p - 1)%nat ->
+      forall x : carrier (znz_units_group p Hp),
+        exists k : Z, gpow (znz_units_group p Hp) g k = x.
+  ```
+- **Proof Strategy**: `fermat_little_theorem` で全元 x^(p-1) = e → `order_d_elements_are_powers` で ∃ k < p-1, g^k = x → `gpow_of_nat` で Z冪に変換。
+- **Key Tactics**: `destruct order_d_elements_are_powers`, `rewrite gpow_of_nat`, `exact Heq`
+- **Dependencies**: `fermat_little_theorem`, `order_d_elements_are_powers`, `gpow_of_nat`
+- **Notes**: `set (G := ...)` を使うと `eq_sym Heq` の型が合わなくなる。`G` を使わずに直接 `znz_units_group p Hp` を書く。
+- **Date**: 2026-04-06
+
+---
+
+### `znz_units_cyclic_group`
+- **Type**: Definition (CyclicGroup)
+- **Statement**:
+  ```coq
+  Definition znz_units_cyclic_group (p : nat) (Hp : (1 < p)%nat)
+      (Hprime : prime (Z.of_nat p)) : CyclicGroup.
+  ```
+- **Proof Strategy**: `primitive_root_exists` は Prop existential .claude .dockerignore .git .github .gitignore .integer.aux .lia.cache .nia.cache .vscode CLAUDE.md LESSONS_LEARNED.md README.md docker docs galois_theory.v integer.glob integer.v integer.vo integer.vok integer.vos lessons_learned progress proof_knowledge_base.md todo.txt --- `destruct` 不可。`epsilon` で Type 値を取り出してから CyclicGroup レコードを `refine` で構築。
+- **Key Tactics**: `epsilon (inhabits (e ...)) (fun g => ...)`, `epsilon_spec`, `refine {| ... |}`, `Defined`
+- **Dependencies**: `primitive_root_exists`, `primitive_root_generates_all`, `epsilon`, `epsilon_spec`
+- **Notes**: ⚠️ Prop existential から CyclicGroup (Type) を作るために `destruct` は使えない。`epsilon` 必須。
+- **Date**: 2026-04-06
+
+---
+
+### `generator_mult_order_eq_group_order`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma generator_mult_order_eq_group_order :
+    forall (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n),
+      mult_order C n Hord (generator C) = n.
+  ```
+- **Proof Strategy**: `mult_order_spec` + `generator_order` で d ≤ n、`cyclic_group_order_le_period` で n ≤ d、`lia` で d = n。
+- **Key Tactics**: `set d`, `fold d in Hd_spec`, `destruct Hd_spec`, `cyclic_group_order_le_period`, `lia`
+- **Dependencies**: `mult_order_spec`, `generator_order`, `cyclic_group_order_le_period`, `group_order_pos`
+- **Notes**: なし
+- **Date**: 2026-04-06
+
+---
+
+### `cyclic_powers_injective`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma cyclic_powers_injective :
+    forall (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n) (r1 r2 : nat),
+      (r1 < n)%nat -> (r2 < n)%nat ->
+      gpow_nat C (generator C) r1 = gpow_nat C (generator C) r2 -> r1 = r2.
+  ```
+- **Proof Strategy**: `Nat.eq_dec` で r1=r2 か確認。r1≠r2 なら `mult_order_powers_distinct` に渡す。`generator_mult_order_eq_group_order` で `r < mult_order` の形に変換。
+- **Key Tactics**: `Nat.eq_dec`, `rewrite generator_mult_order_eq_group_order`, `mult_order_powers_distinct`
+- **Dependencies**: `generator_mult_order_eq_group_order`, `mult_order_powers_distinct`
+- **Notes**: なし
+- **Date**: 2026-04-06
+
+---
+
+### `gpow_nat_mod`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma gpow_nat_mod :
+    forall (G : Group) (g : carrier G) (n k : nat),
+      (0 < n)%nat -> gpow_nat G g n = e G ->
+      gpow_nat G g (k mod n) = gpow_nat G g k.
+  ```
+- **Proof Strategy**: `set (q := k/n); set (r := k mod n)` で冪を固定し `Hk : k = n*q + r` を assert。`rewrite Hk; symmetry; apply gpow_nat_period_cancel`。
+- **Key Tactics**: `set`, `Nat.div_mod`, `symmetry`, `gpow_nat_period_cancel`
+- **Dependencies**: `gpow_nat_period_cancel`, `Nat.div_mod`
+- **Notes**: ⚠️ `assert (Hk : k = ...)`  `%nat` が必要 (Z_scope)。`rewrite Hk` が `k mod n` 内の `k` も書き換えるため、`set (r := k mod n)` で事前に固定してから rewrite する。
+- **Date**: 2026-04-06
+
+---
+
+### `cyc_index` / `cyc_index_spec` / `cyc_index_unique`
+- **Type**: Definition + Lemmas
+- **Statement**: `cyc_index C n Hord x` = unique r < n s.t. `gpow_nat C g r = x` (via epsilon)
+- **Proof Strategy**: `epsilon_spec` で存在を示す。存在は `generator_order` + `gpow_reduce_mod` + `gpow_of_nat`。Uniqueness は `cyclic_powers_injective`。
+- **Key Tactics**: `unfold cyc_index; apply epsilon_spec`, `gpow_reduce_mod`, `rewrite gpow_of_nat in Hxr; exact (eq_sym Hxr)`
+- **Dependencies**: `generator_order`, `gpow_reduce_mod`, `gpow_of_nat`, `group_order_pos`, `cyclic_powers_injective`
+- **Notes**: `cyc_index_unique` で `eq_sym (proj2 (cyc_index_spec ...))` が必要 (方向を反転)。
+- **Date**: 2026-04-06
+
+---
+
+### `cyc_index_homo`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma cyc_index_homo :
+    forall (C : CyclicGroup) (n : nat) (Hord : GroupOrder C n) (x y : carrier C),
+      (cyc_index C n Hord (op C x y) =
+       (cyc_index C n Hord x + cyc_index C n Hord y) mod n)%nat.
+  ```
+- **Proof Strategy**: `set (g := generator C); set (r := cyc_index x); set (s := cyc_index y)`。`cyc_index_unique` に `(r+s) mod n < n` と `g^((r+s) mod n) = x*y` を渡す。後者は `← gpow_nat_add; fold g; apply gpow_nat_mod`。
+- **Key Tactics**: `set g/r/s`, `Nat.mod_upper_bound`, `rewrite <- gpow_nat_add`, `fold g`, `gpow_nat_mod`
+- **Dependencies**: `cyc_index_spec`, `cyc_index_unique`, `gpow_nat_mod`, `gpow_nat_add`, `generator_order`
+- **Notes**: ⚠️ 文 自体に `%nat` が必要 (Z_scope)。⚠️ `generator C` vs `set (g := generator C)` のミスマッチは `fold g` で解消。`Hgn` 作成時は `rewrite <- gpow_of_nat` (逆向き)。
+- **Date**: 2026-04-06
+
+---
+
+### `cyclic_group_isomorphic_znz`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem cyclic_group_isomorphic_znz :
+    forall (C : CyclicGroup) (n : nat) (Hn : (0 < n)%nat) (Hord : GroupOrder C n),
+      C ≅ znz_group n Hn.
+  ```
+- **Proof Strategy**: 同型写像 f(x) = [Z.of_nat (cyc_index x)]。準同型: `cyc_index_homo + Nat2Z.inj_mod + Nat2Z.inj_add`。単射: `injection Hfxy as Hfxy; Nat2Z.inj`。全射: `gpow_nat C g (Z.to_nat k)` が原像、`cyc_index_unique + Z2Nat.id`。
+- **Key Tactics**: `exists fun x => exist _ (Z.of_nat (cyc_index ...)) ...`, `injection Hfxy as Hfxy`, `Nat2Z.inj`, `cyc_index_unique`, `Z2Nat.id`
+- **Dependencies**: `cyc_index_spec`, `cyc_index_homo`, `cyc_index_unique`, `Nat2Z.inj_mod`, `Nat2Z.inj_add`, `Nat2Z.inj`, `Z2Nat.id`
+- **Notes**: ⚠️ `apply sig_eq in Hfxy` は失敗 (方向が逆)。`injection Hfxy as Hfxy` を使う。⚠️ `Nat2Z.inj_lt` は iff なので `proj1 (Nat2Z.inj_lt _ _)` で関数として使う。⚠️ `proj2 (Nat2Z.inj_lt _ _)` で nat<n を証明する。
+- **Date**: 2026-04-06
+
+---
+
+### `znz_units_group_cyclic_iso`
+- **Type**: Theorem (主定理)
+- **Statement**:
+  ```coq
+  Theorem znz_units_group_cyclic_iso :
+    forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p)),
+      exists Hp1 : (0 < p - 1)%nat,
+        znz_units_group p Hp ≅ znz_group (p - 1) Hp1.
+  ```
+- **Proof Strategy**: `znz_units_cyclic_group` で CyclicGroup 構築、`prime_units_group_order` で GroupOrder、`cyclic_group_isomorphic_znz` 適用。
+- **Key Tactics**: `set (C := znz_units_cyclic_group ...)`, `exact (cyclic_group_isomorphic_znz C ...)`
+- **Dependencies**: `znz_units_cyclic_group`, `prime_units_group_order`, `cyclic_group_isomorphic_znz`
+- **Notes**: なし
+- **Date**: 2026-04-06
