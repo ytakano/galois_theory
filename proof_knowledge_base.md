@@ -1221,3 +1221,64 @@
 - **Dependencies**: `euler_phi_prime_pow`, `euler_phi_group_order`
 - **Notes**: ⚠ corollary では `m, Hm` が結論から推論不可。`exact (mult_order_... G m Hm a ...)` で明示的引数を渡す。
 - **Date**: 2026-04-05
+
+---
+
+### Phase 2 Lemmas: Embedding (Z/pZ)* → field Z/pZ and polynomial root bound
+
+#### `znz_units_to_field`
+- **Type**: Definition
+- **Statement**: `znz_units_to_field p Hp Hprime x = exist _ (proj1_sig x) (proj1 (proj2_sig x))`
+- **Proof Strategy**: 直接定義。gcd 条件を strip して体の carrier に埋め込む。
+- **Key Tactics**: definition
+- **Dependencies**: `znz_units_group`, `znz_p_field`
+- **Notes**: carrier type は `{x : Z | 0 ≤ x < Z.of_nat p}` (体側)。gcd 条件は不要。
+- **Date**: 2026-04-07
+
+#### `znz_units_to_field_pow`
+- **Type**: Lemma
+- **Statement**: `ring_pow_nat (znz_p_field p Hprime) (znz_units_to_field p Hp Hprime x) n = znz_units_to_field p Hp Hprime (gpow_nat (znz_units_group p Hp) x n)`
+- **Proof Strategy**: n についての帰納法。`change (...)` で inductive step のゴールを明示してから `rewrite IH; apply znz_units_to_field_mul`。
+- **Key Tactics**: `induction n`, `change (...)`, `rewrite IH`, `apply znz_units_to_field_mul`
+- **Dependencies**: `znz_units_to_field_mul`, `znz_units_to_field_one`
+- **Notes**: ⚠️ `simpl` は `znz_units_to_field` を `exist _ ...` に展開し、その後 `apply znz_units_to_field_mul` が失敗する。`change (...)` で明示的に書く必要あり。
+- **Date**: 2026-04-07
+
+#### `znz_units_to_field_inj`
+- **Type**: Lemma
+- **Statement**: `znz_units_to_field p Hp Hprime x = znz_units_to_field p Hp Hprime y → x = y`
+- **Proof Strategy**: `apply sig_eq; change (proj1_sig x = proj1_sig y); f_equal (fun e : ring_carrier F => proj1_sig e) Heq`
+- **Key Tactics**: `sig_eq`, `change`, `f_equal` with explicit type annotation
+- **Dependencies**: `sig_eq`
+- **Notes**: ⚠️ `f_equal proj1_sig` fails — Rocq can't infer `?B` in `∀ A P, {x:A|P x} → A`. Use `f_equal (fun e : ring_carrier (znz_p_field p Hprime) => proj1_sig e)`.
+- **Date**: 2026-04-07
+
+#### `xd_poly_last` / `last_nonempty_cons`
+- **Type**: Lemma
+- **Statement**: `last (xd_poly F n) (ring_zero F) = ring_one F`
+- **Proof Strategy**: `assert (xd_poly F n = repeat (ring_zero F) n ++ [ring_one F])` by induction on n, then `rewrite Hshape, List.last_last`.
+- **Key Tactics**: `assert` inner induction, `List.last_last`
+- **Dependencies**: `xd_poly`
+- **Notes**: ⚠️ `remember ... as l eqn:Heql` then `destruct l` introduces `Heql : l = e` so empty case needs `eq_sym Heql`. Cleaner: use `List.last_last` with append shape. Added helper `last_nonempty_cons : l ≠ nil → last (a :: l) d = last l d` proved by `destruct l; [contradiction | reflexivity]`.
+- **Date**: 2026-04-07
+
+#### `gpow_is_field_root`
+- **Type**: Lemma
+- **Statement**: if `gpow_nat (znz_units_group p Hp) x d = e`, then `poly_eval (znz_p_field p Hprime) (xd_minus_1_poly (znz_p_field p Hprime) d) (znz_units_to_field p Hp Hprime x) = ring_zero (znz_p_field p Hprime)`
+- **Proof Strategy**: `rewrite xd_minus_1_poly_eval; rewrite znz_units_to_field_pow, Hxd, znz_units_to_field_one; apply ring_add_neg_l`
+- **Key Tactics**: `xd_minus_1_poly_eval`, `znz_units_to_field_pow` (forward direction!), `ring_add_neg_l`
+- **Notes**: ⚠️ Use `rewrite znz_units_to_field_pow` (not `rewrite ←`). The lemma LHS is `ring_pow_nat ... (embed x) n`, and after `rewrite xd_minus_1_poly_eval`, the goal has `ring_pow_nat ... (embed x) d` which matches the LHS directly.
+- **Date**: 2026-04-07
+
+#### `order_d_elements_are_powers`
+- **Type**: Lemma
+- **Statement**: if `mult_order_p p Hp Hprime a = d` and `gpow_nat G x d = e`, then `∃ k < d, gpow_nat G a k = x`
+- **Proof Strategy**: 背理法 + 多項式根の個数上界。roots = {embed(a^0),...,embed(a^(d-1)),embed(x)} は NoDup で d+1 個、全て x^d-1=0 の根。`fp_poly_roots_bound` より d+1 < d+1、矛盾。
+- **Key Tactics**: `classic`, `set G := ...`, `set F := ...`, `NoDup_field_powers`, `gpow_is_field_root`, `fp_poly_roots_bound`, `xd_minus_1_poly_length`, `lia`
+- **Dependencies**: `NoDup_field_powers`, `gpow_is_field_root`, `fp_poly_roots_bound`, `xd_minus_1_poly_nonzero_leading`, `xd_minus_1_poly_length`, `mult_order_p_divides`
+- **Notes**: 
+  - ⚠️ `set G := znz_units_group p Hp` は opaque — `apply znz_units_to_field_inj` が G から p,Hp,Hprime を推論できない。`apply (znz_units_to_field_inj p Hp Hprime)` と明示する。
+  - ⚠️ `in_map_iff` で得た `Hk1 : embed(a^k) = y` と `Hy2 : embed x = y` から `embed(a^k) = embed x` を作るのに `eq_sym Hy2` が必要。
+  - ⚠️ `(a^k)^d = e` の証明: `rewrite <- gpow_nat_mul; apply (proj2 (mult_order_p_divides p Hp Hprime a (k * d))); rewrite Ha; unfold Nat.divide; exists k; lia`。`ring` は nat に使えない。
+  - ⚠️ `in [x]` を展開した後の `Hr : False` ケースには `contradiction`（`exact Hr` は型不一致）。
+- **Date**: 2026-04-07

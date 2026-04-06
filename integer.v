@@ -239,6 +239,7 @@ Notation "G1 ≅ G2" := (GroupIsomorphic G1 G2)
 
 From Stdlib Require Import Vectors.Fin.
 From Stdlib Require Import Lists.List.
+From Stdlib Require Import Sorting.Permutation.
 From Stdlib Require Import Classical.
 Import ListNotations.
 
@@ -5335,4 +5336,524 @@ Proof.
   unfold mult_order_p.
   exact (mult_order_divides (znz_units_group p Hp) (p - 1)
            (prime_units_group_order p Hp Hprime) a x).
+Qed.
+
+(** ===================================================================== *)
+(** 原始根の存在定理のための補題群                                        *)
+(** (Auxiliary Lemmas for Primitive Root Existence)                        *)
+(** ===================================================================== *)
+
+(** 右消去法則 (Right Cancellation):
+    a * z = b * z ならば a = b.
+    証明: 両辺に右から z の逆元を掛け、結合律・逆元・単位元を適用する。 *)
+Lemma op_cancel_r : forall (G : Group) (x y z : carrier G),
+  op G x z = op G y z -> x = y.
+Proof.
+  intros G x y z H.
+  assert (Hstep : op G (op G x z) (inv G z) = op G (op G y z) (inv G z)).
+  { rewrite H. reflexivity. }
+  rewrite <- (assoc G x z (inv G z)), <- (assoc G y z (inv G z)) in Hstep.
+  rewrite !inv_right, !id_right in Hstep.
+  exact Hstep.
+Qed.
+
+(** 全群要素のリスト (List of All Group Elements):
+    GroupOrder G n をもつ群の全元を NoDup リストとして取り出す。
+    全単射 f : carrier G → Fin.t n の逆像を epsilon で構成し、
+    fin_all n の像として全元リストを得る。 *)
+Lemma group_elements_list :
+  forall (G : Group) (n : nat) (Hn : GroupOrder G n),
+    exists L : list (carrier G),
+      List.NoDup L /\ length L = n /\ forall x : carrier G, List.In x L.
+Proof.
+  intros G n [f [Hinj Hsurj]].
+  set (g := fun (i : Fin.t n) =>
+    epsilon (inhabits (e G)) (fun x : carrier G => f x = i)).
+  assert (Hg : forall i : Fin.t n, f (g i) = i).
+  { intro i. apply epsilon_spec. exact (Hsurj i). }
+  exists (List.map g (fin_all n)).
+  split.
+  - (* NoDup: g は単射 *)
+    apply List.NoDup_map_NoDup_ForallPairs.
+    + intros a b _ _ Heq.
+      assert (Hfab : f (g a) = f (g b)) by (rewrite Heq; reflexivity).
+      rewrite (Hg a), (Hg b) in Hfab. exact Hfab.
+    + apply fin_all_NoDup.
+  - split.
+    + (* length = n *)
+      rewrite List.map_length, fin_all_length. reflexivity.
+    + (* 全射: 任意の x が含まれる *)
+      intros x.
+      assert (Hfx_in : List.In (f x) (fin_all n)) by apply fin_all_complete.
+      assert (Hin : List.In (g (f x)) (List.map g (fin_all n))).
+      { apply List.in_map. exact Hfx_in. }
+      assert (Hgfx : g (f x) = x).
+      { apply Hinj. rewrite Hg. reflexivity. }
+      rewrite Hgfx in Hin. exact Hin.
+Qed.
+
+(** (Z/pZ)* の演算は可換 (Commutativity of znz_units_group):
+    乗法 mod p は Z の乗法から Z.mul_comm で可換性を得る。 *)
+Lemma znz_units_op_comm :
+  forall (p : nat) (Hp : (1 < p)%nat)
+         (a b : carrier (znz_units_group p Hp)),
+    op (znz_units_group p Hp) a b = op (znz_units_group p Hp) b a.
+Proof.
+  intros p Hp a b.
+  apply sig_eq. simpl.
+  rewrite Z.mul_comm. reflexivity.
+Qed.
+
+(** 可換群での左乗算の fold_right への影響:
+    fold_right (op G) e (map (fun x => op G a x) L) = a^(length L) * fold_right (op G) e L.
+    証明: L についての帰納法。再帰ステップは可換律 G_abelian を使って
+      (a*x)*(a^n*P) = (a*a^n)*(x*P) を rewrite で変形する。 *)
+Lemma fold_right_mul_left_abelian :
+  forall (G : Group)
+         (G_abelian : forall a b : carrier G, op G a b = op G b a)
+         (a : carrier G) (L : list (carrier G)),
+    fold_right (op G) (e G) (List.map (fun x => op G a x) L) =
+    op G (gpow_nat G a (length L)) (fold_right (op G) (e G) L).
+Proof.
+  intros G G_abelian a L.
+  induction L as [| x L' IH].
+  - (* Base: L = [] *)
+    simpl. rewrite id_left. reflexivity.
+  - (* Step: L = x :: L' *)
+    simpl.
+    rewrite IH.
+    set (an := gpow_nat G a (length L')).
+    set (P := fold_right (op G) (e G) L').
+    (* Goal: (a*x)*(an*P) = (a*an)*(x*P) *)
+    rewrite <- (assoc G a x (op G an P)).
+    rewrite (assoc G x an P).
+    rewrite (G_abelian x an).
+    rewrite <- (assoc G an x P).
+    rewrite (assoc G a an (op G x P)).
+    reflexivity.
+Qed.
+
+(** 左乗算は全元リストの置換を与える (Left Multiplication Permutes Elements):
+    NoDup L かつ L が全要素を含むとき、map (op a) L は L の置換。
+    証明: NoDup_Permutation を使い、
+      - NoDup (map (op a) L): op_cancel_l の単射性から
+      - ∀z, In z L ↔ In z (map (op a) L): 逆元 a^{-1} の存在から *)
+Lemma znz_units_mul_left_permutation :
+  forall (p : nat) (Hp : (1 < p)%nat)
+         (a : carrier (znz_units_group p Hp))
+         (L : list (carrier (znz_units_group p Hp))),
+    List.NoDup L ->
+    (forall x : carrier (znz_units_group p Hp), List.In x L) ->
+    Permutation L (List.map (fun x => op (znz_units_group p Hp) a x) L).
+Proof.
+  intros p Hp a L HND Hall.
+  set (G := znz_units_group p Hp).
+  apply NoDup_Permutation.
+  - exact HND.
+  - (* NoDup (map (op a) L) *)
+    apply List.NoDup_map_NoDup_ForallPairs.
+    + intros x y _ _ H.
+      exact (op_cancel_l G a x y H).
+    + exact HND.
+  - intro z.
+    split.
+    + (* z ∈ L → z ∈ map (op a) L *)
+      intro Hz.
+      apply List.in_map_iff.
+      set (w := op G (inv G a) z).
+      exists w.
+      split.
+      * (* op a (inv a z) = z *)
+        unfold w.
+        rewrite (assoc G a (inv G a) z), inv_right, id_left.
+        reflexivity.
+      * apply Hall.
+    + (* z ∈ map (op a) L → z ∈ L *)
+      intro Hz.
+      apply List.in_map_iff in Hz.
+      destruct Hz as [w [Haw Hw]].
+      rewrite <- Haw. apply Hall.
+Qed.
+
+(** Permutation 下での fold_right 不変性 (可換群):
+    G がアーベル群で Permutation L L' ならば fold_right の値が等しい。
+    証明: Permutation の帰納的構造に従い、
+      perm_swap で x*(y*P) = y*(x*P) を交換律から示す。 *)
+Lemma fold_right_permutation_abelian :
+  forall (G : Group)
+         (G_abelian : forall a b : carrier G, op G a b = op G b a)
+         (L L' : list (carrier G)),
+    Permutation L L' ->
+    fold_right (op G) (e G) L = fold_right (op G) (e G) L'.
+Proof.
+  intros G G_abelian L L' HP.
+  induction HP as [| x l l' _ IH | x y l | l l' l'' _ IH1 _ IH2].
+  - (* perm_nil *)
+    reflexivity.
+  - (* perm_skip: x :: l → x :: l' *)
+    simpl. rewrite IH. reflexivity.
+  - (* perm_swap: y :: x :: l → x :: y :: l *)
+    simpl.
+    set (P := fold_right (op G) (e G) l).
+    (* Goal: op G y (op G x P) = op G x (op G y P) *)
+    rewrite (assoc G y x P), (G_abelian y x), <- (assoc G x y P).
+    reflexivity.
+  - (* perm_trans *)
+    rewrite IH1, IH2. reflexivity.
+Qed.
+
+(** フェルマーの小定理 (Fermat's Little Theorem):
+    素数 p に対して、(Z/pZ)* の任意の元 a は a^(p-1) = 1 を満たす。
+
+    証明の方針:
+      1. (Z/pZ)* の全要素リスト L を取り出す（group_elements_list）。
+      2. 左乗算 x ↦ a*x は L の置換（znz_units_mul_left_permutation）。
+      3. 置換不変性より fold_right (op) e L = fold_right (op) e (map (op a) L)。
+      4. fold_right_mul_left_abelian より
+           fold_right (op) e (map (op a) L) = a^(p-1) * fold_right (op) e L。
+      5. P = fold_right (op) e L として P = a^(p-1) * P。
+      6. 右消去法則 op_cancel_r より a^(p-1) = e。 *)
+Lemma fermat_little_theorem :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (a : carrier (znz_units_group p Hp)),
+    gpow_nat (znz_units_group p Hp) a (p - 1) = e (znz_units_group p Hp).
+Proof.
+  intros p Hp Hprime a.
+  set (G := znz_units_group p Hp).
+  assert (Hord : GroupOrder G (p - 1)) by exact (prime_units_group_order p Hp Hprime).
+  destruct (group_elements_list G (p - 1) Hord) as [L [HND [Hlen Hall]]].
+  set (P := fold_right (op G) (e G) L).
+  (* 置換: L と map (op a) L *)
+  assert (Hperm : Permutation L (List.map (fun x => op G a x) L)).
+  { apply znz_units_mul_left_permutation; assumption. }
+  (* 置換不変性: fold L = fold (map (op a) L) *)
+  assert (Hfeq : fold_right (op G) (e G) L =
+                 fold_right (op G) (e G) (List.map (fun x => op G a x) L)).
+  { apply fold_right_permutation_abelian.
+    - exact (znz_units_op_comm p Hp).
+    - exact Hperm. }
+  (* fold (map (op a) L) = a^(p-1) * P *)
+  assert (Hmul : fold_right (op G) (e G) (List.map (fun x => op G a x) L) =
+                 op G (gpow_nat G a (p - 1)) P).
+  { unfold P. rewrite <- Hlen.
+    exact (fold_right_mul_left_abelian G (znz_units_op_comm p Hp) a L). }
+  (* P = a^(p-1) * P *)
+  assert (HP : P = op G (gpow_nat G a (p - 1)) P).
+  { unfold P at 1. exact (eq_trans Hfeq Hmul). }
+  (* 右消去: a^(p-1) = e *)
+  apply (op_cancel_r G (gpow_nat G a (p - 1)) (e G) P).
+  rewrite id_left.
+  exact (eq_sym HP).
+Qed.
+
+(** 乗法位数は p-1 を割り切る (Multiplicative Order Divides p-1):
+    フェルマーの小定理 a^(p-1) = 1 と mult_order_p_divides の組み合わせ。 *)
+Lemma mult_order_p_divides_p_minus_1 :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (a : carrier (znz_units_group p Hp)),
+    Nat.divide (mult_order_p p Hp Hprime a) (p - 1).
+Proof.
+  intros p Hp Hprime a.
+  apply (proj1 (mult_order_p_divides p Hp Hprime a (p - 1))).
+  exact (fermat_little_theorem p Hp Hprime a).
+Qed.
+(** ===================================================================== *)
+(** 原始根の存在定理: フェーズ 2                                          *)
+(** (Z/pZ)* から体 Z/pZ への埋め込みと多項式の根の解析                   *)
+(** ===================================================================== *)
+
+(** (Z/pZ)* の元を体 Z/pZ に埋め込む埋め込み写像。
+    台集合 {x : Z | 0≤x<p ∧ gcd(x,p)=1} から {x : Z | 0≤x<p} への自然な射影。 *)
+Definition znz_units_to_field (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+    (x : carrier (znz_units_group p Hp)) : ring_carrier (znz_p_field p Hprime) :=
+  exist _ (proj1_sig x) (proj1 (proj2_sig x)).
+
+(** 埋め込みは乗算と可換: embed(a * b) = embed(a) * embed(b)。
+    両者が同じ mod 計算に帰着するので sig_eq で示す。 *)
+Lemma znz_units_to_field_mul :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (x y : carrier (znz_units_group p Hp)),
+    ring_mul (znz_p_field p Hprime)
+      (znz_units_to_field p Hp Hprime x)
+      (znz_units_to_field p Hp Hprime y) =
+    znz_units_to_field p Hp Hprime (op (znz_units_group p Hp) x y).
+Proof.
+  intros p Hp Hprime x y. apply sig_eq. simpl. reflexivity.
+Qed.
+
+(** 埋め込みは単位元を環の 1 に送る。
+    e G = exist _ 1 _、ring_one F = exist _ (1 mod p) _、
+    p ≥ 2 のとき 1 mod p = 1 なので sig_eq で一致する。 *)
+Lemma znz_units_to_field_one :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p)),
+    znz_units_to_field p Hp Hprime (e (znz_units_group p Hp)) =
+    ring_one (znz_p_field p Hprime).
+Proof.
+  intros p Hp Hprime. apply sig_eq. simpl.
+  symmetry. apply Z.mod_small. apply prime_ge_2 in Hprime. lia.
+Qed.
+
+(** 体における n 乗: ring_pow_nat F a 0 = 1、ring_pow_nat F a (n+1) = a * a^n。 *)
+Fixpoint ring_pow_nat (F : Field) (a : ring_carrier F) (n : nat) : ring_carrier F :=
+  match n with
+  | O => ring_one F
+  | S n' => ring_mul F a (ring_pow_nat F a n')
+  end.
+
+(** 埋め込みは冪を保つ: ring_pow_nat F (embed a) n = embed (gpow_nat G a n)。
+    帰納: 底は znz_units_to_field_one、ステップは znz_units_to_field_mul。 *)
+Lemma znz_units_to_field_pow :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (x : carrier (znz_units_group p Hp)) (n : nat),
+    ring_pow_nat (znz_p_field p Hprime) (znz_units_to_field p Hp Hprime x) n =
+    znz_units_to_field p Hp Hprime (gpow_nat (znz_units_group p Hp) x n).
+Proof.
+  intros p Hp Hprime x n.
+  induction n as [| n' IH].
+  - simpl. symmetry. apply znz_units_to_field_one.
+  - change (ring_mul (znz_p_field p Hprime) (znz_units_to_field p Hp Hprime x)
+      (ring_pow_nat (znz_p_field p Hprime) (znz_units_to_field p Hp Hprime x) n') =
+    znz_units_to_field p Hp Hprime
+      (op (znz_units_group p Hp) x (gpow_nat (znz_units_group p Hp) x n'))).
+    rewrite IH. apply znz_units_to_field_mul.
+Qed.
+
+(** 埋め込みは単射: embed x = embed y → x = y。
+    proj1_sig の等しさから sig_eq で示す。 *)
+Lemma znz_units_to_field_inj :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (x y : carrier (znz_units_group p Hp)),
+    znz_units_to_field p Hp Hprime x = znz_units_to_field p Hp Hprime y -> x = y.
+Proof.
+  intros p Hp Hprime x y Heq.
+  apply sig_eq.
+  change (proj1_sig x = proj1_sig y).
+  set (embed := znz_units_to_field p Hp Hprime) in Heq.
+  unfold embed in Heq.
+  exact (f_equal (fun e : ring_carrier (znz_p_field p Hprime) => proj1_sig e) Heq).
+Qed.
+
+(** 多項式 t^n を小端表現 [0; ...; 0; 1] (n 個の 0 の後に 1) で構成する。 *)
+Fixpoint xd_poly (F : Field) (n : nat) : list (ring_carrier F) :=
+  match n with
+  | O => [ring_one F]
+  | S n' => ring_zero F :: xd_poly F n'
+  end.
+
+(** xd_poly の評価は ring_pow_nat に等しい。
+    帰納: 底は ring_mul_zero_r と ring_add_zero_r、ステップは ring_add_zero_l。 *)
+Lemma xd_poly_eval :
+  forall (F : Field) (n : nat) (x : ring_carrier F),
+    poly_eval F (xd_poly F n) x = ring_pow_nat F x n.
+Proof.
+  intros F n x.
+  induction n as [| n' IH].
+  - simpl. rewrite ring_mul_zero_r. apply ring_add_zero_r.
+  - simpl. rewrite IH. apply ring_add_zero_l.
+Qed.
+
+(** xd_poly の長さは n+1。 *)
+Lemma xd_poly_length :
+  forall (F : Field) (n : nat), length (xd_poly F n) = S n.
+Proof.
+  intros F n. induction n as [| n' IH].
+  - reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+(** xd_poly は空でない。 *)
+Lemma xd_poly_nonempty :
+  forall (F : Field) (n : nat), xd_poly F n <> [].
+Proof.
+  intros F n. rewrite <- List.length_zero_iff_nil, xd_poly_length. discriminate.
+Qed.
+
+(** xd_poly の末尾要素は ring_one F。
+    帰納: last (0 :: l) d = last l d (l ≠ []) から IH を適用。 *)
+Lemma xd_poly_last :
+  forall (F : Field) (n : nat),
+    last (xd_poly F n) (ring_zero F) = ring_one F.
+Proof.
+  intros F n.
+  assert (H : xd_poly F n = List.repeat (ring_zero F) n ++ [ring_one F]).
+  { induction n as [| n' IH].
+    - reflexivity.
+    - unfold xd_poly. fold (xd_poly F n'). rewrite IH.
+      reflexivity. }
+  rewrite H. apply List.last_last.
+Qed.
+
+(** 多項式 t^d - 1 の小端表現: [-1; 0; ...; 0; 1] (d ≥ 1 の場合)。 *)
+Definition xd_minus_1_poly (F : Field) (d : nat) : list (ring_carrier F) :=
+  match d with
+  | O => []
+  | S d' => ring_neg F (ring_one F) :: xd_poly F d'
+  end.
+
+(** xd_minus_1_poly の長さは d+1 (d ≥ 1 の場合)。 *)
+Lemma xd_minus_1_poly_length :
+  forall (F : Field) (d : nat),
+    (0 < d)%nat ->
+    length (xd_minus_1_poly F d) = S d.
+Proof.
+  intros F d Hd. destruct d as [| d'].
+  - lia.
+  - simpl. rewrite xd_poly_length. reflexivity.
+Qed.
+
+(** xd_minus_1_poly の評価: poly_eval F (t^d - 1) x = (-1) + x^d。 *)
+Lemma xd_minus_1_poly_eval :
+  forall (F : Field) (d : nat) (x : ring_carrier F),
+    (0 < d)%nat ->
+    poly_eval F (xd_minus_1_poly F d) x =
+    ring_add F (ring_neg F (ring_one F)) (ring_pow_nat F x d).
+Proof.
+  intros F d x Hd. destruct d as [| d'].
+  - lia.
+  - simpl xd_minus_1_poly. rewrite poly_eval_cons, xd_poly_eval. reflexivity.
+Qed.
+
+Lemma last_nonempty_cons : forall (A : Type) (a : A) (l : list A) (d : A),
+  l <> nil -> last (a :: l) d = last l d.
+Proof.
+  intros A a l d Hne.
+  destruct l as [| h t].
+  - contradiction.
+  - reflexivity.
+Qed.
+
+Lemma xd_minus_1_poly_nonzero_leading :
+  forall (F : Field) (d : nat),
+    (0 < d)%nat ->
+    poly_nonzero_leading F (xd_minus_1_poly F d).
+Proof.
+  intros F d Hd. destruct d as [| d'].
+  - lia.
+  - split.
+    + simpl. discriminate.
+    + simpl xd_minus_1_poly.
+      rewrite last_nonempty_cons by apply xd_poly_nonempty.
+      rewrite xd_poly_last. apply field_one_ne_zero.
+Qed.
+
+(** mult_order_p の周期性: a^(mult_order_p ... a) = e。
+    mult_order_p_divides の ← 方向を ord(a) | ord(a) に適用。 *)
+Lemma mult_order_p_pow_is_e :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (a : carrier (znz_units_group p Hp)),
+    gpow_nat (znz_units_group p Hp) a (mult_order_p p Hp Hprime a) =
+    e (znz_units_group p Hp).
+Proof.
+  intros p Hp Hprime a.
+  apply (proj2 (mult_order_p_divides p Hp Hprime a (mult_order_p p Hp Hprime a))).
+  apply Nat.divide_refl.
+Qed.
+
+(** x^d = e ならば embed(x) は field の多項式 t^d - 1 の根。
+    embed(x)^d = embed(x^d) = embed(e) = ring_one F。
+    poly_eval(-1 + x^d) = -1 + 1 = 0。 *)
+Lemma gpow_is_field_root :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (x : carrier (znz_units_group p Hp))
+         (d : nat) (Hd : (0 < d)%nat)
+         (Hxd : gpow_nat (znz_units_group p Hp) x d = e (znz_units_group p Hp)),
+    poly_eval (znz_p_field p Hprime)
+      (xd_minus_1_poly (znz_p_field p Hprime) d)
+      (znz_units_to_field p Hp Hprime x) =
+    ring_zero (znz_p_field p Hprime).
+Proof.
+  intros p Hp Hprime x d Hd Hxd.
+  rewrite xd_minus_1_poly_eval; [| exact Hd].
+  rewrite znz_units_to_field_pow, Hxd, znz_units_to_field_one.
+  apply ring_add_neg_l.
+Qed.
+
+(** a^0,...,a^(d-1) を体に埋め込んだリストは NoDup。
+    mult_order_p_powers_distinct より a^i ≠ a^j (i ≠ j, i,j < d)、
+    znz_units_to_field_inj より埋め込みの単射性で示す。 *)
+Lemma NoDup_field_powers :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (a : carrier (znz_units_group p Hp)) (d : nat)
+         (Ha : mult_order_p p Hp Hprime a = d),
+    List.NoDup
+      (List.map
+        (fun k => znz_units_to_field p Hp Hprime (gpow_nat (znz_units_group p Hp) a k))
+        (List.seq 0 d)).
+Proof.
+  intros p Hp Hprime a d Ha.
+  apply List.NoDup_map_NoDup_ForallPairs.
+  - intros i j Hi Hj Heq.
+    apply List.in_seq in Hi. apply List.in_seq in Hj.
+    apply znz_units_to_field_inj in Heq.
+    destruct (Nat.eq_dec i j) as [Heqij | Hneij].
+    + exact Heqij.
+    + exfalso.
+      apply (mult_order_p_powers_distinct p Hp Hprime a i j).
+      * rewrite Ha. lia.
+      * rewrite Ha. lia.
+      * exact Hneij.
+      * exact Heq.
+  - apply seq_NoDup.
+Qed.
+
+(** 位数 d の元 a が存在するとき、x^d = e ならば x は a の冪乗である。
+    証明: a^0,...,a^(d-1) と x をあわせた d+1 個が t^d-1 の根になる。
+    fp_poly_roots_bound より d+1 < d+1、矛盾。 *)
+Lemma order_d_elements_are_powers :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (a : carrier (znz_units_group p Hp))
+         (d : nat) (Hd : (0 < d)%nat)
+         (Ha : mult_order_p p Hp Hprime a = d)
+         (x : carrier (znz_units_group p Hp))
+         (Hx : gpow_nat (znz_units_group p Hp) x d = e (znz_units_group p Hp)),
+    exists k : nat, (k < d)%nat /\
+      gpow_nat (znz_units_group p Hp) a k = x.
+Proof.
+  intros p Hp Hprime a d Hd Ha x Hx.
+  set (G := znz_units_group p Hp).
+  set (F := znz_p_field p Hprime).
+  destruct (classic (exists k, (k < d)%nat /\ gpow_nat G a k = x)) as [H | H].
+  - exact H.
+  - exfalso.
+    assert (Hnotpow : forall k, (k < d)%nat -> gpow_nat G a k <> x).
+    { intros k Hk Heq. apply H. exists k. exact (conj Hk Heq). }
+    set (roots :=
+      List.map (fun k => znz_units_to_field p Hp Hprime (gpow_nat G a k)) (List.seq 0 d)
+      ++ [znz_units_to_field p Hp Hprime x]).
+    assert (Hlen : length roots = S d).
+    { unfold roots. rewrite List.app_length, List.map_length, List.seq_length.
+      simpl. lia. }
+    assert (Hnd : List.NoDup roots).
+    { unfold roots. apply List.NoDup_app.
+      - apply NoDup_field_powers. exact Ha.
+      - constructor. intro Hf. exact Hf. constructor.
+      - intros y Hy1 Hy2.
+        apply List.in_map_iff in Hy1.
+        destruct Hy1 as [k [Hk1 Hk2]].
+        apply List.in_seq in Hk2.
+        simpl in Hy2. destruct Hy2 as [Hy2 | Hy2]; [| exact Hy2].
+        apply (Hnotpow k).
+        + lia.
+        + apply (znz_units_to_field_inj p Hp Hprime). rewrite Hk1. exact (eq_sym Hy2). }
+    assert (Hroots : forall r, List.In r roots ->
+        poly_eval F (xd_minus_1_poly F d) r = ring_zero F).
+    { intros r Hr.
+      unfold roots in Hr. apply List.in_app_iff in Hr.
+      destruct Hr as [Hr | Hr].
+      - apply List.in_map_iff in Hr.
+        destruct Hr as [k [Hk1 Hk2]].
+        rewrite <- Hk1.
+        apply gpow_is_field_root. exact Hd.
+        rewrite <- gpow_nat_mul.
+        apply (proj2 (mult_order_p_divides p Hp Hprime a (k * d))).
+        rewrite Ha. unfold Nat.divide. exists k. lia.
+      - simpl in Hr. destruct Hr as [Hr | Hr]; [| contradiction].
+        rewrite <- Hr.
+        apply gpow_is_field_root. exact Hd. exact Hx. }
+    assert (Hbound : (length roots < length (xd_minus_1_poly F d))%nat).
+    { apply fp_poly_roots_bound.
+      - apply xd_minus_1_poly_nonzero_leading. exact Hd.
+      - exact Hnd.
+      - exact Hroots. }
+    rewrite Hlen, (xd_minus_1_poly_length F d Hd) in Hbound. lia.
 Qed.
