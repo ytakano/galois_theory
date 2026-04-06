@@ -1282,3 +1282,42 @@
   - ⚠️ `(a^k)^d = e` の証明: `rewrite <- gpow_nat_mul; apply (proj2 (mult_order_p_divides p Hp Hprime a (k * d))); rewrite Ha; unfold Nat.divide; exists k; lia`。`ring` は nat に使えない。
   - ⚠️ `in [x]` を展開した後の `Hr : False` ケースには `contradiction`（`exact Hr` は型不一致）。
 - **Date**: 2026-04-07
+
+#### `sum_phi_over_divisors`
+- **Type**: Lemma
+- **Statement**: `∀ n, (1 ≤ n)%nat → fold_right Nat.add 0%nat (map euler_phi (nat_divisors n)) = n`
+- **Proof Strategy**: 全単射論。j ↦ (n/gcd(j,n), j/gcd(j,n)) が {1,...,n} と {(d,k): d|n, gcd(k,d)=1, 1≤k≤d} の間の全単射を与えることを使い、partition_sum_length 型の補題で証明。
+- **Key Tactics**: `fiber_len_eq_phi`, `divisors_perm`, `fold_right_Permutation`, `Permutation_map`, `Nat.add_comm`
+- **Dependencies**: `nat_divisors_spec`, `euler_phi_nat_gcd`, `nat_gcd_le_n`, `nat_gcd_ge_one`
+- **Notes**: Z_scope が open なので全ての nat 比較に `%nat` アノテーション必須。
+- **Date**: 2025
+
+#### `psi_le_phi`
+- **Type**: Lemma
+- **Statement**: `∀ d, Nat.divide d (p-1) → (psi p Hp Hprime d ≤ euler_phi d)%nat`
+- **Proof Strategy**: k_of_x: {x: ord(x)=d} → {k<d: gcd(k,d)=1} が単射であることを示す。ord(a^k)=d/gcd(k,d)=d → gcd(k,d)=1 を使う。
+- **Key Tactics**: `set k_of_x := fun x => epsilon (inhabits 0%nat) ...`, `NoDup_incl_length`スタイルの単射性証明, `order_of_power_gcd`
+- **Dependencies**: `order_d_elements_are_powers`, `order_of_power_gcd`, `epsilon_spec`
+- **Notes**:
+  - ⚠️ **epsilon unfolding issue**: `rewrite (order_of_power_gcd ...) in Hx_ord` によって `k_of_x x` (folded) が epsilon の展開形に変換され、その後の `destruct (Nat.gcd (k_of_x x) d)` が `Hx_ord` を更新しない。Fix: 新しい assert `Hkgcd` を作り `pose proof + assert (Heq : gpow_nat (znz_units_group p Hp) a (k_of_x x) = x) by exact Hk_eq` で `rewrite Heq in Hpow` して Hkgcd を保持する。
+  - ⚠️ G := znz_units_group p Hp と znz_units_group p Hp の構文的差異: `fold G in Hpow` は不要。代わりに `assert (Heq : gpow_nat (znz_units_group p Hp) a (k_of_x x) = x) by exact Hk_eq` で直接解決。
+  - ⚠️ `linarith` は `Stdlib.Linarith` を `Require Import` しないと使えない。`Nat.lt_irrefl` + `rewrite` で代替。
+- **Date**: 2025
+
+#### `sum_psi_eq_p_minus_1`
+- **Type**: Lemma
+- **Statement**: `fold_right Nat.add 0%nat (map (psi p Hp Hprime) (nat_divisors (p-1))) = (p-1)%nat`
+- **Proof Strategy**: partition_sum_length を L=znz_units_all, D=nat_divisors(p-1), f=mult_order_p に適用。各元 x の位数は p-1 の約数（フェルマー）、全元を位数で分類すると各 d の元の数が psi(d) になる。
+- **Key Tactics**: `partition_sum_length`, `mult_order_p_in_nat_divisors`, `nat_divisors_NoDup`
+- **Dependencies**: `mult_order_p_divides_p_minus_1`, `znz_units_all_spec`, `nat_divisors_spec`
+- **Notes**: Z_scope issues: `Nat.eqb` comparisons need careful handling; use `Nat.eqb_eq`.
+- **Date**: 2025
+
+#### `primitive_root_exists`
+- **Type**: Theorem
+- **Statement**: `∀ p, (1 < p)%nat → prime (Z.of_nat p) → ∃ g, mult_order_p p Hp Hprime g = (p-1)%nat`
+- **Proof Strategy**: (1) fold_add_map_le: ∑psi ≤ ∑phi; (2) ∑psi = ∑phi = p-1; (3) fold_add_eq_all_eq: psi(p-1) = phi(p-1); (4) euler_phi_pos: phi(p-1) ≥ 1; (5) filter_nonempty_ex: psi(p-1) ≥ 1 → 原始根が存在。
+- **Key Tactics**: `fold_add_map_le`, `fold_add_eq_all_eq`, `filter_nonempty_ex`, `euler_phi_pos`, `nat_divisors_self`
+- **Dependencies**: `sum_psi_eq_p_minus_1`, `sum_phi_over_divisors`, `psi_le_phi`, `euler_phi_pos`
+- **Notes**: `rewrite Heq_p1 in Hsum_psi` is WRONG (psi(p-1) doesn't appear in the sum directly). Instead use `assert (Hpsi_pos : ...) by (rewrite Heq_p1; exact Hphi_pos)`.
+- **Date**: 2025

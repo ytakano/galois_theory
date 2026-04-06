@@ -6018,15 +6018,403 @@ Proof.
   - apply Nat.eqb_eq. symmetry. apply Nat.mod_same. lia.
 Qed.
 
-(** ∑_{d|n} φ(d) = n  (約数和公式、Euler の恒等式)
-    証明は複雑なため Admitted とする。 *)
+Local Open Scope nat_scope.
+
+
+(** ===================================================================== *)
+(** 補助補題: 約数和公式・原始根存在定理の証明に必要な補助補題              *)
+(** ===================================================================== *)
+
+(** fold_right add 0 の和分解 *)
+Lemma fold_right_add_map_add : forall (A : Type) (f g : A -> nat) (L : list A),
+  List.fold_right Nat.add 0%nat (List.map (fun x => (f x + g x)%nat) L) =
+  (List.fold_right Nat.add 0%nat (List.map f L) + List.fold_right Nat.add 0%nat (List.map g L))%nat.
+Proof.
+  intros A f g L. induction L as [|h t IH]; simpl; lia.
+Qed.
+
+(** filter (h::t) の長さ分解 *)
+Lemma filter_cons_length : forall (A : Type) (f : A -> bool) (h : A) (t : list A),
+  List.length (List.filter f (h :: t)) =
+  (List.length (List.filter f t) + (if f h then 1%nat else 0%nat))%nat.
+Proof.
+  intros A f h t. simpl. destruct (f h); simpl; lia.
+Qed.
+
+(** 指示関数の sum: x ∉ L ならば sum = 0 *)
+Lemma fold_indicator_not_in : forall (A : Type) (eq_dec : forall a b : A, {a = b} + {a <> b})
+  (x : A) (L : list A),
+  ~List.In x L ->
+  List.fold_right Nat.add 0%nat (List.map (fun y => if eq_dec x y then 1%nat else 0%nat) L) = 0%nat.
+Proof.
+  intros A eq_dec x L HnotIn.
+  induction L as [|h t IH]; simpl.
+  - reflexivity.
+  - destruct (eq_dec x h) as [Heq | Hne].
+    + exfalso. apply HnotIn. left. symmetry. exact Heq.
+    + simpl. apply IH. intro Hin. apply HnotIn. right. exact Hin.
+Qed.
+
+(** 指示関数の sum: x ∈ NoDup L ならば sum = 1 *)
+Lemma sum_indicator_one : forall (A : Type) (eq_dec : forall a b : A, {a = b} + {a <> b})
+  (x : A) (L : list A),
+  List.In x L -> List.NoDup L ->
+  List.fold_right Nat.add 0%nat (List.map (fun y => if eq_dec x y then 1%nat else 0%nat) L) = 1%nat.
+Proof.
+  intros A eq_dec x L HIn HND.
+  induction L as [|h t IH]; [inversion HIn|].
+  simpl. inversion HND as [|h' t' Hnot HNDt [Hh' Ht']]. subst h' t'.
+  destruct HIn as [Heq | HIn'].
+  - subst h. destruct (eq_dec x x) as [_ | Hne].
+    2: (exfalso; exact (Hne eq_refl)).
+    simpl. rewrite fold_indicator_not_in; [lia | exact Hnot].
+  - destruct (eq_dec x h) as [Heq | Hne].
+    + exfalso. apply Hnot. subst h. exact HIn'.
+    + simpl. apply IH; assumption.
+Qed.
+
+(** 全要素が 0 の map の fold_right は 0 *)
+Lemma fold_right_add_map_zero : forall (A : Type) (f : A -> nat) (L : list A),
+  (forall x, List.In x L -> f x = 0%nat) ->
+  List.fold_right Nat.add 0%nat (List.map f L) = 0%nat.
+Proof.
+  intros A f L H. induction L as [|h t IH]; simpl.
+  - reflexivity.
+  - rewrite H; [simpl; apply IH | left; reflexivity].
+    intros x Hx. apply H. right. exact Hx.
+Qed.
+
+(** 分割和の定理:
+    NoDup な L と NoDup な D があり、f : L → D ならば
+    ∑_{d ∈ D} |{x ∈ L : f x = d}| = |L| *)
+Lemma partition_sum_length : forall (A B : Type)
+  (eq_dec : forall a b : B, {a = b} + {a <> b})
+  (L : list A) (D : list B) (f : A -> B),
+  List.NoDup L ->
+  List.NoDup D ->
+  (forall x, List.In x L -> List.In (f x) D) ->
+  List.fold_right Nat.add 0%nat
+    (List.map (fun d => List.length (List.filter (fun x => if eq_dec (f x) d then true else false) L)) D)
+  = List.length L.
+Proof.
+  intros A B eq_dec L D f HND_L HND_D Hf.
+  induction L as [|h t IH].
+  - simpl. apply fold_right_add_map_zero. intros d _. simpl. reflexivity.
+  - inversion HND_L as [|h' t' Hnot HNDt [Hh' Ht']]. subst h' t'.
+    pose proof (Hf h (or_introl eq_refl)) as Hfh_in.
+    assert (Hmap : forall d,
+      List.length (List.filter (fun x => if eq_dec (f x) d then true else false) (h :: t)) =
+      (List.length (List.filter (fun x => if eq_dec (f x) d then true else false) t) +
+                   (if eq_dec (f h) d then 1%nat else 0%nat))%nat).
+    { intro d. rewrite filter_cons_length. destruct (eq_dec (f h) d); simpl; lia. }
+    rewrite (List.map_ext _ _ Hmap), fold_right_add_map_add, IH; try assumption.
+    2: { intros x Hx. apply Hf. right. exact Hx. }
+    assert (Hind1 : List.fold_right Nat.add 0%nat (List.map (fun d => if eq_dec (f h) d then 1%nat else 0%nat) D) = 1%nat).
+    { apply (sum_indicator_one B eq_dec (f h) D Hfh_in HND_D). }
+    simpl. lia.
+Qed.
+
+(** nat_divisors は NoDup *)
+Lemma nat_divisors_NoDup : forall n : nat, List.NoDup (nat_divisors n).
+Proof.
+  intro n. unfold nat_divisors. apply List.NoDup_filter. apply List.seq_NoDup.
+Qed.
+
+(** mult_order_p の nat_divisors (p-1) *)
+Lemma mult_order_p_in_nat_divisors :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (x : carrier (znz_units_group p Hp)),
+  List.In (mult_order_p p Hp Hprime x) (nat_divisors (p - 1)).
+Proof.
+  intros p Hp Hprime x.
+  apply (nat_divisors_spec (p - 1) (mult_order_p p Hp Hprime x)).
+  { lia. }
+  split.
+  { unfold mult_order_p.
+    exact (proj1 (mult_order_spec (znz_units_group p Hp) (p-1)
+      (prime_units_group_order p Hp Hprime) x)). }
+  split.
+  { destruct (mult_order_p_divides_p_minus_1 p Hp Hprime x) as [k Hk].
+    assert (Hk_pos : k <> 0%nat).
+    { intro Hz. subst k. simpl in Hk.
+      unfold mult_order_p in Hk.
+      pose proof (proj1 (mult_order_spec (znz_units_group p Hp) (p-1)
+        (prime_units_group_order p Hp Hprime) x)) as Hord_pos.
+      lia. }
+    nia. }
+  exact (mult_order_p_divides_p_minus_1 p Hp Hprime x).
+Qed.
+
+(** Z の divisibility から Nat の divisibility へ変換 *)
+Lemma nat_divide_Z : forall m n : nat,
+  Nat.divide m n -> (Z.of_nat m | Z.of_nat n)%Z.
+Proof.
+  intros m n [k Hk]. exists (Z.of_nat k). rewrite Hk. rewrite Nat2Z.inj_mul. lia.
+Qed.
+
+(** Z の divisibility から Nat の divisibility へ逆変換 *)
+Lemma Z_divide_nat : forall m n : nat,
+  (Z.of_nat m | Z.of_nat n)%Z -> Nat.divide m n.
+Proof.
+  intros m n [k Hk].
+  destruct m as [|m'].
+  - exists 0%nat. apply Nat2Z.inj. simpl. lia.
+  - assert (Hk_nn : (0 <= k)%Z).
+    { destruct (Z.lt_ge_cases k 0%Z) as [Hk_neg | Hk_nn]. 2: exact Hk_nn.
+      exfalso. assert (H : (k * Z.of_nat (S m') < 0)%Z) by (apply Z.mul_neg_pos; lia). lia. }
+    exists (Z.to_nat k). apply Nat2Z.inj. rewrite Nat2Z.inj_mul.
+    rewrite Z2Nat.id by exact Hk_nn. lia.
+Qed.
+
+(** Z.gcd と Nat.gcd の関係 *)
+Lemma Z_gcd_of_nat : forall m n : nat,
+  Z.gcd (Z.of_nat m) (Z.of_nat n) = Z.of_nat (Nat.gcd m n).
+Proof.
+  intros m n. apply Z.gcd_unique; [apply Nat2Z.is_nonneg | apply nat_divide_Z; apply Nat.gcd_divide_l |
+  apply nat_divide_Z; apply Nat.gcd_divide_r |].
+  intros d Hdm Hdn. apply Z.divide_abs_l.
+  assert (Habs_eq : Z.abs d = Z.of_nat (Z.to_nat (Z.abs d))).
+  { symmetry. apply Z2Nat.id. apply Z.abs_nonneg. }
+  rewrite Habs_eq. apply nat_divide_Z. apply Nat.gcd_greatest.
+  - apply Z_divide_nat. rewrite <- Habs_eq. apply Z.divide_abs_l. exact Hdm.
+  - apply Z_divide_nat. rewrite <- Habs_eq. apply Z.divide_abs_l. exact Hdn.
+Qed.
+
+(** euler_phi を Nat.gcd で書き換え *)
+Lemma euler_phi_nat_gcd : forall n : nat,
+  euler_phi n =
+  List.length (List.filter (fun k => Nat.eqb (Nat.gcd k n) 1) (List.seq 0 n)).
+Proof.
+  intro n. unfold euler_phi. f_equal. apply List.filter_ext. intro k.
+  rewrite Z_gcd_of_nat.
+  destruct (Nat.eqb (Nat.gcd k n) 1) eqn:Heqb.
+  - apply Nat.eqb_eq in Heqb. rewrite Heqb. reflexivity.
+  - apply Z.eqb_neq.
+    intro Heq.
+    assert (Hnat : (Nat.gcd k n = 1)%nat).
+    { zify. lia. }
+    rewrite Hnat in Heqb. discriminate Heqb.
+Qed.
+
+(** n >= 1 のとき gcd(k,n) >= 1 *)
+Lemma nat_gcd_ge_one : forall k n : nat, (1 <= n)%nat -> (1 <= Nat.gcd k n)%nat.
+Proof.
+  intros k n Hn.
+  pose proof (Nat.gcd_divide_r k n) as [q Hq].
+  destruct (Nat.gcd k n) as [|g]; [simpl in Hq; lia | lia].
+Qed.
+
+(** n >= 1 のとき gcd(k,n) <= n *)
+Lemma nat_gcd_le_n : forall k n : nat, (1 <= n)%nat -> (Nat.gcd k n <= n)%nat.
+Proof.
+  intros k n Hn.
+  pose proof (Nat.gcd_divide_r k n) as [q Hq].
+  destruct q as [|q']; [simpl in Hq; lia|].
+  destruct (Nat.gcd k n) as [|g']; [simpl in Hq; lia | nia].
+Qed.
+
+(** k ∈ seq 0 n のとき gcd(k,n) ∈ nat_divisors n *)
+Lemma nat_gcd_in_nat_divisors : forall n k : nat,
+  (1 <= n)%nat -> List.In k (List.seq 0 n) ->
+  List.In (Nat.gcd k n) (nat_divisors n).
+Proof.
+  intros n k Hn _.
+  unfold nat_divisors. apply List.filter_In. split.
+  - apply List.in_seq. split.
+    + exact (nat_gcd_ge_one k n Hn).
+    + pose proof (nat_gcd_le_n k n Hn). lia.
+  - apply Nat.eqb_eq. symmetry.
+    destruct (Nat.gcd_divide_r k n) as [q Hq].
+    rewrite Hq at 1. apply Nat.Div0.mod_mul.
+Qed.
+
+(** n/(n/d) = d (d|n, d>=1, n>=1) *)
+Lemma div_div_eq : forall n d : nat,
+  (1 <= d)%nat -> (1 <= n)%nat -> Nat.divide d n -> (n / (n / d))%nat = d.
+Proof.
+  intros n d Hd Hn [k Hk].
+  assert (Hk0 : (k <> 0)%nat) by (intro Hkz; subst; simpl in Hn; lia).
+  subst n. rewrite Nat.div_mul by lia. rewrite Nat.mul_comm. apply Nat.div_mul. lia.
+Qed.
+
+(** d|n → n/d|n *)
+Lemma divisor_div_closed : forall n d : nat,
+  (1 <= n)%nat -> (1 <= d)%nat -> Nat.divide d n -> Nat.divide (n/d) n.
+Proof.
+  intros n d Hn Hd [k Hk].
+  subst n. rewrite Nat.div_mul by lia. exists d. lia.
+Qed.
+
+(** fiber の長さ: |{k < n : gcd(k,n) = e}| = |{j < n/e : gcd(j,n/e) = 1}| *)
+Lemma fiber_len_eq : forall (n e : nat),
+  (1 <= n)%nat -> (1 <= e)%nat -> Nat.divide e n ->
+  List.length (List.filter (fun k => Nat.eqb (Nat.gcd k n) e) (List.seq 0 n)) =
+  List.length (List.filter (fun j => Nat.eqb (Nat.gcd j (n/e)) 1) (List.seq 0 (n/e))).
+Proof.
+  intros n e Hn He Hdvd.
+  assert (He' : (e <> 0)%nat) by lia.
+  assert (Hn_eq : n = n/e * e).
+  { destruct Hdvd as [k Hk]. subst n. rewrite Nat.div_mul by exact He'. lia. }
+  set (m := (n/e)%nat). fold m in Hn_eq.
+  set (Lk := List.filter (fun k => Nat.eqb (Nat.gcd k n) e) (List.seq 0 n)).
+  set (Lj := List.filter (fun j => Nat.eqb (Nat.gcd j m) 1) (List.seq 0 m)).
+  apply Nat.le_antisymm.
+  - rewrite <- (List.length_map (fun k => k/e) Lk).
+    apply List.NoDup_incl_length.
+    + apply List.NoDup_map_NoDup_ForallPairs.
+      * intros k1 k2 Hk1 Hk2 Heq.
+        apply List.filter_In in Hk1, Hk2.
+        destruct Hk1 as [_ Hk1_gcd], Hk2 as [_ Hk2_gcd].
+        apply Nat.eqb_eq in Hk1_gcd, Hk2_gcd.
+        assert (He_dvd_k1 : Nat.divide e k1). { rewrite <- Hk1_gcd. apply Nat.gcd_divide_l. }
+        assert (He_dvd_k2 : Nat.divide e k2). { rewrite <- Hk2_gcd. apply Nat.gcd_divide_l. }
+        destruct He_dvd_k1 as [j1 Hj1], He_dvd_k2 as [j2 Hj2].
+        assert (Hj1e : k1/e = j1) by (rewrite Hj1; apply Nat.div_mul; lia).
+        assert (Hj2e : k2/e = j2) by (rewrite Hj2; apply Nat.div_mul; lia).
+        rewrite Hj1e, Hj2e in Heq. subst j2. lia.
+      * apply List.NoDup_filter. apply List.seq_NoDup.
+    + intros k Hk_in.
+      apply List.in_map_iff in Hk_in.
+      destruct Hk_in as [k0 [Heq Hk0_in]].
+      apply List.filter_In in Hk0_in.
+      destruct Hk0_in as [Hk0_seq Hk0_gcd].
+      apply Nat.eqb_eq in Hk0_gcd.
+      assert (He_dvd_k0 : Nat.divide e k0). { rewrite <- Hk0_gcd. apply Nat.gcd_divide_l. }
+      destruct He_dvd_k0 as [j Hj].
+      assert (Hje : k0/e = j) by (rewrite Hj; apply Nat.div_mul; lia).
+      rewrite Hje in Heq. subst k.
+      apply List.filter_In. split.
+      * apply List.in_seq. split. lia. apply List.in_seq in Hk0_seq. rewrite Hn_eq in Hk0_seq. nia.
+      * apply Nat.eqb_eq.
+        assert (Hgcd : Nat.gcd (j*e) (m*e) = Nat.gcd j m * e) by apply Nat.gcd_mul_mono_r.
+        rewrite <- Hj, <- Hn_eq in Hgcd. rewrite Hk0_gcd in Hgcd. nia.
+  - rewrite <- (List.length_map (fun j => j*e) Lj).
+    apply List.NoDup_incl_length.
+    + apply List.NoDup_map_NoDup_ForallPairs.
+      * intros j1 j2 _ _ Heq. nia.
+      * apply List.NoDup_filter. apply List.seq_NoDup.
+    + intros k Hk_in.
+      apply List.in_map_iff in Hk_in.
+      destruct Hk_in as [j [Heq Hj_in]].
+      apply List.filter_In in Hj_in.
+      destruct Hj_in as [Hj_seq Hj_gcd].
+      apply Nat.eqb_eq in Hj_gcd.
+      apply List.filter_In. split.
+      * apply List.in_seq. split. lia. apply List.in_seq in Hj_seq. rewrite Hn_eq. nia.
+      * apply Nat.eqb_eq. subst k.
+        assert (Hgcd : Nat.gcd (j*e) (m*e) = Nat.gcd j m * e) by apply Nat.gcd_mul_mono_r.
+        rewrite <- Hn_eq in Hgcd. rewrite Hj_gcd in Hgcd. lia.
+Qed.
+
+(** fiber の長さ = euler_phi (n/e) *)
+Lemma fiber_len_eq_phi : forall (n e : nat),
+  (1 <= n)%nat -> (1 <= e)%nat -> Nat.divide e n ->
+  List.length (List.filter (fun k => Nat.eqb (Nat.gcd k n) e) (List.seq 0 n)) =
+  euler_phi (n/e).
+Proof.
+  intros n e Hn He Hdvd.
+  rewrite fiber_len_eq by assumption.
+  rewrite <- euler_phi_nat_gcd. reflexivity.
+Qed.
+
+(** nat_divisors n は d ↦ n/d で自分自身と Permutation *)
+Lemma divisors_perm : forall n : nat, (1 <= n)%nat ->
+  Permutation (nat_divisors n) (List.map (fun d => n/d) (nat_divisors n)).
+Proof.
+  intros n Hn.
+  apply NoDup_Permutation.
+  - apply nat_divisors_NoDup.
+  - apply List.NoDup_map_NoDup_ForallPairs.
+    + intros d1 d2 Hd1_in Hd2_in Heq.
+      apply (nat_divisors_spec n d1 Hn) in Hd1_in.
+      apply (nat_divisors_spec n d2 Hn) in Hd2_in.
+      destruct Hd1_in as [Hd1_ge [_ Hd1_dvd]].
+      destruct Hd2_in as [Hd2_ge [_ Hd2_dvd]].
+      pose proof (div_div_eq n d1 Hd1_ge Hn Hd1_dvd) as H1.
+      pose proof (div_div_eq n d2 Hd2_ge Hn Hd2_dvd) as H2.
+      rewrite Heq in H1. lia.
+    + apply nat_divisors_NoDup.
+  - intro d. split.
+    + intro Hd_in.
+      apply (nat_divisors_spec n d Hn) in Hd_in.
+      destruct Hd_in as [Hd_ge [Hd_le Hd_dvd]].
+      assert (Hnd_dvd : Nat.divide (n/d) n) by (apply divisor_div_closed; assumption).
+      assert (Hnd_ge : 1 <= n/d).
+      { destruct Hd_dvd as [k Hk]. subst n. rewrite Nat.div_mul by lia. lia. }
+      apply List.in_map_iff. exists (n/d). split.
+      * exact (div_div_eq n d Hd_ge Hn Hd_dvd).
+      * apply (nat_divisors_spec n (n/d) Hn). split; [exact Hnd_ge|]. split.
+        { destruct Hd_dvd as [k Hk]. subst n. rewrite Nat.div_mul by lia. nia. }
+        exact Hnd_dvd.
+    + intro Hd_in. apply List.in_map_iff in Hd_in.
+      destruct Hd_in as [d' [Heq Hd'_in]].
+      apply (nat_divisors_spec n d' Hn) in Hd'_in.
+      destruct Hd'_in as [Hd'_ge [_ Hd'_dvd]]. subst d.
+      apply (nat_divisors_spec n (n/d') Hn). split.
+      { destruct Hd'_dvd as [k Hk]. subst n. rewrite Nat.div_mul by lia. lia. }
+      split.
+      { destruct Hd'_dvd as [k Hk]. subst n. rewrite Nat.div_mul by lia. nia. }
+      exact (divisor_div_closed n d' Hn Hd'_ge Hd'_dvd).
+Qed.
+
+(** Permutation なら fold_right add 0 は等しい *)
+Lemma fold_right_Permutation : forall (L1 L2 : list nat),
+  Permutation L1 L2 ->
+  List.fold_right Nat.add 0%nat L1 = List.fold_right Nat.add 0%nat L2.
+Proof.
+  intros L1 L2 Hperm. induction Hperm; simpl; lia.
+Qed.
+
+
+(** ===================================================================== *)
+(** 約数和公式: ∑_{d|n} φ(d) = n                                          *)
+(** ===================================================================== *)
+
+(** 証明:
+    1. partition_sum_length を L=seq 0 n, D=nat_divisors n, f=gcd(·,n) に適用
+    2. 各 fiber |{k<n: gcd(k,n)=d}| = euler_phi(n/d) を fiber_len_eq_phi で示す
+    3. divisors_perm で ∑ euler_phi(n/d) = ∑ euler_phi d を得る *)
 Lemma sum_phi_over_divisors : forall n : nat,
   (1 <= n)%nat ->
   List.fold_right Nat.add 0%nat
     (List.map euler_phi (nat_divisors n)) = n.
 Proof.
-  Admitted.
+  intros n Hn.
+  assert (Hpart : List.fold_right Nat.add 0%nat
+    (List.map (fun d => List.length (List.filter (fun k => if Nat.eq_dec (Nat.gcd k n) d then true else false) (List.seq 0 n)))
+    (nat_divisors n)) = List.length (List.seq 0 n)).
+  { apply partition_sum_length.
+    - apply List.seq_NoDup.
+    - apply nat_divisors_NoDup.
+    - intros k Hk_in. apply nat_gcd_in_nat_divisors; assumption. }
+  rewrite List.length_seq in Hpart.
+  assert (Hmap_eq : List.map (fun d => List.length (List.filter (fun k => if Nat.eq_dec (Nat.gcd k n) d then true else false) (List.seq 0 n))) (nat_divisors n) =
+    List.map (fun d => euler_phi (n/d)) (nat_divisors n)).
+  { apply List.map_ext_in. intros d Hd_in.
+    apply (nat_divisors_spec n d Hn) in Hd_in.
+    destruct Hd_in as [Hd_ge [_ Hd_dvd]].
+    assert (Hfilter_eq : List.filter (fun k => if Nat.eq_dec (Nat.gcd k n) d then true else false) (List.seq 0 n) =
+      List.filter (fun k => Nat.eqb (Nat.gcd k n) d) (List.seq 0 n)).
+    { apply List.filter_ext_in. intros k _.
+      destruct (Nat.eq_dec (Nat.gcd k n) d) as [Heq | Hne];
+      [rewrite Heq; symmetry; apply Nat.eqb_refl | symmetry; apply Nat.eqb_neq; exact Hne]. }
+    rewrite Hfilter_eq.
+    exact (fiber_len_eq_phi n d Hn Hd_ge Hd_dvd). }
+  rewrite Hmap_eq in Hpart.
+  assert (Hperm_eq : List.fold_right Nat.add 0%nat (List.map (fun d => euler_phi (n/d)) (nat_divisors n)) =
+    List.fold_right Nat.add 0%nat (List.map euler_phi (nat_divisors n))).
+  { pose proof (divisors_perm n Hn) as Hperm.
+    assert (Hmap_perm : Permutation (List.map (fun d => euler_phi (n/d)) (nat_divisors n))
+                                    (List.map euler_phi (nat_divisors n))).
+    { pose proof (Permutation_map euler_phi (Permutation_sym Hperm)) as Hp2.
+      rewrite List.map_map in Hp2. exact Hp2. }
+    apply fold_right_Permutation. exact Hmap_perm. }
+  lia.
+Qed.
 
+
+
+Local Close Scope nat_scope.
 (** 位数 d の元の個数: ψ(d) の定義 *)
 Definition psi (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
     (d : nat) : nat :=
@@ -6034,27 +6422,150 @@ Definition psi (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
     (fun x => Nat.eqb (mult_order_p p Hp Hprime x) d)
     (znz_units_all p Hp)).
 
+(** ===================================================================== *)
+(** psi_le_phi: ψ(d) ≤ φ(d) for all d | (p-1)                           *)
+(** ===================================================================== *)
+
+(** 空でないリストから要素を取り出す *)
+Lemma list_nonempty_has_elem : forall (A : Type) (L : list A),
+  (0 < List.length L)%nat -> exists x, List.In x L.
+Proof.
+  intros A L H. destruct L as [|h t].
+  - simpl in H. lia.
+  - exists h. left. reflexivity.
+Qed.
+
 (** 各 d | (p-1) に対して ψ(d) ≤ φ(d)
-    - ψ(d) = 0 の場合: 自明 (0 ≤ φ(d))
-    - ψ(d) ≥ 1 の場合: 位数 d の元 a を取り、order_d_elements_are_powers +
-      order_of_power_gcd により ψ(d) = φ(d) を示す。
-    証明は複雑なため Admitted とする。 *)
+    証明:
+    - ψ(d) = 0 の場合: 自明
+    - ψ(d) ≥ 1 の場合: 位数 d の元 a を取り、epsilon で各 x に k を対応させる単射を構成 *)
 Lemma psi_le_phi : forall (p : nat) (Hp : (1 < p)%nat)
     (Hprime : prime (Z.of_nat p)) (d : nat),
   Nat.divide d (p - 1) ->
   (psi p Hp Hprime d <= euler_phi d)%nat.
 Proof.
-  Admitted.
+  intros p Hp Hprime d Hdvd.
+  (* d = 0 の場合: p-1 = 0 → p = 1, 矛盾 *)
+  destruct (Nat.eq_dec d 0%nat) as [Hd0 | Hd_pos].
+  - subst d. destruct Hdvd as [k Hk]. lia.
+  - (* d ≥ 1 の場合 *)
+    assert (Hd_ge : (0 < d)%nat) by lia.
+    (* psi d = 0 の場合: 0 <= euler_phi d は自明 *)
+    destruct (Nat.eq_dec (psi p Hp Hprime d) 0%nat) as [Hz | Hnz].
+    + rewrite Hz. apply Nat.le_0_l.
+    + assert (Hpsi_pos : (0 < psi p Hp Hprime d)%nat) by lia.
+      unfold psi in Hpsi_pos.
+      set (G := znz_units_group p Hp).
+      set (Lx := List.filter (fun x => Nat.eqb (mult_order_p p Hp Hprime x) d) (znz_units_all p Hp)).
+      set (Lk := List.filter (fun k => Nat.eqb (Nat.gcd k d) 1) (List.seq 0 d)).
+      fold Lx in Hpsi_pos.
+      pose proof (list_nonempty_has_elem _ Lx Hpsi_pos) as [a Ha_in].
+      apply List.filter_In in Ha_in.
+      destruct Ha_in as [_ Ha_ord].
+      apply Nat.eqb_eq in Ha_ord.
+      (* a には位数 d がある *)
+      (* 単射 Lx → Lk を epsilon で構成: x ↦ k where a^k = x *)
+      set (k_of_x := fun x => epsilon (inhabits 0%nat)
+        (fun k => (k < d)%nat /\ gpow_nat G a k = x)).
+      (* psi d ≤ euler_phi d: length Lx ≤ length Lk *)
+      assert (Hmain : (List.length (List.map k_of_x Lx) <= List.length Lk)%nat).
+      { apply List.NoDup_incl_length.
+      * apply List.NoDup_map_NoDup_ForallPairs.
+        -- intros x1 x2 Hx1 Hx2 Hk_eq.
+           apply List.filter_In in Hx1, Hx2.
+           destruct Hx1 as [_ Hx1_ord], Hx2 as [_ Hx2_ord].
+           apply Nat.eqb_eq in Hx1_ord, Hx2_ord.
+           assert (Hx1d : gpow_nat G x1 d = e G).
+           { rewrite <- Hx1_ord. exact (mult_order_p_pow_is_e p Hp Hprime x1). }
+           assert (Hx2d : gpow_nat G x2 d = e G).
+           { rewrite <- Hx2_ord. exact (mult_order_p_pow_is_e p Hp Hprime x2). }
+           assert (Hx1_ex : exists k, (k < d)%nat /\ gpow_nat G a k = x1).
+           { apply (order_d_elements_are_powers p Hp Hprime a d Hd_ge Ha_ord x1 Hx1d). }
+           assert (Hx2_ex : exists k, (k < d)%nat /\ gpow_nat G a k = x2).
+           { apply (order_d_elements_are_powers p Hp Hprime a d Hd_ge Ha_ord x2 Hx2d). }
+           pose proof (epsilon_spec (inhabits 0%nat) _ Hx1_ex) as [Hk1_lt Hk1_eq].
+           pose proof (epsilon_spec (inhabits 0%nat) _ Hx2_ex) as [Hk2_lt Hk2_eq].
+           (* k_of_x x1 = k_of_x x2 から x1 = x2 *)
+           assert (Hx1x2 : x1 = x2).
+           { rewrite <- Hk1_eq, <- Hk2_eq.
+             unfold k_of_x in Hk_eq. rewrite Hk_eq. reflexivity. }
+           exact Hx1x2.
+        -- apply List.NoDup_filter. exact (proj1 (znz_units_all_spec p Hp Hprime)).
+      * intros k Hk_in.
+        apply List.in_map_iff in Hk_in.
+        destruct Hk_in as [x [Heq Hx_in]].
+        apply List.filter_In in Hx_in.
+        destruct Hx_in as [_ Hx_ord].
+        apply Nat.eqb_eq in Hx_ord.
+        assert (Hxd : gpow_nat G x d = e G).
+        { rewrite <- Hx_ord. exact (mult_order_p_pow_is_e p Hp Hprime x). }
+        assert (Hx_ex : exists k0, (k0 < d)%nat /\ gpow_nat G a k0 = x).
+        { apply (order_d_elements_are_powers p Hp Hprime a d Hd_ge Ha_ord x Hxd). }
+        pose proof (epsilon_spec (inhabits 0%nat) _ Hx_ex) as [Hk_lt Hk_eq].
+        subst k.
+        apply List.filter_In. split.
+        -- apply List.in_seq. split. lia. exact Hk_lt.
+        -- apply Nat.eqb_eq.
+           (* k_of_x x を fold した形で gcd 条件を作る *)
+           assert (Hkgcd : Nat.div d (Nat.gcd (k_of_x x) d) = d).
+           { pose proof (order_of_power_gcd p Hp Hprime a (k_of_x x)) as Hpow.
+             rewrite Ha_ord in Hpow.
+             assert (Heq : gpow_nat (znz_units_group p Hp) a (k_of_x x) = x) by exact Hk_eq.
+             rewrite Heq in Hpow. rewrite Hx_ord in Hpow.
+             exact (eq_sym Hpow). }
+           destruct (Nat.gcd (k_of_x x) d) as [|g] eqn:Hgcd_eq.
+           ++ exfalso. pose proof (Nat.gcd_divide_r (k_of_x x) d) as [q Hq].
+              rewrite Hgcd_eq in Hq. simpl in Hq. lia.
+           ++ destruct g as [|g'].
+              ** reflexivity.
+              ** exfalso.
+                 assert (H1lt : (1 < S (S g'))%nat) by lia.
+                 pose proof (Nat.div_lt d (S (S g')) Hd_ge H1lt) as Hlt.
+                 rewrite Hkgcd in Hlt.
+                 exact (Nat.lt_irrefl d Hlt).
+}
+      rewrite List.length_map in Hmain.
+      unfold psi. fold G. fold Lx. rewrite euler_phi_nat_gcd. exact Hmain.
+Qed.
 
-(** ∑_{d | (p-1)} ψ(d) = p-1
-    全要素は位数 p-1 の約数を持つ (フェルマー) ので各 d での集計の和 = |G| = p-1。
-    証明は複雑なため Admitted とする。 *)
+
+(** ===================================================================== *)
+(** sum_psi_eq_p_minus_1: ∑_{d|(p-1)} ψ(d) = p-1                        *)
+(** ===================================================================== *)
+
+(** ∑_{d|(p-1)} ψ(d) = p-1
+    証明: partition_sum_length を L=znz_units_all, D=nat_divisors(p-1),
+    f=mult_order_p に適用 *)
 Lemma sum_psi_eq_p_minus_1 : forall (p : nat) (Hp : (1 < p)%nat)
     (Hprime : prime (Z.of_nat p)),
   List.fold_right Nat.add 0%nat
     (List.map (psi p Hp Hprime) (nat_divisors (p - 1))) = (p - 1)%nat.
 Proof.
-  Admitted.
+  intros p Hp Hprime.
+  (* psi d の定義を展開し、partition_sum_length の形に持ち込む *)
+  unfold psi.
+  (* 目標: fold_right add 0 (map (fun d => length (filter (order=d) units)) divisors) = p-1 *)
+  (* これは partition_sum_length の結果 *)
+  assert (Hpart : List.fold_right Nat.add 0%nat
+    (List.map (fun d => List.length (List.filter (fun x => if Nat.eq_dec (mult_order_p p Hp Hprime x) d then true else false)
+      (znz_units_all p Hp))) (nat_divisors (p - 1))) =
+    List.length (znz_units_all p Hp)).
+  { apply partition_sum_length.
+    - exact (proj1 (znz_units_all_spec p Hp Hprime)).
+    - apply nat_divisors_NoDup.
+    - intros x _. apply (mult_order_p_in_nat_divisors p Hp Hprime x). }
+  rewrite (proj1 (proj2 (znz_units_all_spec p Hp Hprime))) in Hpart.
+  (* filter の bool 関数を変換 *)
+  assert (Hmap_eq : List.map (fun d => List.length (List.filter (fun x => if Nat.eq_dec (mult_order_p p Hp Hprime x) d then true else false)
+    (znz_units_all p Hp))) (nat_divisors (p - 1)) =
+    List.map (fun d => List.length (List.filter (fun x => Nat.eqb (mult_order_p p Hp Hprime x) d)
+    (znz_units_all p Hp))) (nat_divisors (p - 1))).
+  { apply List.map_ext. intro d. f_equal. apply List.filter_ext. intro x.
+    destruct (Nat.eq_dec (mult_order_p p Hp Hprime x) d) as [Heq | Hne];
+    [rewrite Heq; symmetry; apply Nat.eqb_refl | symmetry; apply Nat.eqb_neq; exact Hne]. }
+  rewrite <- Hmap_eq. exact Hpart.
+Qed.
+
 
 (** 非負整数リストの和が0なら全要素が0 *)
 Lemma nat_sum_zero_all_zero : forall (L : list nat),
@@ -6070,6 +6581,65 @@ Proof.
     + apply IH. lia. exact HIn'.
 Qed.
 
+(** ===================================================================== *)
+(** primitive_root_exists の補助補題                                       *)
+(** ===================================================================== *)
+
+(** 自然数リストの点ごとの ≤ から fold の ≤ *)
+Lemma fold_add_map_le : forall (A : Type) (f g : A -> nat) (L : list A),
+  (forall x, List.In x L -> (f x <= g x)%nat) ->
+  (List.fold_right Nat.add 0%nat (List.map f L) <=
+  List.fold_right Nat.add 0%nat (List.map g L))%nat.
+Proof.
+  intros A f g L H.
+  induction L as [|h t IH]; simpl.
+  - lia.
+  - apply Nat.add_le_mono.
+    + exact (H h (or_introl eq_refl)).
+    + apply IH. intros x Hx. apply H. right. exact Hx.
+Qed.
+
+(** fold が等しく点ごと ≤ ならば点ごとに等しい *)
+Lemma fold_add_eq_all_eq : forall (A : Type) (f g : A -> nat) (L : list A),
+  List.fold_right Nat.add 0%nat (List.map f L) =
+  List.fold_right Nat.add 0%nat (List.map g L) ->
+  (forall x, List.In x L -> (f x <= g x)%nat) ->
+  forall x, List.In x L -> f x = g x.
+Proof.
+  intros A f g L Hsum Hle x Hx.
+  induction L as [|h t IH].
+  - inversion Hx.
+  - simpl in Hsum.
+    assert (Hfh_le : (f h <= g h)%nat) by (apply Hle; left; reflexivity).
+    assert (Hft_le : (List.fold_right Nat.add 0%nat (List.map f t) <=
+                     List.fold_right Nat.add 0%nat (List.map g t))%nat).
+    { apply fold_add_map_le. intros y Hy. apply Hle. right. exact Hy. }
+    destruct Hx as [Heq | Hx'].
+    + subst h. lia.
+    + apply IH.
+      * lia.
+      * intros y Hy. apply Hle. right. exact Hy.
+      * exact Hx'.
+Qed.
+
+(** filter の長さが ≥ 1 なら要素が存在する *)
+Lemma filter_nonempty_ex : forall (A : Type) (P : A -> bool) (L : list A),
+  (1 <= List.length (List.filter P L))%nat ->
+  exists x, List.In x L /\ P x = true.
+Proof.
+  intros A P L H.
+  induction L as [|h t IH].
+  - simpl in H. lia.
+  - simpl in H. destruct (P h) eqn:Hph.
+    + exists h. split; [left; reflexivity | exact Hph].
+    + simpl in H. destruct (IH H) as [x [Hx_in Hx_P]].
+      exists x. split; [right; exact Hx_in | exact Hx_P].
+Qed.
+
+(** ===================================================================== *)
+(** primitive_root_exists: 原始根の存在定理                               *)
+(** ===================================================================== *)
+
 (** 原始根の存在定理 (Primitive Root Theorem):
     任意の素数 p に対して (Z/pZ)* に位数 p-1 の元 (原始根) が存在する。
 
@@ -6084,4 +6654,37 @@ Theorem primitive_root_exists :
     exists g : carrier (znz_units_group p Hp),
       mult_order_p p Hp Hprime g = (p - 1)%nat.
 Proof.
-  Admitted.
+  intros p Hp Hprime.
+  (* p-1 ≥ 1 *)
+  assert (Hp1 : (1 <= p - 1)%nat) by lia.
+  (* ∑psi = p-1 と ∑phi = p-1 *)
+  pose proof (sum_psi_eq_p_minus_1 p Hp Hprime) as Hsum_psi.
+  pose proof (sum_phi_over_divisors (p - 1) Hp1) as Hsum_phi.
+  (* 各 d | p-1 に対して psi d ≤ phi d *)
+  assert (Hle : forall d, List.In d (nat_divisors (p - 1)) ->
+    (psi p Hp Hprime d <= euler_phi d)%nat).
+  { intros d Hd_in.
+    apply (nat_divisors_spec (p-1) d Hp1) in Hd_in.
+    destruct Hd_in as [_ [_ Hd_dvd]].
+    exact (psi_le_phi p Hp Hprime d Hd_dvd). }
+  (* ∑psi = ∑phi かつ点ごと psi ≤ phi → psi (p-1) = phi (p-1) *)
+  assert (Heq_p1 : psi p Hp Hprime (p - 1) = euler_phi (p - 1)).
+  { apply (fold_add_eq_all_eq nat
+      (psi p Hp Hprime) euler_phi (nat_divisors (p - 1))).
+    - lia.
+    - exact Hle.
+    - apply (nat_divisors_self (p - 1) Hp1). }
+  (* phi (p-1) ≥ 1 *)
+  assert (Hphi_pos : (1 <= euler_phi (p - 1))%nat) by (apply euler_phi_pos; lia).
+  (* psi (p-1) ≥ 1 → filter が空でない → 要素が存在する *)
+  (* psi(p-1) = phi(p-1) >= 1 *)
+  assert (Hpsi_pos : (1 <= psi p Hp Hprime (p - 1))%nat) by (rewrite Heq_p1; exact Hphi_pos).
+  unfold psi in Hpsi_pos.
+  pose proof (filter_nonempty_ex (carrier (znz_units_group p Hp))
+    (fun x => Nat.eqb (mult_order_p p Hp Hprime x) (p - 1))
+    (znz_units_all p Hp)
+    Hpsi_pos) as [g [_ Hg_ord]].
+  apply Nat.eqb_eq in Hg_ord.
+  exists g. exact Hg_ord.
+Qed.
+

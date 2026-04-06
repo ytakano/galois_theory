@@ -1,10 +1,35 @@
 # Proof Progress: primitive_root_exists
 
 ## Status Overview
-- Overall: In Progress
-- Complete Lemmas: 22/24
-- Unproven (`Admitted`): `sum_phi_over_divisors`, `psi_le_phi`, `sum_psi_eq_p_minus_1`, `primitive_root_exists`
+- Overall: **Complete** (2025)
+- Complete Lemmas: 26/26
+- Unproven (`Admitted`): none
 - Failed/Abandoned Items: none
+
+## Final Completion Notes
+
+All 4 previously-Admitted lemmas are now proven and `integer.v` compiles without errors.
+
+### Key Technical Challenges Resolved
+
+**psi_le_phi — epsilon unfolding issue:**
+When using `rewrite (order_of_power_gcd ...) in Hx_ord`, Rocq unfolds `k_of_x x` from `epsilon (inhabits 0%nat) (fun k => (k<d)%nat /\ ...)` to its definition but with Z_scope interpretation, creating a term with `inhabits 0` (Z) instead of `inhabits 0%nat` (nat). This makes `destruct (Nat.gcd (k_of_x x) d)` fail to substitute in `Hx_ord`.
+
+**Fix**: Instead of modifying `Hx_ord` in-place, create a fresh `Hkgcd` assertion:
+```coq
+assert (Hkgcd : Nat.div d (Nat.gcd (k_of_x x) d) = d).
+{ pose proof (order_of_power_gcd p Hp Hprime a (k_of_x x)) as Hpow.
+  rewrite Ha_ord in Hpow.
+  assert (Heq : gpow_nat (znz_units_group p Hp) a (k_of_x x) = x) by exact Hk_eq.
+  rewrite Heq in Hpow. rewrite Hx_ord in Hpow.
+  exact (eq_sym Hpow). }
+```
+Then `destruct (Nat.gcd (k_of_x x) d)` updates `Hkgcd` correctly, and the exfalso case uses `rewrite Hkgcd in Hlt; exact (Nat.lt_irrefl d Hlt)`.
+
+**Z_scope issues:**
+All `<=` comparisons on nat values needed `%nat` annotation. `fold_add_map_le` and `fold_add_eq_all_eq` signatures needed explicit `(... <= ...)%nat`.
+
+**Duplicate lemma**: `euler_phi_pos` already exists in integer.v at line 5941 — removed from new_lemmas.v.
 
 ## Completed Lemmas
 
