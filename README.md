@@ -11,3 +11,7 @@ Claude Codeの実験のためのCoq/Rocqプロジェクトです。現在は整�
 # チェック方法
 
 `rocq compile integer.v`
+
+コンパイルエラーとなった場合、以下のコマンドでエラー箇所のゴールを確認できます。
+
+`python3 rocq_error_goal.py integer.v`
