@@ -1,9 +1,9 @@
 # Proof Progress: znz_units_pow2_structure
 
 ## Status Overview
-- Overall: **Complete** (2026-04-06)
-- Complete Lemmas: 18/18 (all main chain lemmas proved)
-- Unproven (`Admitted`): `one_plus_pow2_r_pow_s`, `congr_pow_mod` (not needed for main chain)
+- Overall: **Complete** (2026-04-06, integer.v confirmed 2026-04-06)
+- Complete Lemmas: 18/18 + main theorem (all proved, no Admitted)
+- Unproven (`Admitted`): none
 - Failed/Abandoned Items: none
 
 ## Completed Lemmas

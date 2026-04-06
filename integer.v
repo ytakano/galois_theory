@@ -7565,4 +7565,181 @@ Theorem znz_units_pow2_structure :
     znz_units_group (Nat.pow 2 n) H2n ≅
     znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1).
 Proof.
-Admitted.
+  intros n Hn H2n Hn2.
+  apply GroupIsomorphic_symm.
+  (* 基本的な定数と事実の設定 *)
+  set (N := Z.of_nat (Nat.pow 2 n)).
+  set (M := Z.of_nat (Nat.pow 2 (n-2))).
+  assert (HNpos : 0 < N) by (unfold N; lia).
+  assert (HN1 : 1 < N) by (unfold N; lia).
+  assert (HMpos : 0 < M) by (unfold M; lia).
+  assert (Hn_pos : (0 < Nat.pow 2 n)%nat) by lia.
+  (* 5 の周期 M: 5^M ≡ 1 (mod N) *)
+  assert (Hper5 : (5:Z)^M mod N = 1).
+  { apply dvd_to_one_mod; [exact HN1|].
+    unfold M, N. apply five_pow_pow2_nm2_one. exact Hn. }
+  (* (N-1) の周期 2: (N-1)^2 ≡ 1 (mod N) *)
+  assert (Hper_neg1 : (N-1)^(2:Z) mod N = 1).
+  { apply dvd_to_one_mod; [exact HN1|].
+    unfold N. apply neg_one_sq_one_pow2. exact Hn. }
+  (* gcd(5^a, N) = 1 *)
+  assert (Hgcd5 : forall a : Z, 0 <= a -> Z.gcd ((5:Z)^a) N = 1).
+  { intros a Ha. unfold N.
+    apply Z.coprime_pow_l; [exact Ha | apply five_gcd_pow2; lia]. }
+  (* gcd((N-1)^b, N) = 1 *)
+  assert (Hgcd_neg1 : forall b : Z, 0 <= b -> Z.gcd ((N-1)^b) N = 1).
+  { intros b Hb.
+    apply Z.coprime_pow_l; [exact Hb |].
+    unfold N. apply neg_one_gcd_pow2. exact Hn. }
+  (* 4 | N: n >= 2 なので 2^n = 4 * 2^(n-2) *)
+  assert (H4N : ((4:Z) | N)).
+  { unfold N.
+    exists (Z.of_nat (Nat.pow 2 (n-2))).
+    assert (H : (Nat.pow 2 n = 4 * Nat.pow 2 (n-2))%nat).
+    { change (4%nat) with (Nat.pow 2 2).
+      rewrite <- Nat.pow_add_r. f_equal. lia. }
+    apply (f_equal Z.of_nat) in H.
+    rewrite Nat2Z.inj_mul in H.
+    lia. }
+  (* (N-1) mod 4 = 3: N ≡ 0 (mod 4) なので N-1 ≡ -1 ≡ 3 (mod 4) *)
+  assert (HN1_mod4 : (N-1) mod 4 = 3).
+  { destruct H4N as [q Hq].
+    replace (N-1) with (-1 + q*4) by lia.
+    rewrite Z.mod_add by lia.
+    compute. reflexivity. }
+  (* 同型写像 φ(a, b) = 5^a * (N-1)^b mod N の定義 *)
+  set (phi :=
+    fun pair : carrier (znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1)) =>
+    let a := proj1_sig (fst pair) in
+    let b := proj1_sig (snd pair) in
+    exist (fun x : Z => 0 <= x < N /\ Z.gcd x N = 1)
+      ((5:Z)^a * (N - 1)^b mod N)
+      (conj
+        (Z.mod_pos_bound _ N HNpos)
+        (eq_trans
+          (znz_gcd_mod_eq (Nat.pow 2 n) Hn_pos ((5:Z)^a * (N-1)^b))
+          (znz_gcd_mul_coprime (Nat.pow 2 n) ((5:Z)^a) ((N-1)^b)
+            (Hgcd5 a (proj1 (proj2_sig (fst pair))))
+            (Hgcd_neg1 b (proj1 (proj2_sig (snd pair)))))))).
+  (* 準同型性の事前証明 *)
+  assert (Hhom : forall p1 p2,
+      phi (op (znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1)) p1 p2) =
+      op (znz_units_group (Nat.pow 2 n) H2n) (phi p1) (phi p2)).
+  { intros [[a1 Ha1] [b1 Hb1]] [[a2 Ha2] [b2 Hb2]].
+    unfold phi. apply sig_eq. simpl.
+    fold N. fold M.
+    (* Goal: 5^((a1+a2) mod M) * (N-1)^((b1+b2) mod 2) mod N
+           = 5^a1*(N-1)^b1 mod N * (5^a2*(N-1)^b2 mod N) mod N *)
+    rewrite Z.mul_mod at 1 by lia.
+    rewrite <- (Zpow_mod_period_Z 5 N M (a1+a2) HN1 HMpos ltac:(lia) Hper5).
+    rewrite <- (Zpow_mod_period_Z (N-1) N 2 (b1+b2) HN1 ltac:(lia) ltac:(lia) Hper_neg1).
+    rewrite <- Z.mul_mod by lia.
+    rewrite <- Z.mul_mod by lia.
+    f_equal.
+    rewrite (Z.pow_add_r 5 a1 a2 (proj1 Ha1) (proj1 Ha2)).
+    rewrite (Z.pow_add_r (N-1) b1 b2 (proj1 Hb1) (proj1 Hb2)).
+    ring. }
+  (* 単射性の事前証明 *)
+  assert (Hinj : forall p1 p2,
+      phi p1 = phi p2 -> p1 = p2).
+  { intros [[a1 Ha1] [b1 Hb1]] [[a2 Ha2] [b2 Hb2]] Heq.
+    unfold phi in Heq. injection Heq as Heq.
+    (* Heq : (5:Z)^a1 * (N-1)^b1 mod N = (5:Z)^a2 * (N-1)^b2 mod N *)
+    (* N | 5^a1*(N-1)^b1 - 5^a2*(N-1)^b2 を導出 *)
+    assert (HN_dvd : (N | (5:Z)^a1*(N-1)^b1 - (5:Z)^a2*(N-1)^b2)).
+    { exists ((5:Z)^a1*(N-1)^b1 / N - (5:Z)^a2*(N-1)^b2 / N).
+      pose proof (Z.div_mod ((5:Z)^a1*(N-1)^b1) N ltac:(lia)) as H1.
+      pose proof (Z.div_mod ((5:Z)^a2*(N-1)^b2) N ltac:(lia)) as H2.
+      lia. }
+    (* 4 | diff *)
+    assert (H4_dvd : ((4:Z) | (5:Z)^a1*(N-1)^b1 - (5:Z)^a2*(N-1)^b2)).
+    { destruct H4N as [kN HkN].
+      destruct HN_dvd as [kD HkD].
+      exists (kN * kD). lia. }
+    (* mod 4 の等式 *)
+    assert (Hmod4 : (5:Z)^a1*(N-1)^b1 mod 4 = (5:Z)^a2*(N-1)^b2 mod 4).
+    { destruct H4_dvd as [k Hk].
+      assert (H : (5:Z)^a1*(N-1)^b1 = (5:Z)^a2*(N-1)^b2 + k*4) by lia.
+      rewrite H. rewrite Z.mod_add by lia. reflexivity. }
+    (* b1 = b2 の証明: b1 ≠ b2 なら mod 4 で矛盾 *)
+    assert (Hbb : b1 = b2).
+    { assert (Hb1_range : b1 = 0 \/ b1 = 1) by lia.
+      assert (Hb2_range : b2 = 0 \/ b2 = 1) by lia.
+      destruct Hb1_range as [Hb10|Hb11]; destruct Hb2_range as [Hb20|Hb21]; try lia.
+      - (* b1=0, b2=1: 5^a1 mod 4 = 1 vs 5^a2*(N-1) mod 4 = 3 で矛盾 *)
+        exfalso. subst b1. subst b2.
+        rewrite Z.pow_0_r, Z.mul_1_r in Hmod4.
+        rewrite Z.pow_1_r in Hmod4.
+        assert (H5a1 : (5:Z)^a1 mod 4 = 1).
+        { replace a1 with (Z.of_nat (Z.to_nat a1))
+            by (apply Z2Nat.id; exact (proj1 Ha1)).
+          apply five_pow_mod_four. }
+        assert (H5a2N1 : (5:Z)^a2 * (N-1) mod 4 = 3).
+        { rewrite Z.mul_mod by lia.
+          replace a2 with (Z.of_nat (Z.to_nat a2))
+            by (apply Z2Nat.id; exact (proj1 Ha2)).
+          rewrite five_pow_mod_four. rewrite HN1_mod4.
+          compute. reflexivity. }
+        lia.
+      - (* b1=1, b2=0: 5^a1*(N-1) mod 4 = 3 vs 5^a2 mod 4 = 1 で矛盾 *)
+        exfalso. subst b1. subst b2.
+        rewrite Z.pow_1_r, Z.pow_0_r, Z.mul_1_r in Hmod4.
+        assert (H5a1N1 : (5:Z)^a1 * (N-1) mod 4 = 3).
+        { rewrite Z.mul_mod by lia.
+          replace a1 with (Z.of_nat (Z.to_nat a1))
+            by (apply Z2Nat.id; exact (proj1 Ha1)).
+          rewrite five_pow_mod_four. rewrite HN1_mod4.
+          compute. reflexivity. }
+        assert (H5a2 : (5:Z)^a2 mod 4 = 1).
+        { replace a2 with (Z.of_nat (Z.to_nat a2))
+            by (apply Z2Nat.id; exact (proj1 Ha2)).
+          apply five_pow_mod_four. }
+        lia. }
+    subst b2.
+    (* a1 = a2 の証明 *)
+    assert (Haa : a1 = a2).
+    { assert (Hb1_range : b1 = 0 \/ b1 = 1) by lia.
+      destruct Hb1_range as [Hb10|Hb11].
+      - (* b1=0: 5^a1 ≡ 5^a2 (mod N) → five_pow_inj_mod *)
+        subst b1. rewrite !Z.pow_0_r, !Z.mul_1_r in Heq.
+        unfold N in Heq.
+        exact (five_pow_inj_mod n Hn a1 a2 Ha1 Ha2 Heq).
+      - (* b1=1: Z.gauss で (N-1) を消去 → five_pow_inj_mod *)
+        subst b1. rewrite Z.pow_1_r in Heq.
+        assert (HN_dvd2 : (N | (5:Z)^a1*(N-1) - (5:Z)^a2*(N-1))).
+        { exists ((5:Z)^a1*(N-1) / N - (5:Z)^a2*(N-1) / N).
+          pose proof (Z.div_mod ((5:Z)^a1*(N-1)) N ltac:(lia)) as H1.
+          pose proof (Z.div_mod ((5:Z)^a2*(N-1)) N ltac:(lia)) as H2.
+          lia. }
+        assert (HN_dvd5 : (N | (5:Z)^a1 - (5:Z)^a2)).
+        { apply Z.gauss with (N-1).
+          - replace ((5:Z)^a1*(N-1) - (5:Z)^a2*(N-1)) with
+                ((N-1) * ((5:Z)^a1 - (5:Z)^a2)) in HN_dvd2 by ring.
+            exact HN_dvd2.
+          - rewrite Z.gcd_comm. unfold N. apply neg_one_gcd_pow2. exact Hn. }
+        assert (Heq5 : (5:Z)^a1 mod N = (5:Z)^a2 mod N).
+        { destruct HN_dvd5 as [k Hk].
+          assert (H : (5:Z)^a1 = (5:Z)^a2 + k*N) by lia.
+          rewrite H. rewrite Z.mod_add by lia. reflexivity. }
+        unfold N in Heq5.
+        exact (five_pow_inj_mod n Hn a1 a2 Ha1 Ha2 Heq5). }
+    (* ペアの等式を証明 *)
+    f_equal; apply sig_eq; simpl; [exact Haa | reflexivity]. }
+  (* 全射性: GroupOrder の等位数から単射 → 全射 *)
+  exists phi.
+  split; [| split].
+  - exact Hhom.
+  - exact Hinj.
+  - assert (HordG : GroupOrder
+        (znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1))
+        (Nat.pow 2 (n-1))).
+    { rewrite <- (pow2_nm2_times2 n Hn).
+      apply group_order_product.
+      - exact (znz_group_order_n _ Hn2).
+      - exact (znz_group_order_n 2 (Nat.lt_0_succ 1)). }
+    exact (inj_hom_surj_of_eq_order
+      (znz_group (Nat.pow 2 (n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1))
+      (znz_units_group (Nat.pow 2 n) H2n)
+      (Nat.pow 2 (n-1))
+      phi Hhom Hinj HordG (znz_units_pow2_order n Hn H2n)).
+Qed.
