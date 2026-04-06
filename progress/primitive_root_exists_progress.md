@@ -2,8 +2,8 @@
 
 ## Status Overview
 - Overall: In Progress
-- Complete Lemmas: 16/24 (Phase 2 complete)
-- Unproven (`Admitted`): none
+- Complete Lemmas: 22/24
+- Unproven (`Admitted`): `sum_phi_over_divisors`, `psi_le_phi`, `sum_psi_eq_p_minus_1`, `primitive_root_exists`
 - Failed/Abandoned Items: none
 
 ## Completed Lemmas
@@ -82,11 +82,62 @@ Key fixes:
 ## Proof Attempts & Diagnostics
 (none)
 
+### `order_of_power_gcd`
+`Nat.gcd_div_gcd` + `Nat.gauss` + `Nat.divide_antisym` を使った証明。
+- `fold g in Hk', Hq'` で gcd展開を折りたたむ。
+- `%nat` アノテーションが Z_scope との衝突回避に必須。
+- `proj1` (cancel方向) vs `proj2` (multiply方向) を正確に選ぶ。
+
+### `list_length_pos_of_in`
+`List.In x L → 0 < length L` の補題。`destruct L` で証明。
+
+### `euler_phi_pos`
+n=1 は k=0 (gcd(0,1)=1)、n≥2 は k=1 (gcd(1,n)=1)。`list_length_pos_of_in` を使用。
+
+### `znz_units_all` (Definition)
+epsilon で (Z/pZ)* の全要素リストを定義。
+
+### `znz_units_all_spec`
+`epsilon_spec` + `group_elements_list` の組み合わせ。
+`exact (ex_intro _ L (conj HND (conj Hlen Hall)))` で存在証明を構成。
+
+### `nat_divisors` (Definition)
+`List.filter (fun d => Nat.eqb 0 (n mod d)%nat) (List.seq 1 n)`
+
+### `nat_divisors_spec`
+`Nat.div_mod` + `lia` で整除条件 ↔ mod=0 を変換。
+
+### `nat_divisors_self`
+`Nat.mod_same` + `symmetry` で n | n を示す。
+
+### `nat_sum_zero_all_zero`
+リストの帰納法 + `lia`。
+
+### `psi` (Definition)
+位数 d の元の個数を `filter` + `length` で定義。
+
+## Proof Attempts & Diagnostics
+
+### `sum_phi_over_divisors` — Status: Admitted
+ディリクレ級数の恒等式 Σ_{d|n} φ(d) = n。証明には素数冪分解 + 乗法的関数の議論が必要で複雑。
+Admitted として今後証明予定。
+
+### `psi_le_phi` — Status: Admitted
+ψ(d) ≤ φ(d) の証明。0の場合は自明、非ゼロの場合は `order_d_elements_are_powers` + `order_of_power_gcd` で全単射を構成。
+
+### `sum_psi_eq_p_minus_1` — Status: Admitted
+Σ ψ(d) = p-1 の証明。全要素の位数は (p-1) の約数なので分割論から示せるが複雑。
+
+### `primitive_root_exists` — Status: Admitted (structure complete)
+証明の骨格:
+1. ψ(d) ≤ φ(d) for all d | (p-1)  [psi_le_phi - Admitted]
+2. Σ ψ = p-1  [sum_psi_eq_p_minus_1 - Admitted]
+3. Σ φ = p-1  [sum_phi_over_divisors - Admitted]
+4. ∴ ψ(p-1) = φ(p-1) ≥ 1
+5. filter が空でないので元が存在
+
 ## TODO
-- [ ] `order_of_power_gcd` (Phase 3)
-- [ ] `psi_le_phi` (Phase 4)
-- [ ] `divisors_list` + `sum_phi_over_divisors` (Phase 5)
-- [ ] `sum_psi_over_divisors` (Phase 6)
-- [ ] `psi_eq_phi_all` (Phase 6)
-- [ ] `euler_phi_pos` (Phase 6)
-- [ ] `primitive_root_exists` (main theorem)
+- [ ] `psi_le_phi` (Phase 4) - 要 order_of_power_gcd + order_d_elements_are_powers
+- [ ] `sum_phi_over_divisors` (Phase 5)
+- [ ] `sum_psi_eq_p_minus_1` (Phase 6)
+- [ ] `primitive_root_exists` (main theorem - 依存する3つが解決すれば組み立て可能)

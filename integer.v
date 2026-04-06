@@ -5857,3 +5857,231 @@ Proof.
       - exact Hroots. }
     rewrite Hlen, (xd_minus_1_poly_length F d Hd) in Hbound. lia.
 Qed.
+
+(** a^k の位数: ord(a^k) = ord(a) / gcd(k, ord(a))
+
+    d = ord(a), g = gcd(k,d), q = d/g とおき、k = g*k'、d = g*q' と分解する。
+    1. (a^k)^q' = e: k*q' = d*k' より gpow_nat_mul を使う。
+    2. ord(a^k) | q': (1) と mult_order_p_divides から。
+    3. q' | ord(a^k): a^(k*m)=e → d|k*m → q'|k'*m
+                      → gcd(q',k')=1 (Nat.gcd_div_gcd) → Nat.gauss → q'|m。
+    4. Nat.divide_antisym で等号を導く。 *)
+Lemma order_of_power_gcd :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (a : carrier (znz_units_group p Hp)) (k : nat),
+    mult_order_p p Hp Hprime (gpow_nat (znz_units_group p Hp) a k) =
+    Nat.div (mult_order_p p Hp Hprime a) (Nat.gcd k (mult_order_p p Hp Hprime a)).
+Proof.
+  intros p Hp Hprime a k.
+  set (G := znz_units_group p Hp).
+  set (d := mult_order_p p Hp Hprime a).
+  set (g := Nat.gcd k d).
+  set (b := gpow_nat G a k).
+  set (m_b := mult_order_p p Hp Hprime b).
+  (* d > 0, g ≠ 0 *)
+  assert (Hd_pos : (0 < d)%nat).
+  { unfold d, mult_order_p.
+    exact (proj1 (mult_order_spec G (p-1) (prime_units_group_order p Hp Hprime) a)). }
+  assert (Hg_ne0 : g <> 0%nat).
+  { intro Hg0.
+    destruct (Nat.gcd_divide_r k d) as [j Hj].
+    unfold g in Hg0. rewrite Hg0 in Hj. simpl in Hj. lia. }
+  (* k = g * k', d = g * q' *)
+  destruct (Nat.gcd_divide_l k d) as [k' Hk'].
+  destruct (Nat.gcd_divide_r k d) as [q' Hq'].
+  fold g in Hk'. fold g in Hq'.  (* Hk' : k = k' * g, Hq' : d = q' * g *)
+  assert (Hq_eq : (d / g = q')%nat).
+  { rewrite Hq'. apply Nat.div_mul. exact Hg_ne0. }
+  assert (Hk'_eq : (k / g = k')%nat).
+  { rewrite Hk'. apply Nat.div_mul. exact Hg_ne0. }
+  (* (a^k)^q' = e *)
+  assert (Had_e : gpow_nat G a d = e G) by exact (mult_order_p_pow_is_e p Hp Hprime a).
+  assert (Hbq_e : gpow_nat G b q' = e G).
+  { unfold b. rewrite <- gpow_nat_mul.
+    replace (k * q')%nat with (d * k')%nat by (rewrite Hk', Hq'; nia).
+    rewrite gpow_nat_mul. rewrite Had_e. apply gpow_nat_e. }
+  (* m_b | q' *)
+  assert (Hmb_dvd_q' : Nat.divide m_b q').
+  { apply (proj1 (mult_order_p_divides p Hp Hprime b q')). exact Hbq_e. }
+  (* q' | m_b *)
+  assert (Hq'_dvd_mb : Nat.divide q' m_b).
+  { assert (Hbmb_e : gpow_nat G b m_b = e G).
+    { apply (proj2 (mult_order_p_divides p Hp Hprime b m_b)). apply Nat.divide_refl. }
+    assert (Hakm_e : gpow_nat G a (k * m_b) = e G).
+    { rewrite gpow_nat_mul. exact Hbmb_e. }
+    assert (Hdvd_km : Nat.divide d (k * m_b)).
+    { exact (proj1 (mult_order_p_divides p Hp Hprime a (k * m_b)) Hakm_e). }
+    assert (Hq'_k'm : Nat.divide q' (k' * m_b)).
+    { apply (proj1 (Nat.mul_divide_cancel_l q' (k' * m_b) g Hg_ne0)).
+      replace (g * q')%nat with d by (rewrite Hq'; nia).
+      replace (g * (k' * m_b))%nat with (k * m_b)%nat by (rewrite Hk'; nia).
+      exact Hdvd_km. }
+    assert (Hcop : Nat.gcd q' k' = 1%nat).
+    { assert (H2 : g = Nat.gcd d k) by (unfold g; apply Nat.gcd_comm).
+      pose proof (Nat.gcd_div_gcd d k g Hg_ne0 H2) as H.
+      rewrite Hq_eq, Hk'_eq in H. exact H. }
+    exact (Nat.gauss q' k' m_b Hq'_k'm Hcop). }
+  (* m_b = q' = d / g *)
+  rewrite Hq_eq.
+  exact (Nat.divide_antisym m_b q' Hmb_dvd_q' Hq'_dvd_mb).
+Qed.
+
+(** リストに要素が含まれるなら長さは正 *)
+Lemma list_length_pos_of_in : forall {A : Type} (L : list A) (x : A),
+  List.In x L -> (0 < List.length L)%nat.
+Proof.
+  intros A L x HIn. destruct L.
+  - inversion HIn.
+  - simpl. lia.
+Qed.
+
+(** euler_phi n ≥ 1 for n ≥ 1
+    gcd(0,1)=1 (n=1の場合) または gcd(1,n)=1 (n≥2の場合) により
+    filter に少なくとも1要素が含まれる。 *)
+Lemma euler_phi_pos : forall n : nat, (1 <= n)%nat -> (1 <= euler_phi n)%nat.
+Proof.
+  intros n Hn.
+  destruct n as [| n']. { lia. }
+  unfold euler_phi.
+  apply (list_length_pos_of_in _
+    (if Nat.eqb n' 0 then 0%nat else 1%nat)).
+  apply List.filter_In.
+  destruct n' as [| n''].
+  - (* n = 1: k = 0, gcd(0,1)=1 *)
+    split.
+    + apply List.in_seq. simpl. lia.
+    + simpl. reflexivity.
+  - (* n >= 2: k = 1, gcd(1,n)=1 *)
+    split.
+    + apply List.in_seq. simpl. lia.
+    + simpl. reflexivity.
+Qed.
+
+(** (Z/pZ)* の全要素リスト *)
+Definition znz_units_all (p : nat) (Hp : (1 < p)%nat) : list (carrier (znz_units_group p Hp)) :=
+  let G := znz_units_group p Hp in
+  let Hord := prime_units_group_order p Hp in
+  epsilon (inhabits [])
+    (fun L => List.NoDup L /\ List.length L = (p - 1)%nat /\
+              forall x : carrier G, List.In x L).
+
+(** znz_units_all は正しいリストを返す *)
+Lemma znz_units_all_spec : forall (p : nat) (Hp : (1 < p)%nat)
+    (Hprime : prime (Z.of_nat p)),
+  List.NoDup (znz_units_all p Hp) /\
+  List.length (znz_units_all p Hp) = (p - 1)%nat /\
+  forall x : carrier (znz_units_group p Hp), List.In x (znz_units_all p Hp).
+Proof.
+  intros p Hp Hprime.
+  unfold znz_units_all.
+  apply epsilon_spec.
+  pose proof (group_elements_list (znz_units_group p Hp) (p - 1)
+                (prime_units_group_order p Hp Hprime)) as [L [HND [Hlen Hall]]].
+  exact (ex_intro _ L (conj HND (conj Hlen Hall))).
+Qed.
+
+(** 約数リスト: {d ∈ {1,...,n} | d | n} *)
+Definition nat_divisors (n : nat) : list nat :=
+  List.filter (fun d => Nat.eqb 0 (n mod d)%nat) (List.seq 1 n).
+
+(** nat_divisors の仕様: d ∈ nat_divisors n ↔ 1 ≤ d ≤ n ∧ d | n *)
+Lemma nat_divisors_spec : forall (n d : nat),
+  (1 <= n)%nat ->
+  List.In d (nat_divisors n) <->
+    (1 <= d)%nat /\ (d <= n)%nat /\ Nat.divide d n.
+Proof.
+  intros n d Hn.
+  unfold nat_divisors.
+  rewrite List.filter_In, List.in_seq.
+  split.
+  - intros [[H1 H2] Heq].
+    split; [lia|]. split; [lia|].
+    apply Nat.eqb_eq in Heq.
+    exists (n / d)%nat.
+    assert (Hd : (d <> 0)%nat) by lia.
+    pose proof (Nat.div_mod n d Hd) as Hdm.
+    lia.
+  - intros [H1 [H2 [k Hk]]].
+    split; [lia|].
+    apply Nat.eqb_eq.
+    subst n. symmetry. apply Nat.mod_mul. lia.
+Qed.
+
+(** nat_divisors n は n 自身を含む (n ≥ 1) *)
+Lemma nat_divisors_self : forall n : nat, (1 <= n)%nat ->
+  List.In n (nat_divisors n).
+Proof.
+  intros n Hn.
+  unfold nat_divisors.
+  apply List.filter_In. split.
+  - apply List.in_seq. lia.
+  - apply Nat.eqb_eq. symmetry. apply Nat.mod_same. lia.
+Qed.
+
+(** ∑_{d|n} φ(d) = n  (約数和公式、Euler の恒等式)
+    証明は複雑なため Admitted とする。 *)
+Lemma sum_phi_over_divisors : forall n : nat,
+  (1 <= n)%nat ->
+  List.fold_right Nat.add 0%nat
+    (List.map euler_phi (nat_divisors n)) = n.
+Proof.
+  Admitted.
+
+(** 位数 d の元の個数: ψ(d) の定義 *)
+Definition psi (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+    (d : nat) : nat :=
+  List.length (List.filter
+    (fun x => Nat.eqb (mult_order_p p Hp Hprime x) d)
+    (znz_units_all p Hp)).
+
+(** 各 d | (p-1) に対して ψ(d) ≤ φ(d)
+    - ψ(d) = 0 の場合: 自明 (0 ≤ φ(d))
+    - ψ(d) ≥ 1 の場合: 位数 d の元 a を取り、order_d_elements_are_powers +
+      order_of_power_gcd により ψ(d) = φ(d) を示す。
+    証明は複雑なため Admitted とする。 *)
+Lemma psi_le_phi : forall (p : nat) (Hp : (1 < p)%nat)
+    (Hprime : prime (Z.of_nat p)) (d : nat),
+  Nat.divide d (p - 1) ->
+  (psi p Hp Hprime d <= euler_phi d)%nat.
+Proof.
+  Admitted.
+
+(** ∑_{d | (p-1)} ψ(d) = p-1
+    全要素は位数 p-1 の約数を持つ (フェルマー) ので各 d での集計の和 = |G| = p-1。
+    証明は複雑なため Admitted とする。 *)
+Lemma sum_psi_eq_p_minus_1 : forall (p : nat) (Hp : (1 < p)%nat)
+    (Hprime : prime (Z.of_nat p)),
+  List.fold_right Nat.add 0%nat
+    (List.map (psi p Hp Hprime) (nat_divisors (p - 1))) = (p - 1)%nat.
+Proof.
+  Admitted.
+
+(** 非負整数リストの和が0なら全要素が0 *)
+Lemma nat_sum_zero_all_zero : forall (L : list nat),
+  List.fold_right Nat.add 0%nat L = 0%nat ->
+  forall x, List.In x L -> x = 0%nat.
+Proof.
+  intros L Hsum x HIn.
+  induction L as [| h t IH].
+  - inversion HIn.
+  - simpl in Hsum.
+    destruct HIn as [Heq | HIn'].
+    + subst x. lia.
+    + apply IH. lia. exact HIn'.
+Qed.
+
+(** 原始根の存在定理 (Primitive Root Theorem):
+    任意の素数 p に対して (Z/pZ)* に位数 p-1 の元 (原始根) が存在する。
+
+    証明:
+    1. ψ(d) ≤ φ(d) for all d | (p-1)  [psi_le_phi]
+    2. ∑_{d|(p-1)} ψ(d) = p-1           [sum_psi_eq_p_minus_1]
+    3. ∑_{d|(p-1)} φ(d) = p-1           [sum_phi_over_divisors]
+    4. 2,3 より ∑(φ(d)-ψ(d)) = 0 で各項 ≥ 0 なので ψ(d) = φ(d) for all d.
+    5. ψ(p-1) = φ(p-1) ≥ 1 より原始根が存在する。 *)
+Theorem primitive_root_exists :
+  forall (p : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p)),
+    exists g : carrier (znz_units_group p Hp),
+      mult_order_p p Hp Hprime g = (p - 1)%nat.
+Proof.
+  Admitted.
