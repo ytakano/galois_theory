@@ -15,3 +15,18 @@ Claude Codeの実験のためのCoq/Rocqプロジェクトです。現在は整�
 コンパイルエラーとなった場合、以下のコマンドでエラー箇所のゴールを確認できます。
 
 `python3 rocq_error_goal.py integer.v`
+
+利用例:
+
+```
+$ python3 rocq_error_goal.py integer.v
+---- repl stdout ----
+1 goal
+
+  a, b, d, k : Z
+  Hk : d = k * Z.gcd a b
+  u, v : Z
+  Hbezout : u * a + v * b = Z.gcd a b
+  ============================
+  a * (u * k) + b * (v * k) = d
+```
