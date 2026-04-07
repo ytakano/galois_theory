@@ -1619,3 +1619,92 @@
 - **Dependencies**: `znz_units_gpow_nat_val`, `one_plus_p_pow_pk_dvd`, `one_plus_p_pow_pk_not_dvd`, `nat_prime_pow_divisors`, `mult_order_divides`, `dvd_to_one_mod`
 - **Notes**: ⚠️ All nat expressions in Z_scope need %nat annotation (p^(n-1)%nat, etc.). ⚠️ Hodd : p <> 2%nat (not p <> 2 which parses as Z). ⚠️ Nat.le_or_lt doesn't exist; use assert+lia for case split. ⚠️ Z.of_nat (p^(n-2)) is fine (already wrapped in Z.of_nat).
 - **Date**: 2026-04-08
+
+---
+
+### `znz_units_op_comm_gen`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma znz_units_op_comm_gen :
+    forall (n : nat) (Hn : (1 < n)%nat)
+           (a b : carrier (znz_units_group n Hn)),
+      op (znz_units_group n Hn) a b = op (znz_units_group n Hn) b a.
+  ```
+- **Proof Strategy**: `apply sig_eq. simpl. rewrite Z.mul_comm. reflexivity.`
+- **Key Tactics**: `sig_eq`, `Z.mul_comm`
+- **Dependencies**: `sig_eq`
+- **Notes**: Generalization of `znz_units_op_comm` (which is specific to prime p). Works for any modulus n > 1.
+- **Date**: 2026-04-07
+
+---
+
+### `gpow_group_order_eq_e`
+- **Type**: Lemma (Lagrange's theorem for abelian finite groups)
+- **Statement**:
+  ```coq
+  Lemma gpow_group_order_eq_e :
+    forall (G : Group) (m : nat) (Hm : GroupOrder G m)
+           (G_abelian : forall a b : carrier G, op G a b = op G b a)
+           (a : carrier G),
+      gpow_nat G a m = e G.
+  ```
+- **Proof Strategy**: Same permutation argument as `fermat_little_theorem`. (1) Get complete list L via `group_elements_list`. (2) Left multiplication by a is a permutation (using `NoDup_Permutation`, `op_cancel_l`, inverse). (3) `fold_right_permutation_abelian` and `fold_right_mul_left_abelian` give P = a^m * P. (4) `op_cancel_r` gives a^m = e.
+- **Key Tactics**: `group_elements_list`, `NoDup_Permutation`, `fold_right_permutation_abelian`, `fold_right_mul_left_abelian`, `op_cancel_r`
+- **Dependencies**: `group_elements_list`, `fold_right_permutation_abelian`, `fold_right_mul_left_abelian`, `op_cancel_l`, `op_cancel_r`
+- **Notes**: Requires `G_abelian` as explicit hypothesis. For `znz_units_group` use `znz_units_op_comm_gen`. This is the key "Lagrange theorem" used to show `d | m` (group order) via `mult_order_divides`.
+- **Date**: 2026-04-07
+
+---
+
+### `order_of_power_gcd_general`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma order_of_power_gcd_general :
+    forall (G : Group) (m : nat) (Hm : GroupOrder G m)
+           (a : carrier G) (k : nat),
+      mult_order G m Hm (gpow_nat G a k) =
+      Nat.div (mult_order G m Hm a) (Nat.gcd k (mult_order G m Hm a)).
+  ```
+- **Proof Strategy**: Direct generalization of `order_of_power_gcd`. Replace `mult_order_p` with `mult_order G m Hm`. Replace `mult_order_p_pow_is_e` with `(proj2 (mult_order_divides G m Hm a d) (Nat.divide_refl _))`. Replace `mult_order_p_divides` with `mult_order_divides G m Hm`.
+- **Key Tactics**: `Nat.gcd_divide_l/r`, `Nat.gcd_div_gcd`, `Nat.div_mul`, `Nat.gauss`, `Nat.mul_divide_cancel_l`, `nia`
+- **Dependencies**: `mult_order_spec`, `mult_order_divides`, `gpow_nat_mul`, `gpow_nat_e`
+- **Notes**: Proof is identical to `order_of_power_gcd` (which is the (Z/pZ)* special case). The key substitution is: `mult_order_p_pow_is_e` → `proj2 (mult_order_divides ... a d) (Nat.divide_refl _)`.
+- **Date**: 2026-04-07
+
+---
+
+### `pnm1_pm1_coprime`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma pnm1_pm1_coprime :
+    forall (p n : nat),
+      prime (Z.of_nat p) -> (1 < p)%nat -> p <> 2 -> (1 <= n)%nat ->
+      Nat.gcd (p^(n-1)) (p-1) = 1.
+  ```
+- **Proof Strategy**: (1) Show gcd d > 0 using `Nat.gcd_eq_0` and positivity of p^(n-1). (2) d | p^(n-1) → by `nat_prime_pow_divisors`, d = p^k for some k. (3) If k ≥ 1 then d ≥ p. (4) d | p-1 and p-1 < p ≤ d → contradiction.
+- **Key Tactics**: `nat_prime_pow_divisors`, `Nat.pow_le_mono_r`, `Nat.gcd_eq_0`, `Nat.gcd_divide_l/r`, `lia`
+- **Dependencies**: `nat_prime_pow_divisors`
+- **Notes**: `Nat.gcd_pos_of_pos_l` does not exist in Rocq 9.1. Use `Nat.gcd_eq_0` + lia for positivity. `Nat.pow_le_mono_r` takes `apply Nat.pow_le_mono_r; lia` (2 subgoals both closed by lia).
+- **Date**: 2026-04-07
+
+---
+
+### `lift_prim_root_to_pn`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma lift_prim_root_to_pn :
+    forall (p n : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+           (Hodd : p <> 2) (Hn : (1 <= n)%nat) (Hpn : (1 < p^n)%nat)
+           (Hm : GroupOrder (znz_units_group (p^n) Hpn) (p^(n-1) * (p-1))),
+      exists g : carrier (znz_units_group (p^n) Hpn),
+        mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm g = (p - 1)%nat.
+  ```
+- **Proof Strategy**: (1) Get g₀ ∈ (Z/pZ)* with order p-1. (2) Lift: v=proj1_sig g₀ satisfies 0≤v<p<p^n, gcd(v,p^n)=1 via `Z.coprime_pow_r`. (3) Construct G_elem = exist _ v ... in (Z/p^nZ)*. (4) G_elem^d=e → v^d mod p^n=1 → v^d mod p=1 (using `Z.divide_pow_same_r` + div_mod arithmetic). (5) g₀^d=e → (p-1)|d. (6) Lagrange: d|p^(n-1)*(p-1) via `gpow_group_order_eq_e`. (7) d=(p-1)*q → q|p^(n-1) → q=p^k via `nat_prime_pow_divisors`. (8) gcd(p^k,d)=p^k via `Nat.divide_antisym`+`Nat.gcd_greatest`. (9) `order_of_power_gcd_general` gives order of G_elem^(p^k) = p-1.
+- **Key Tactics**: `Z.coprime_pow_r`, `Z.divide_pow_same_r`, `Z.divide_trans`, `gpow_group_order_eq_e`, `order_of_power_gcd_general`, `nat_prime_pow_divisors`, `Nat.mul_divide_cancel_l`, `Nat.divide_antisym`, `Nat.gcd_greatest`
+- **Dependencies**: `primitive_root_exists`, `znz_units_gpow_nat_val`, `mult_order_divides`, `mult_order_p_divides`, `gpow_group_order_eq_e`, `order_of_power_gcd_general`, `nat_prime_pow_divisors`, `znz_units_op_comm_gen`
+- **Notes**: Key insight for mod reduction: `Z.divide_pow_same_r` gives p|p^n; then use Z.div_mod arithmetic to get v^d mod p=1 from v^d mod p^n=1 (not Z.mod_mod). `Z.coprime_pow_r` takes `0 <= n` not `0 < n`. The `Nat.mul_divide_cancel_l` cancels (p-1) from (p-1)|d and d|p^(n-1)*(p-1). Hodd param: use `(p <> 2)` (nat, not Z notation issue).
+- **Date**: 2026-04-07

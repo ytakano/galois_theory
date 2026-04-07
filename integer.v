@@ -8376,3 +8376,296 @@ Proof.
   (* d = p^(n-1) *)
   rewrite Hdeq. f_equal. exact Hk_eq.
 Qed.
+
+(** ===================================================================== *)
+(** Phase 2: p-1 位数の元の存在                                          *)
+(** (Existence of an Element of Order p-1 in (Z/p^nZ)*)                 *)
+(** ===================================================================== *)
+
+(** znz_units_group n Hn は可換群（乗算は Z の可換性から）。
+    任意の n に対して成立する一般版。 *)
+Lemma znz_units_op_comm_gen :
+  forall (n : nat) (Hn : (1 < n)%nat)
+         (a b : carrier (znz_units_group n Hn)),
+    op (znz_units_group n Hn) a b = op (znz_units_group n Hn) b a.
+Proof.
+  intros n Hn a b.
+  apply sig_eq. simpl.
+  rewrite Z.mul_comm. reflexivity.
+Qed.
+
+(** アーベル有限群の Lagrange 定理:
+    有限アーベル群 G (位数 m) の任意の元 a に対して a^m = e。
+    証明: fermat_little_theorem と同じ置換論法。 *)
+Lemma gpow_group_order_eq_e :
+  forall (G : Group) (m : nat) (Hm : GroupOrder G m)
+         (G_abelian : forall a b : carrier G, op G a b = op G b a)
+         (a : carrier G),
+    gpow_nat G a m = e G.
+Proof.
+  intros G m Hm G_abelian a.
+  (* 全要素リスト L を取り出す *)
+  destruct (group_elements_list G m Hm) as [L [HND [Hlen Hall]]].
+  set (P := fold_right (op G) (e G) L).
+  (* 左乗算は置換 *)
+  assert (Hperm : Permutation L (List.map (fun x => op G a x) L)).
+  { apply NoDup_Permutation.
+    - exact HND.
+    - apply List.NoDup_map_NoDup_ForallPairs.
+      + intros x y _ _ H. exact (op_cancel_l G a x y H).
+      + exact HND.
+    - intro z. split.
+      + intro Hz.
+        apply List.in_map_iff.
+        exists (op G (inv G a) z).
+        split.
+        * rewrite (assoc G a (inv G a) z), inv_right, id_left. reflexivity.
+        * apply Hall.
+      + intro Hz.
+        apply List.in_map_iff in Hz.
+        destruct Hz as [w [Haw Hw]].
+        rewrite <- Haw. apply Hall. }
+  (* 置換不変性 *)
+  assert (Hfeq : fold_right (op G) (e G) L =
+                 fold_right (op G) (e G) (List.map (fun x => op G a x) L)).
+  { apply fold_right_permutation_abelian. exact G_abelian. exact Hperm. }
+  (* fold (map (op a) L) = a^m * P *)
+  assert (Hmul : fold_right (op G) (e G) (List.map (fun x => op G a x) L) =
+                 op G (gpow_nat G a m) P).
+  { unfold P. rewrite <- Hlen.
+    exact (fold_right_mul_left_abelian G G_abelian a L). }
+  (* P = a^m * P → a^m = e *)
+  assert (HP : P = op G (gpow_nat G a m) P).
+  { unfold P at 1. exact (eq_trans Hfeq Hmul). }
+  apply (op_cancel_r G (gpow_nat G a m) (e G) P).
+  rewrite id_left.
+  exact (eq_sym HP).
+Qed.
+
+(** order_of_power_gcd の一般群への一般化:
+    任意の有限群 G (位数 m) と a ∈ G、k ∈ ℕ に対して
+    mult_order(a^k) = mult_order(a) / gcd(k, mult_order(a))。
+    既存の order_of_power_gcd (Z/pZ)* 特化版の証明を一般化したもの。 *)
+Lemma order_of_power_gcd_general :
+  forall (G : Group) (m : nat) (Hm : GroupOrder G m)
+         (a : carrier G) (k : nat),
+    mult_order G m Hm (gpow_nat G a k) =
+    Nat.div (mult_order G m Hm a) (Nat.gcd k (mult_order G m Hm a)).
+Proof.
+  intros G m Hm a k.
+  set (d := mult_order G m Hm a).
+  set (g := Nat.gcd k d).
+  set (b := gpow_nat G a k).
+  set (m_b := mult_order G m Hm b).
+  assert (Hd_pos : (0 < d)%nat).
+  { exact (proj1 (mult_order_spec G m Hm a)). }
+  assert (Hg_ne0 : g <> 0%nat).
+  { intro Hg0.
+    destruct (Nat.gcd_divide_r k d) as [j Hj].
+    unfold g in Hg0. rewrite Hg0 in Hj. simpl in Hj. lia. }
+  destruct (Nat.gcd_divide_l k d) as [k' Hk'].
+  destruct (Nat.gcd_divide_r k d) as [q' Hq'].
+  fold g in Hk'. fold g in Hq'.
+  assert (Hq_eq : (d / g = q')%nat).
+  { rewrite Hq'. apply Nat.div_mul. exact Hg_ne0. }
+  assert (Hk'_eq : (k / g = k')%nat).
+  { rewrite Hk'. apply Nat.div_mul. exact Hg_ne0. }
+  assert (Had_e : gpow_nat G a d = e G).
+  { apply (proj2 (mult_order_divides G m Hm a d)). apply Nat.divide_refl. }
+  assert (Hbq_e : gpow_nat G b q' = e G).
+  { unfold b. rewrite <- gpow_nat_mul.
+    replace (k * q')%nat with (d * k')%nat by (rewrite Hk', Hq'; nia).
+    rewrite gpow_nat_mul. rewrite Had_e. apply gpow_nat_e. }
+  assert (Hmb_dvd_q' : Nat.divide m_b q').
+  { apply (proj1 (mult_order_divides G m Hm b q')). exact Hbq_e. }
+  assert (Hq'_dvd_mb : Nat.divide q' m_b).
+  { assert (Hbmb_e : gpow_nat G b m_b = e G).
+    { apply (proj2 (mult_order_divides G m Hm b m_b)). apply Nat.divide_refl. }
+    assert (Hakm_e : gpow_nat G a (k * m_b) = e G).
+    { rewrite gpow_nat_mul. exact Hbmb_e. }
+    assert (Hdvd_km : Nat.divide d (k * m_b)).
+    { exact (proj1 (mult_order_divides G m Hm a (k * m_b)) Hakm_e). }
+    assert (Hq'_k'm : Nat.divide q' (k' * m_b)).
+    { apply (proj1 (Nat.mul_divide_cancel_l q' (k' * m_b) g Hg_ne0)).
+      replace (g * q')%nat with d by (rewrite Hq'; nia).
+      replace (g * (k' * m_b))%nat with (k * m_b)%nat by (rewrite Hk'; nia).
+      exact Hdvd_km. }
+    assert (Hcop : Nat.gcd q' k' = 1%nat).
+    { assert (H2 : g = Nat.gcd d k) by (unfold g; apply Nat.gcd_comm).
+      pose proof (Nat.gcd_div_gcd d k g Hg_ne0 H2) as H.
+      rewrite Hq_eq, Hk'_eq in H. exact H. }
+    exact (Nat.gauss q' k' m_b Hq'_k'm Hcop). }
+  rewrite Hq_eq.
+  exact (Nat.divide_antisym m_b q' Hmb_dvd_q' Hq'_dvd_mb).
+Qed.
+
+(** p^(n-1) と p-1 は互いに素 (奇素数 p, n ≥ 1):
+    証明: nat_prime_pow_divisors で p^(n-1) の因子は p の冪に限られる。
+    p の冪 ≥ p > p-1 なので (p-1) は p の冪を割り切れない。
+    よって gcd(p^(n-1), p-1) = 1。 *)
+Lemma pnm1_pm1_coprime :
+  forall (p n : nat),
+    prime (Z.of_nat p) -> (1 < p)%nat -> p <> 2 -> (1 <= n)%nat ->
+    Nat.gcd (p^(n-1)) (p-1) = 1.
+Proof.
+  intros p n Hprime Hp Hodd Hn.
+  remember (Nat.gcd (p^(n-1)) (p-1)) as d eqn:Hd_def.
+  assert (Hd_pos : (0 < d)%nat).
+  { assert (H2 : (0 < p^(n-1))%nat).
+    { apply Nat.lt_le_trans with 1%nat. lia.
+      replace (1%nat) with (p^0)%nat at 1 by reflexivity.
+      apply Nat.pow_le_mono_r; lia. }
+    assert (H3 : Nat.gcd (p^(n-1)) (p-1) <> 0%nat).
+    { intro H. apply (proj1 (Nat.gcd_eq_0 _ _)) in H. lia. }
+    lia. }
+  assert (Hd_le1 : (d <= 1)%nat).
+  { assert (Hd_dvd_pn : Nat.divide d (p^(n-1))).
+    { rewrite Hd_def. apply Nat.gcd_divide_l. }
+    assert (Hp2 : (2 <= p)%nat) by lia.
+    destruct (nat_prime_pow_divisors p (n-1) Hprime Hp2 d Hd_pos Hd_dvd_pn)
+      as [k [Hk Hdeq]].
+    destruct k.
+    - (* k = 0: d = 1 *)
+      simpl in Hdeq. lia.
+    - (* k ≥ 1: d = p^(S k) ≥ p > p-1 → 矛盾 *)
+      exfalso.
+      assert (Hd_ge_p : (p <= d)%nat).
+      { rewrite Hdeq.
+        replace p with (p^1)%nat at 1 by (simpl; lia).
+        apply Nat.pow_le_mono_r; lia. }
+      assert (Hd_dvd_pm1 : Nat.divide d (p-1)).
+      { rewrite Hd_def. apply Nat.gcd_divide_r. }
+      destruct Hd_dvd_pm1 as [c Hc].
+      destruct c; lia. }
+  lia.
+Qed.
+
+(** (Z/p^nZ)* に位数ちょうど p-1 の元が存在する (奇素数 p, n ≥ 1):
+    証明:
+    1. primitive_root_exists で g₀ ∈ (Z/pZ)* (位数 p-1) を取得。
+    2. g₀ の値 v = proj1_sig g₀ は 0 ≤ v < p で gcd(v, p) = 1。
+       v < p ≤ p^n なので v ∈ (Z/p^nZ)* の元 G_elem を構成できる。
+    3. G_elem^d = e かつ G_elem ≡ v (mod p) より v^d ≡ 1 (mod p)、
+       すなわち g₀^d = e in (Z/pZ)*。よって (p-1) | d。
+    4. d | p^(n-1)(p-1)（Lagrange）かつ (p-1)|d より d = p^k(p-1) (0≤k≤n-1)。
+    5. G_elem^(p^k) の位数 = d/gcd(p^k,d) = p-1 (order_of_power_gcd_general)。 *)
+Lemma lift_prim_root_to_pn :
+  forall (p n : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (Hodd : p <> 2) (Hn : (1 <= n)%nat) (Hpn : (1 < p^n)%nat)
+         (Hm : GroupOrder (znz_units_group (p^n) Hpn) (p^(n-1) * (p-1))),
+    exists g : carrier (znz_units_group (p^n) Hpn),
+      mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm g = (p - 1)%nat.
+Proof.
+  intros p n Hp Hprime Hodd Hn Hpn Hm.
+  (* Step 1: (Z/pZ)* の原始根 g₀ を取得 *)
+  destruct (primitive_root_exists p Hp Hprime) as [g₀ Hg₀_ord].
+  set (v := proj1_sig g₀).
+  set (v_cond := proj2_sig g₀).
+  (* v の性質: 0 ≤ v < p かつ gcd(v, p) = 1 *)
+  assert (Hv_bound : 0 <= v < Z.of_nat p).
+  { exact (proj1 v_cond). }
+  assert (Hv_gcd_p : Z.gcd v (Z.of_nat p) = 1).
+  { exact (proj2 v_cond). }
+  (* Step 2: v を (Z/p^nZ)* の元として持ち上げる *)
+  assert (Hv_pn_bound : 0 <= v < Z.of_nat (p^n)).
+  { split. { exact (proj1 Hv_bound). }
+    apply Z.lt_le_trans with (Z.of_nat p). { exact (proj2 Hv_bound). }
+    apply Nat2Z.inj_le.
+    replace p with (p^1)%nat at 1 by (simpl; lia).
+    apply Nat.pow_le_mono_r; lia. }
+  assert (Hv_pn_gcd : Z.gcd v (Z.of_nat (p^n)) = 1).
+  { rewrite Nat2Z.inj_pow.
+    apply Z.coprime_pow_r. lia. exact Hv_gcd_p. }
+  (* G_cond: v が znz_units_group (p^n) Hpn のキャリア条件を満たす *)
+  assert (G_cond : 0 <= v < Z.of_nat (p^n) /\ Z.gcd v (Z.of_nat (p^n)) = 1).
+  { exact (conj Hv_pn_bound Hv_pn_gcd). }
+  set (G_elem := exist _ v G_cond : carrier (znz_units_group (p^n) Hpn)).
+  assert (HG_val : proj1_sig G_elem = v) by reflexivity.
+  (* d = mult_order G_elem in (Z/p^nZ)* *)
+  set (d := mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm G_elem).
+  assert (Hd_pos : (0 < d)%nat).
+  { exact (proj1 (mult_order_spec (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm G_elem)). }
+  (* G_elem^d = e *)
+  assert (HGd_e : gpow_nat (znz_units_group (p^n) Hpn) G_elem d =
+                  e (znz_units_group (p^n) Hpn)).
+  { apply (proj2 (mult_order_divides (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm G_elem d)).
+    apply Nat.divide_refl. }
+  (* v^d mod p^n = 1 *)
+  assert (Hvd_pn : v ^ Z.of_nat d mod Z.of_nat (p^n) = 1).
+  { assert (Hv1 : proj1_sig (gpow_nat (znz_units_group (p^n) Hpn) G_elem d) = 1).
+    { rewrite HGd_e. reflexivity. }
+    rewrite znz_units_gpow_nat_val, HG_val in Hv1.
+    exact Hv1. }
+  (* v^d mod p = 1 (p | p^n なので) *)
+  assert (Hvd_p : v ^ Z.of_nat d mod Z.of_nat p = 1).
+  { assert (Hdvd : Z.divide (Z.of_nat p) (Z.of_nat (p^n))).
+    { rewrite Nat2Z.inj_pow. apply Z.divide_pow_same_r. lia. }
+    assert (Hpn_pos : (0 < p^n)%nat).
+    { apply Nat.lt_le_trans with p%nat. lia.
+      replace (p%nat) with (p^1)%nat at 1 by (simpl; lia).
+      apply Nat.pow_le_mono_r; lia. }
+    assert (Hpn_ne0 : Z.of_nat (p^n) <> 0) by lia.
+    assert (HpnA : Z.divide (Z.of_nat (p^n)) (v ^ Z.of_nat d - 1)).
+    { pose proof (Z.div_mod (v ^ Z.of_nat d) (Z.of_nat (p^n)) Hpn_ne0) as Hdm.
+      rewrite Hvd_pn in Hdm.
+      exists (v ^ Z.of_nat d / Z.of_nat (p^n)). lia. }
+    assert (HpA : Z.divide (Z.of_nat p) (v ^ Z.of_nat d - 1)).
+    { exact (Z.divide_trans _ _ _ Hdvd HpnA). }
+    destruct HpA as [c Hc].
+    assert (HA2 : v ^ Z.of_nat d = 1 + c * Z.of_nat p) by lia.
+    rewrite HA2. rewrite Z.mod_add by lia. apply Z.mod_1_l. lia. }
+  (* g₀^d = e in (Z/pZ)* *)
+  assert (Hg₀d_e : gpow_nat (znz_units_group p Hp) g₀ d =
+                   e (znz_units_group p Hp)).
+  { apply sig_eq.
+    rewrite znz_units_gpow_nat_val.
+    simpl proj1_sig.
+    (* proj1_sig g₀ = v *)
+    fold v. exact Hvd_p. }
+  (* (p-1) | d : mult_order_p g₀ = p-1 かつ mult_order_p g₀ | d *)
+  assert (Hpm1_dvd_d : Nat.divide (p-1) d).
+  { apply (proj1 (mult_order_p_divides p Hp Hprime g₀ d)).
+    exact Hg₀d_e. }
+  (* Lagrange: d | p^(n-1)*(p-1) *)
+  assert (Hd_dvd_m : Nat.divide d (p^(n-1)*(p-1))).
+  { apply (proj1 (mult_order_divides (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm G_elem
+                                      (p^(n-1)*(p-1)))).
+    apply gpow_group_order_eq_e.
+    - exact Hm.
+    - apply znz_units_op_comm_gen. }
+  (* d = (p-1) * q で q | p^(n-1) *)
+  destruct Hpm1_dvd_d as [q Hq_def].
+  assert (Hq_pos : (0 < q)%nat).
+  { destruct q. { simpl in Hq_def. lia. } lia. }
+  assert (Hq_dvd_pnm1 : Nat.divide q (p^(n-1))).
+  { apply (proj1 (Nat.mul_divide_cancel_l q (p^(n-1)) (p-1) ltac:(lia))).
+    replace ((p-1) * q)%nat with d by lia.
+    replace ((p-1) * p^(n-1))%nat with (p^(n-1)*(p-1))%nat by ring.
+    exact Hd_dvd_m. }
+  (* q = p^k for some k ≤ n-1 *)
+  assert (Hp2 : (2 <= p)%nat) by lia.
+  destruct (nat_prime_pow_divisors p (n-1) Hprime Hp2 q Hq_pos Hq_dvd_pnm1)
+    as [k_val [Hk_le Hq_eq]].
+  (* d = p^k_val * (p-1) *)
+  assert (Hd_form : d = (p^k_val * (p-1))%nat).
+  { rewrite Hq_def, Hq_eq. ring. }
+  (* gcd(p^k_val, d) = p^k_val *)
+  assert (Hgcd_pk_d : Nat.gcd (p^k_val) d = p^k_val).
+  { rewrite Hd_form.
+    apply Nat.divide_antisym.
+    - apply Nat.gcd_divide_l.
+    - apply Nat.gcd_greatest.
+      + apply Nat.divide_refl.
+      + exists (p-1). ring. }
+  (* G_elem^(p^k_val) の位数 = d / gcd(p^k_val, d) = p-1 *)
+  assert (Hord_pk : mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm
+                                (gpow_nat (znz_units_group (p^n) Hpn) G_elem (p^k_val)) =
+                    (p-1)%nat).
+  { rewrite order_of_power_gcd_general.
+    fold d.
+    rewrite Hgcd_pk_d.
+    rewrite Hd_form.
+    apply Nat.div_mul. lia. }
+  exists (gpow_nat (znz_units_group (p^n) Hpn) G_elem (p^k_val)).
+  exact Hord_pk.
+Qed.

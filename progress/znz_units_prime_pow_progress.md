@@ -2,8 +2,8 @@
 
 ## Status Overview
 - Overall: In Progress
-- Complete Lemmas: 18/21+ (Phase 0 + Phase 1 complete)
-- Unproven (`Admitted`): Phase 2-5 lemmas still needed
+- Complete Lemmas: 23/26+ (Phase 0 + Phase 1 + Phase 2 complete)
+- Unproven (`Admitted`): Phase 3-4 lemmas still needed
 - Failed/Abandoned Items: none
 
 ## Completed Lemmas
@@ -33,13 +33,14 @@
 - `nat_prime_pow_divisors`: divisors of p^m are powers of p [COMPILED ✓]
 - `one_plus_p_mult_order`: mult_order of (1+p) in (Z/p^nZ)* = p^(n-1) [COMPILED ✓]
 
-## TODO
+### Phase 2 (complete — 2026-04-07)
+- `znz_units_op_comm_gen`: op commutativity for znz_units_group n Hn (any n) [COMPILED ✓]
+- `gpow_group_order_eq_e`: Lagrange theorem for abelian finite groups — gpow_nat G a m = e [COMPILED ✓]
+- `order_of_power_gcd_general`: mult_order(g^k) = mult_order(g)/gcd(k, mult_order(g)) for any finite group G [COMPILED ✓]
+- `pnm1_pm1_coprime`: gcd(p^(n-1), p-1) = 1 for odd prime p, n≥1 [COMPILED ✓]
+- `lift_prim_root_to_pn`: ∃ g ∈ (Z/p^nZ)* of order p-1 [COMPILED ✓]
 
-### Phase 2: p-1 位数の元の存在
-- [ ] `order_of_power_gcd_general`: mult_order(g^k) = mult_order(g)/gcd(k, mult_order(g))
-- [ ] `lift_prim_root_to_pn`: ∃ g ∈ (Z/p^nZ)* of order p-1
-- [ ] `pnm1_pm1_coprime`: gcd(p^(n-1), p-1) = 1
-- [x] `one_plus_p_mult_order`: mult_order of (1+p) in (Z/p^nZ)* = p^(n-1) [COMPILED ✓ 2026-04-08]
+## TODO
 
 ### Phase 3: 同型写像
 - [ ] `phi_hom_inj`: the map φ(a,b)=h^a·g^b is an injective homomorphism
