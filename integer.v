@@ -1,6 +1,6 @@
 Require Import Corelib.Init.Peano Corelib.Init.Nat.
 From Stdlib Require Import Arith.PeanoNat.
-From Stdlib Require Import ZArith ZArith.Znumtheory Init.Logic.
+From Stdlib Require Import ZArith ZArith.Znumtheory ZArith.Zpow_facts Init.Logic.
 From Stdlib Require Import Lia.
 
 Open Scope Z_scope.
@@ -7742,4 +7742,637 @@ Proof.
       (znz_units_group (Nat.pow 2 n) H2n)
       (Nat.pow 2 (n-1))
       phi Hhom Hinj HordG (znz_units_pow2_order n Hn H2n)).
+Qed.
+
+(* ================================================================= *)
+(*  (Z/p^nZ)* の構造定理と巡回性 (奇素数 p)                           *)
+(*  Theorem 1: (Z/p^nZ)* ≅ Z/p^(n-1)Z × Z/(p-1)Z (p 奇素数)        *)
+(*  Theorem 2: (Z/p^nZ)* は巡回群                                     *)
+(* ================================================================= *)
+
+(** GroupIsomorphic の推移律:
+    G ≅ H かつ H ≅ K ならば G ≅ K。
+    証明: 合成写像 k∘f : G → K が同型であることを示す。 *)
+Lemma GroupIsomorphic_trans : forall G H K : Group,
+    G ≅ H -> H ≅ K -> G ≅ K.
+Proof.
+  intros G H K [f [Hf_hom [Hf_inj Hf_surj]]] [g [Hg_hom [Hg_inj Hg_surj]]].
+  exists (fun x => g (f x)).
+  split; [| split].
+  - intros x y. rewrite Hf_hom. rewrite Hg_hom. reflexivity.
+  - intros x y Heq. apply Hf_inj. apply Hg_inj. exact Heq.
+  - intro z. destruct (Hg_surj z) as [y Hy]. destruct (Hf_surj y) as [x Hx].
+    exists x. rewrite Hx. exact Hy.
+Qed.
+
+(** ===== Phase 0: 算術基礎補題 ===== *)
+
+(** 奇素数 p と n ≥ 1 のとき 1 < p^n。 *)
+Lemma odd_prime_pow_gt_one : forall (p n : nat),
+    (1 < p)%nat -> (1 <= n)%nat -> (1 < p^n)%nat.
+Proof.
+  intros p n Hp Hn.
+  apply Nat.pow_gt_1; lia.
+Qed.
+
+(** (Z/p^nZ)* の位数は p^(n-1) * (p-1)。
+    euler_phi (p^n) = p^(n-1) * (p-1) (euler_phi_prime_pow)、
+    euler_phi_group_order より GroupOrder (znz_units_group (p^n) _) (euler_phi (p^n))。 *)
+Lemma odd_prime_pow_units_order : forall (p n : nat)
+    (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p)) (Hn : (1 <= n)%nat)
+    (Hpn : (1 < p^n)%nat),
+    GroupOrder (znz_units_group (p^n) Hpn) (p^(n-1) * (p-1)).
+Proof.
+  intros p n Hp Hprime Hn Hpn.
+  assert (Hord : GroupOrder (znz_units_group (p^n) Hpn) (euler_phi (p^n)))
+    by apply euler_phi_group_order.
+  rewrite (euler_phi_prime_pow p n Hprime Hn) in Hord.
+  exact Hord.
+Qed.
+
+
+(** ===== Phase 1: (1+p) の位数 p^(n-1) ===== *)
+
+(** 等比数列の和を定義する:
+    geom_sum A n = A^0 + A^1 + ... + A^(n-1) = sum_{i=0}^{n-1} A^i。
+    キー性質: (A-1) * geom_sum A n = A^n - 1。 *)
+Fixpoint geom_sum (A : Z) (n : nat) : Z :=
+  match n with
+  | O => 0
+  | S n' => A ^ Z.of_nat n' + geom_sum A n'
+  end.
+
+(** geom_sum の基本性質: (A-1) * geom_sum A n = A^n - 1。 *)
+Lemma geom_sum_spec : forall (A : Z) (n : nat),
+    (A - 1) * geom_sum A n = A ^ Z.of_nat n - 1.
+Proof.
+  intros A n. induction n as [| n' IH].
+  - simpl. ring.
+  - simpl geom_sum. rewrite Nat2Z.inj_succ.
+    rewrite Z.pow_succ_r by lia.
+    lia.
+Qed.
+
+(** geom_sum の分割補題:
+    geom_sum A (p * N) = geom_sum (A^N) p * geom_sum A N。
+    証明: N の帰納法。 *)
+Lemma geom_sum_split : forall (A : Z) (p N : nat),
+    geom_sum A (p * N) = geom_sum (A ^ Z.of_nat N) p * geom_sum A N.
+Proof.
+  intros A p N.
+  (* 補助補題: geom_sum A (k + N) = geom_sum A k + A^k * geom_sum A N *)
+  assert (Hstep : forall k, geom_sum A (k + N) = geom_sum A k + A^(Z.of_nat k) * geom_sum A N).
+  { intros k. induction k as [| k' IHk].
+    - simpl geom_sum. rewrite Z.pow_0_r. ring.
+    - (* S k' のステップ *)
+      change (S k' + N)%nat with (S (k' + N)%nat).
+      simpl geom_sum.
+      rewrite Nat2Z.inj_succ.
+      rewrite IHk.
+      (* A^(k'+N) = A^k' * A^N を示す *)
+      rewrite Nat2Z.inj_add.
+      rewrite Z.pow_add_r by lia.
+      (* A^(k'+1) = A^k' * A *)
+      rewrite Z.pow_succ_r by lia.
+      (* geom_sum_spec: A^N - 1 = (A-1) * geom_sum A N => A^N = 1 + (A-1)*geom_sum A N *)
+      assert (HAN : A ^ Z.of_nat N = 1 + (A - 1) * geom_sum A N)
+        by (pose proof (geom_sum_spec A N); lia).
+      rewrite HAN. ring. }
+  induction p as [| p' IH].
+  - simpl. ring.
+  - rewrite Nat.mul_succ_l.
+    rewrite (Hstep (p' * N)%nat).
+    rewrite IH.
+    simpl geom_sum.
+    rewrite Nat2Z.inj_mul.
+    rewrite (Z.mul_comm (Z.of_nat p') (Z.of_nat N)).
+    rewrite <- Z.pow_mul_r by lia.
+    ring.
+Qed.
+
+(** 代数的補題: (A-1)^2 | A^i - 1 - i*(A-1)。
+    証明: i の帰納法。
+    - i=0: A^0 - 1 - 0*(A-1) = 0。
+    - i+1: A^(i+1) - 1 - (i+1)*(A-1) = A*(A^i-1-i*(A-1)) + i*(A-1)^2。 *)
+Lemma sq_dvd_pow_minus_one_linear : forall (A : Z) (i : nat),
+    ((A - 1)^2 | A^(Z.of_nat i) - 1 - Z.of_nat i * (A - 1)).
+Proof.
+  intros A i. induction i as [| i' IH].
+  - simpl. exists 0. ring.
+  - rewrite Nat2Z.inj_succ. rewrite Z.pow_succ_r by lia.
+    destruct IH as [q Hq].
+    exists (A * q + Z.of_nat i').
+    assert (Hpow : A ^ Z.of_nat i' = q * (A - 1)^2 + 1 + Z.of_nat i' * (A - 1)) by lia.
+    rewrite Hpow. ring.
+Qed.
+
+(** p | geom_sum A p (p は A-1 を割るとき):
+    各 A^i ≡ 1 (mod p) なので sum ≡ p ≡ 0 (mod p)。
+    証明: (A-1) | geom_sum A p - p を帰納法で示し、
+    p | A-1 と推移律で p | geom_sum A p - p を得る。 *)
+Lemma geom_sum_dvd_p : forall (A : Z) (p : nat),
+    (Z.of_nat p | A - 1) ->
+    (Z.of_nat p | geom_sum A p).
+Proof.
+  intros A p Hdvd.
+  (* Step 1: (A-1) | geom_sum A p - Z.of_nat p *)
+  assert (H_step : (A - 1 | geom_sum A p - Z.of_nat p)).
+  { clear Hdvd. induction p as [| p' IH].
+    - simpl. exists 0. ring.
+    - simpl geom_sum. rewrite Nat2Z.inj_succ.
+      pose proof (geom_sum_spec A p') as Hspec.
+      destruct IH as [q Hq].
+      exists (geom_sum A p' + q).
+      (* (A-1)*(G+q) = (A-1)*G + (A-1)*q = (A^p'-1)+(G-N) = A^p'+G-N-1 *)
+      transitivity ((A - 1) * geom_sum A p' + q * (A - 1)).
+      + rewrite Hspec. rewrite <- Hq. ring.
+      + ring. }
+  replace (geom_sum A p) with (geom_sum A p - Z.of_nat p + Z.of_nat p) by lia.
+  apply Z.divide_add_r.
+  - exact (Z.divide_trans _ (A - 1) _ Hdvd H_step).
+  - exact (Z.divide_refl _).
+Qed.
+
+
+(** p^k | geom_sum (1+p) (p^k):
+    帰納法で証明する。
+    - k=0: geom_sum (1+p) 1 = 1 = (1+p)^0、p^0 = 1 | 1。
+    - k+1: geom_sum_split より geom_sum (1+p) (p^(k+1)) = geom_sum ((1+p)^(p^k)) p * geom_sum (1+p) (p^k)。
+      IH: p^k | geom_sum (1+p) (p^k)。
+      geom_sum_dvd_p と (1+p)^(p^k) ≡ 1 (mod p) より p | geom_sum ((1+p)^(p^k)) p。
+      よって p^(k+1) | 積。 *)
+Lemma one_plus_p_geom_sum_pk_dvd : forall (p k : nat),
+    prime (Z.of_nat p) ->
+    (Z.of_nat (p^k) | geom_sum (1 + Z.of_nat p) (p^k)).
+Proof.
+  intros p k Hprime.
+  induction k as [| k' IH].
+  - simpl. exists 1. ring.
+  - (* S k' case: p^(S k') = p * p^k' *)
+    assert (Hpow : (p ^ S k' = p * p ^ k')%nat) by exact (Nat.pow_succ_r' p k').
+    rewrite Hpow.
+    rewrite (geom_sum_split (1 + Z.of_nat p) p (p^k')).
+    rewrite Nat2Z.inj_mul.
+    (* Z.of_nat p | geom_sum ((1+p)^(p^k')) p *)
+    assert (Hdvd_p : (Z.of_nat p | geom_sum ((1 + Z.of_nat p) ^ Z.of_nat (p^k')) p)).
+    { apply geom_sum_dvd_p.
+      pose proof (geom_sum_spec (1 + Z.of_nat p) (p^k')) as Hspec.
+      assert (HA : (1 + Z.of_nat p) - 1 = Z.of_nat p) by ring.
+      rewrite HA in Hspec.
+      rewrite <- Hspec.
+      apply Z.divide_mul_l, Z.divide_refl. }
+    (* Z.of_nat p * Z.of_nat (p^k') | G_p * G_k' *)
+    destruct Hdvd_p as [x Hx]. destruct IH as [y Hy].
+    exists (x * y). rewrite Hx, Hy. ring.
+Qed.
+
+(** p^(k+1) | (1+p)^(p^k) - 1 (下界):
+    geom_sum_spec と one_plus_p_geom_sum_pk_dvd から直接。 *)
+Lemma one_plus_p_pow_pk_dvd : forall (p k : nat),
+    prime (Z.of_nat p) ->
+    (Z.of_nat (p^(k+1)) | (1 + Z.of_nat p) ^ Z.of_nat (p^k) - 1).
+Proof.
+  intros p k Hprime.
+  pose proof (geom_sum_spec (1 + Z.of_nat p) (p^k)) as Hspec.
+  assert (HA : (1 + Z.of_nat p) - 1 = Z.of_nat p) by ring.
+  rewrite HA in Hspec.
+  assert (Hpow : (p ^ (k + 1) = p * p ^ k)%nat) by
+    (rewrite Nat.add_1_r; exact (Nat.pow_succ_r' p k)).
+  rewrite Hpow, Nat2Z.inj_mul, <- Hspec.
+  (* Goal: Z.of_nat p * Z.of_nat (p^k) | Z.of_nat p * geom_sum (1+p) (p^k) *)
+  destruct (one_plus_p_geom_sum_pk_dvd p k Hprime) as [y Hy].
+  exists y. rewrite Hy. ring.
+Qed.
+
+(** 等比数列部分和のインデックス和 (0 + 1 + ... + (n-1)):
+    geom_sum の二次近似に必要。 *)
+Fixpoint nat_sum_below (n : nat) : Z :=
+  match n with
+  | O => 0
+  | S n' => Z.of_nat n' + nat_sum_below n'
+  end.
+
+(** 二倍公式: 2 * nat_sum_below n = Z.of_nat n * (Z.of_nat n - 1). *)
+Lemma nat_sum_below_double : forall n : nat,
+    2 * nat_sum_below n = Z.of_nat n * (Z.of_nat n - 1).
+Proof.
+  intros n. induction n as [| n' IH].
+  - simpl. ring.
+  - simpl nat_sum_below. rewrite Nat2Z.inj_succ. lia.
+Qed.
+
+(** 奇素数 p に対して p | nat_sum_below p。
+    2*T = p*(p-1)、gcd(2,p)=1 より p|T。 *)
+Lemma nat_sum_below_dvd_odd_prime : forall p : nat,
+    prime (Z.of_nat p) -> p <> 2%nat ->
+    (Z.of_nat p | nat_sum_below p).
+Proof.
+  intros p Hprime Hodd.
+  pose proof (nat_sum_below_double p) as H2T.
+  assert (Hdvd2T : (Z.of_nat p | 2 * nat_sum_below p)).
+  { rewrite H2T. apply Z.divide_mul_l, Z.divide_refl. }
+  (* gcd(Z.of_nat p, 2) = 1 (p は奇素数なので 2 ∤ p) *)
+  assert (Hcop : Z.gcd (Z.of_nat p) 2 = 1).
+  { rewrite Zgcd_1_rel_prime.
+    apply rel_prime_sym, prime_rel_prime.
+    - exact prime_2.
+    - intro Hdvd.
+      destruct (prime_divisors _ Hprime _ Hdvd) as [H | [H | [H | H]]].
+      + lia.
+      + lia.
+      + apply Hodd. lia.
+      + apply prime_ge_2 in Hprime. lia. }
+  exact (Z.gauss _ _ _ Hdvd2T Hcop).
+Qed.
+
+(** (A-1)^2 | geom_sum A p - Z.of_nat p - (A-1) * nat_sum_below p。
+    sq_dvd_pow_minus_one_linear を各 i に適用して足し合わせる。 *)
+Lemma geom_sum_sq_approx : forall (A : Z) (p : nat),
+    ((A - 1)^2 | geom_sum A p - Z.of_nat p - (A - 1) * nat_sum_below p).
+Proof.
+  intros A p. induction p as [| p' IH].
+  - simpl. exists 0. ring.
+  - simpl geom_sum. simpl nat_sum_below. rewrite Nat2Z.inj_succ. unfold Z.succ.
+    pose proof (sq_dvd_pow_minus_one_linear A p') as Hsq.
+    (* goal = (A^p' - 1 - p'*(A-1)) + (geom_sum A p' - p' - (A-1)*T) *)
+    replace (A ^ Z.of_nat p' + geom_sum A p' - (Z.of_nat p' + 1) -
+             (A - 1) * (Z.of_nat p' + nat_sum_below p'))
+      with ((A ^ Z.of_nat p' - 1 - Z.of_nat p' * (A - 1)) +
+            (geom_sum A p' - Z.of_nat p' - (A - 1) * nat_sum_below p')) by ring.
+    apply Z.divide_add_r; [exact Hsq | exact IH].
+Qed.
+
+(** geom_sum ((1+p)^(p^k)) p は p^2 で割り切れない (奇素数 p):
+    A = (1+p)^(p^k) とすると A-1 = p*G_k。
+    geom_sum_sq_approx より p^2 | geom_sum A p - p - (A-1)*T。
+    p^2 | geom_sum A p (仮定) かつ p | (A-1)*T = p*G_k*T より p^2 | p。矛盾。 *)
+Lemma geom_sum_not_dvd_p_sq : forall (p k : nat),
+    prime (Z.of_nat p) ->
+    (2 <= p)%nat ->
+    p <> 2%nat ->
+    ~ (Z.of_nat (p^2) | geom_sum ((1 + Z.of_nat p) ^ Z.of_nat (p^k)) p).
+Proof.
+  intros p k Hprime Hp2 Hodd Hdvd.
+  set (A := (1 + Z.of_nat p) ^ Z.of_nat (p ^ k)).
+  set (Gk := geom_sum (1 + Z.of_nat p) (p ^ k)).
+  set (T := nat_sum_below p).
+  (* A - 1 = p * Gk *)
+  assert (HA1 : A - 1 = Z.of_nat p * Gk).
+  { unfold A, Gk.
+    pose proof (geom_sum_spec (1 + Z.of_nat p) (p^k)) as Hspec.
+    assert (Hbase : (1 + Z.of_nat p) - 1 = Z.of_nat p) by ring.
+    rewrite Hbase in Hspec. lia. }
+  (* (A-1)^2 | geom_sum A p - p - (A-1)*T *)
+  pose proof (geom_sum_sq_approx A p) as Happrox.
+  (* p^2 | Z.of_nat (p^2) = Z.of_nat p ^ 2 *)
+  assert (Hp2eq : Z.of_nat (p ^ 2) = Z.of_nat p ^ 2).
+  { rewrite Nat2Z.inj_pow. reflexivity. }
+  rewrite Hp2eq in Hdvd.
+  (* p^2 | (A-1)^2 since A-1 = p*Gk *)
+  assert (Hp2_A1sq : (Z.of_nat p ^ 2 | (A - 1) ^ 2)).
+  { rewrite HA1. exists (Gk ^ 2). ring. }
+  (* p^2 | geom_sum A p - p - (A-1)*T *)
+  assert (Hp2_diff : (Z.of_nat p ^ 2 | geom_sum A p - Z.of_nat p - (A - 1) * T)).
+  { exact (Z.divide_trans _ _ _ Hp2_A1sq Happrox). }
+  (* p^2 | p + (A-1)*T = p*(1 + Gk*T) *)
+  assert (Hp2_pGkT : (Z.of_nat p ^ 2 | Z.of_nat p * (1 + Gk * T))).
+  { assert (Heq : geom_sum A p - Z.of_nat p * (1 + Gk * T) =
+                  geom_sum A p - Z.of_nat p - (A - 1) * T).
+    { rewrite HA1. unfold T. ring. }
+    replace (Z.of_nat p * (1 + Gk * T))
+      with (geom_sum A p - (geom_sum A p - Z.of_nat p * (1 + Gk * T))) by ring.
+    apply Z.divide_sub_r.
+    - exact Hdvd.
+    - rewrite Heq. exact Hp2_diff. }
+  (* p | 1 + Gk*T (cancel p from p^2 | p*(1+Gk*T)) *)
+  assert (Hp_1GkT : (Z.of_nat p | 1 + Gk * T)).
+  { replace (Z.of_nat p ^ 2) with (Z.of_nat p * Z.of_nat p) in Hp2_pGkT by ring.
+    apply (Z.mul_divide_cancel_l _ _ (Z.of_nat p)).
+    - lia.
+    - exact Hp2_pGkT. }
+  (* p | Gk*T (either p|Gk for k≥1, or p|T for k=0) *)
+  assert (Hp_GkT : (Z.of_nat p | Gk * T)).
+  { unfold T.
+    destruct k as [|k'].
+    - (* k=0: Gk = geom_sum (1+p) 1 = 1, T = nat_sum_below p, p|T *)
+      assert (HGk0 : Gk = 1).
+      { unfold Gk. cbn. ring. }
+      rewrite HGk0. rewrite Z.mul_1_l.
+      exact (nat_sum_below_dvd_odd_prime p Hprime Hodd).
+    - (* k≥1: p^(S k') | Gk, hence p | Gk *)
+      apply Z.divide_mul_l.
+      apply Z.divide_trans with (m := Z.of_nat (p ^ S k')).
+      + (* Z.of_nat p | Z.of_nat (p ^ S k') since p^(S k') = p * p^k' *)
+        exists (Z.of_nat (p ^ k')).
+        rewrite Nat.pow_succ_r', Nat2Z.inj_mul. ring.
+      + exact (one_plus_p_geom_sum_pk_dvd p (S k') Hprime). }
+  (* p | (1+Gk*T) - Gk*T = 1. Contradiction since p ≥ 2. *)
+  assert (Hp1 : (Z.of_nat p | 1)).
+  { replace 1 with (1 + Gk * T - Gk * T) by ring.
+    exact (Z.divide_sub_r _ _ _ Hp_1GkT Hp_GkT). }
+  destruct (Z.divide_1_r _ Hp1) as [Heq | Heq].
+  - apply prime_ge_2 in Hprime. lia.
+  - pose proof (Nat2Z.is_nonneg p). lia.
+Qed.
+
+(** (1+p)^(p^k) - 1 の p 進付値の上界: p^(k+2) ∤ (1+p)^(p^k) - 1。
+    帰納法: k=0 は p^2∤p。帰納ステップは
+    (1+p)^(p^(k+1)) - 1 = (A-1)*geom_sum A p で
+    v_p(A-1) = k+1 (IH), v_p(geom_sum A p) = 1 (not_dvd_p_sq) から。 *)
+Lemma one_plus_p_pow_pk_not_dvd : forall (p k : nat),
+    prime (Z.of_nat p) ->
+    (2 <= p)%nat ->
+    p <> 2%nat ->
+    ~ (Z.of_nat (p ^ (k + 2)) | (1 + Z.of_nat p) ^ Z.of_nat (p ^ k) - 1).
+Proof.
+  intros p k Hprime Hp2 Hodd.
+  induction k as [|k' IH].
+  - (* k=0: p^2 ∤ (1+p)^1 - 1 = p *)
+    intro Hdvd.
+    assert (Heq1 : (1 + Z.of_nat p) ^ Z.of_nat (p ^ 0) - 1 = Z.of_nat p).
+    { rewrite Nat.pow_0_r. change (Z.of_nat 1) with 1. rewrite Z.pow_1_r. ring. }
+    assert (Heq2 : Z.of_nat (p ^ (0 + 2)) = Z.of_nat p * Z.of_nat p).
+    { simpl. rewrite Nat.mul_1_r. apply Nat2Z.inj_mul. }
+    rewrite Heq1, Heq2 in Hdvd.
+    (* Z.of_nat p * Z.of_nat p | Z.of_nat p → p | 1 → contradiction *)
+    assert (Hp1 : (Z.of_nat p | 1)).
+    { assert (Hpne : Z.of_nat p <> 0) by lia.
+      assert (H : (Z.of_nat p * Z.of_nat p | Z.of_nat p * 1)).
+      { rewrite Z.mul_1_r. exact Hdvd. }
+      exact (proj1 (Z.mul_divide_cancel_l _ _ _ Hpne) H). }
+    destruct (Z.divide_1_r _ Hp1) as [Heq | Heq].
+    + apply prime_ge_2 in Hprime. lia.
+    + pose proof (Nat2Z.is_nonneg p). lia.
+  - (* k = S k': need p^(k'+3) ∤ (1+p)^(p^(S k')) - 1 *)
+    intro Hdvd.
+    (* Key factorization: (1+p)^(p^(S k')) - 1 = (A-1)*geom_sum A p
+       where A = (1+p)^(p^k') *)
+    assert (Hfact : ((1 + Z.of_nat p) ^ Z.of_nat (p ^ k') - 1) *
+                    geom_sum ((1 + Z.of_nat p) ^ Z.of_nat (p ^ k')) p =
+                    (1 + Z.of_nat p) ^ Z.of_nat (p ^ S k') - 1).
+    { rewrite (geom_sum_spec ((1 + Z.of_nat p) ^ Z.of_nat (p ^ k')) p).
+      f_equal.
+      rewrite <- Z.pow_mul_r; [| apply Nat2Z.is_nonneg | apply Nat2Z.is_nonneg].
+      rewrite <- Nat2Z.inj_mul, Nat.mul_comm, <- Nat.pow_succ_r'.
+      reflexivity. }
+    rewrite <- Hfact in Hdvd.
+    (* Hlow: p^(k'+1) | (1+p)^(p^k') - 1 *)
+    pose proof (one_plus_p_pow_pk_dvd p k' Hprime) as Hlow.
+    (* Hgeom_p: p | geom_sum A p *)
+    assert (Hgeom_p : (Z.of_nat p |
+                       geom_sum ((1 + Z.of_nat p) ^ Z.of_nat (p ^ k')) p)).
+    { apply geom_sum_dvd_p.
+      apply Z.divide_trans with (m := Z.of_nat (p ^ (k' + 1))).
+      - rewrite Nat.add_1_r, Nat.pow_succ_r', Nat2Z.inj_mul.
+        apply Z.divide_mul_l, Z.divide_refl.
+      - exact Hlow. }
+    (* Hgeom_nsq: p^2 ∤ geom_sum A p *)
+    pose proof (geom_sum_not_dvd_p_sq p k' Hprime Hp2 Hodd) as Hgeom_nsq.
+    (* Extract witnesses: A-1 = m * p^(k'+1), geom_sum A p = r * p *)
+    destruct Hlow as [m Hm].
+    destruct Hgeom_p as [r Hr].
+    (* Hdvd now: p^(S k'+2) | (m*p^(k'+1))*(r*p) = p^(k'+2) * m*r *)
+    assert (Heq : ((1 + Z.of_nat p) ^ Z.of_nat (p ^ k') - 1) *
+                  geom_sum ((1 + Z.of_nat p) ^ Z.of_nat (p ^ k')) p =
+                  Z.of_nat (p ^ (k' + 2)) * (m * r)).
+    { rewrite Hm, Hr.
+      assert (Hpow : Z.of_nat (p ^ (k' + 2)) = Z.of_nat p * Z.of_nat (p ^ (k' + 1))).
+      { replace (k' + 2)%nat with (S (k' + 1))%nat by lia.
+        rewrite Nat.pow_succ_r', Nat2Z.inj_mul. ring. }
+      rewrite Hpow. ring. }
+    assert (Hdvd' : (Z.of_nat (p ^ (S k' + 2)) | Z.of_nat (p ^ (k' + 2)) * (m * r))).
+    { rewrite <- Heq. exact Hdvd. }
+    (* p^(S k' + 2) = p * p^(k'+2) so p | m*r *)
+    assert (Hp_mr : (Z.of_nat p | m * r)).
+    { replace (S k' + 2)%nat with (S (k' + 2))%nat in Hdvd' by lia.
+      rewrite Nat.pow_succ_r', Nat2Z.inj_mul in Hdvd'.
+      assert (Hpkne : Z.of_nat (p ^ (k' + 2)) <> 0) by
+        (pose proof (Nat.pow_nonzero p (k'+2) ltac:(lia)); lia).
+      rewrite (Z.mul_comm (Z.of_nat p) (Z.of_nat (p^(k'+2)))) in Hdvd'.
+      exact (proj1 (Z.mul_divide_cancel_l (Z.of_nat p) (m*r) (Z.of_nat (p^(k'+2))) Hpkne) Hdvd'). }
+    (* p | m*r, p prime → p | m or p | r *)
+    apply prime_mult in Hp_mr.
+    + destruct Hp_mr as [Hm' | Hr'].
+      * (* p | m → p^(k'+2) | A-1 → contradicts IH *)
+        apply IH.
+        replace (k' + 2)%nat with (S (k' + 1))%nat by lia.
+        rewrite Nat.pow_succ_r', Nat2Z.inj_mul.
+        rewrite Hm.
+        (* goal: (Z.of_nat p * Z.of_nat (p^(k'+1)) | m * Z.of_nat (p^(k'+1))) *)
+        destruct Hm' as [d Hd].
+        exists d. rewrite Hd. ring.
+      * (* p | r → p^2 | geom_sum A p → contradicts geom_not_sq *)
+        apply Hgeom_nsq.
+        rewrite Hr.
+        replace (Z.of_nat (p ^ 2)) with (Z.of_nat p * Z.of_nat p) by
+          (rewrite <- Nat2Z.inj_mul; f_equal;
+           rewrite Nat.pow_succ_r', Nat.pow_succ_r'; simpl Nat.pow; rewrite Nat.mul_1_r; reflexivity).
+        (* goal: (Z.of_nat p * Z.of_nat p | r * Z.of_nat p) *)
+        destruct Hr' as [c Hc]. exists c. rewrite Hc. ring.
+    + exact Hprime.
+Qed.
+
+(** ===== Phase 1 続き: (1+p) の位数 p^(n-1) ===== *)
+
+(** 乗法群 (Z/nZ)* における gpow_nat の値:
+    proj1_sig (gpow_nat (znz_units_group n Hn) a k) = (proj1_sig a)^k mod n。
+    証明: k に関する帰納法。 *)
+Lemma znz_units_gpow_nat_val : forall (n : nat) (Hn : (1 < n)%nat)
+    (a : carrier (znz_units_group n Hn)) (k : nat),
+  proj1_sig (gpow_nat (znz_units_group n Hn) a k) =
+    Z.pow (proj1_sig a) (Z.of_nat k) mod Z.of_nat n.
+Proof.
+  intros n Hn a k.
+  induction k as [| k' IH].
+  - (* k = 0: e の値は 1, 1 mod n = 1 (n >= 2) *)
+    simpl. symmetry. apply Z.mod_small. lia.
+  - (* k = S k': op の定義から乗算 mod n *)
+    (* まず LHS を展開して (a * a^k' mod n) mod n の形にする *)
+    assert (Hstep : proj1_sig (gpow_nat (znz_units_group n Hn) a (S k')) =
+              (proj1_sig a * proj1_sig (gpow_nat (znz_units_group n Hn) a k')) mod Z.of_nat n).
+    { simpl. reflexivity. }
+    rewrite Hstep, IH.
+    rewrite Zmult_mod_idemp_r.
+    rewrite Nat2Z.inj_succ, Z.pow_succ_r by apply Nat2Z.is_nonneg.
+    reflexivity.
+Qed.
+
+(** gcd(1+p, p) = 1: 1+p と p は互いに素。
+    証明: d | 1+p かつ d | p ならば d | (1+p)-p = 1。 *)
+Lemma one_plus_p_coprime_p : forall (p : nat),
+    Z.gcd (1 + Z.of_nat p) (Z.of_nat p) = 1.
+Proof.
+  intros p.
+  apply (proj2 (Zgcd_1_rel_prime _ _)).
+  unfold rel_prime.
+  apply Zis_gcd_intro.
+  - apply Z.divide_1_l.
+  - apply Z.divide_1_l.
+  - intros d Hd1 Hd2.
+    replace 1 with ((1 + Z.of_nat p) - Z.of_nat p) by ring.
+    exact (Z.divide_sub_r _ _ _ Hd1 Hd2).
+Qed.
+
+(** gcd(1+p, p^n) = 1: 1+p と p^n は互いに素 (n >= 1)。
+    証明: n に関する帰納法。gcd(1+p, p) = 1 と rel_prime_mult を使う。 *)
+Lemma one_plus_p_coprime_pn : forall (p n : nat),
+    (1 <= n)%nat ->
+    Z.gcd (1 + Z.of_nat p) (Z.of_nat (p^n)) = 1.
+Proof.
+  intros p n Hn.
+  induction n as [| n' IH].
+  - lia.
+  - rewrite Nat.pow_succ_r', Nat2Z.inj_mul.
+    apply (proj2 (Zgcd_1_rel_prime _ _)).
+    apply rel_prime_mult.
+    + apply (proj1 (Zgcd_1_rel_prime _ _)).
+      exact (one_plus_p_coprime_p p).
+    + destruct (Nat.eq_dec n' 0) as [H0 | Hn'].
+      * subst. simpl.
+        apply (proj1 (Zgcd_1_rel_prime _ _)).
+        apply Z.gcd_1_r.
+      * apply (proj1 (Zgcd_1_rel_prime _ _)).
+        apply IH. lia.
+Qed.
+
+(** 素数 p^m の約数は p の冪:
+    prime p, 0 < d, d | p^m ならば ∃ k <= m, d = p^k。
+    証明: m に関する帰納法。
+      - m = 0: d | 1 → d = 1 = p^0。
+      - m = S m': gcd(d,p) = 1 か p | d かで場合分け。
+          gcd = 1 の場合: ガウスの補題で d | p^m'。帰納法。
+          p | d の場合: d = p*d', d' | p^m'。帰納法で d' = p^j → d = p^(j+1)。 *)
+Lemma nat_prime_pow_divisors : forall (p m : nat),
+    prime (Z.of_nat p) ->
+    (2 <= p)%nat ->
+    forall (d : nat),
+    (0 < d)%nat ->
+    Nat.divide d (p^m) ->
+    exists k, (k <= m)%nat /\ (d = p^k)%nat.
+Proof.
+  intros p m Hprime Hp2.
+  induction m as [| m' IH].
+  - (* m = 0: d | 1 → d = 1 = p^0 *)
+    intros d Hd Hdvd.
+    simpl in Hdvd.
+    exists 0%nat. split; [lia |].
+    simpl. apply Nat.divide_1_r. exact Hdvd.
+  - (* m = S m': d | p * p^m' *)
+    intros d Hd Hdvd.
+    rewrite Nat.pow_succ_r' in Hdvd.
+    destruct (Nat.eq_dec (Nat.gcd d p) 1) as [Hgcd1 | Hgcd_ne1].
+    + (* gcd(d,p) = 1: ガウスの補題で d | p^m' *)
+      assert (Hdvd' : Nat.divide d (p^m')).
+      { exact (Nat.gauss d p (p^m') Hdvd Hgcd1). }
+      destruct (IH d Hd Hdvd') as [k [Hk Heq]].
+      exists k. split; [lia | exact Heq].
+    + (* gcd(d,p) ≠ 1: p | d *)
+      (* gcd(d,p) | p なので gcd = p *)
+      set (g := Nat.gcd d p).
+      assert (Hg_dvd_p : Nat.divide g p) by apply Nat.gcd_divide_r.
+      assert (Hgne : (0 < g)%nat).
+      { unfold g.
+        destruct (Nat.eq_dec (Nat.gcd d p) 0) as [H0 | Hne0].
+        - exfalso. pose proof (Nat.gcd_eq_0 d p) as [Hfw _].
+          destruct (Hfw H0) as [_ Hp0]. lia.
+        - lia. }
+      assert (Hg_eq_p : g = p).
+      { (* Z.of_nat g | Z.of_nat p, g > 0, g ≠ 1 → g = p *)
+        assert (HZg_dvd : (Z.of_nat g | Z.of_nat p)).
+        { destruct Hg_dvd_p as [k Hk].
+          exists (Z.of_nat k). rewrite Hk, Nat2Z.inj_mul. ring. }
+        destruct (prime_divisors (Z.of_nat p) Hprime (Z.of_nat g) HZg_dvd)
+          as [H | [H | [H | H]]].
+        - (* Z.of_nat g = -1: 矛盾 (g > 0) *) lia.
+        - (* Z.of_nat g = 1: 矛盾 (g ≠ 1 から) *)
+          exfalso. apply Hgcd_ne1.
+          unfold g in H. apply Nat2Z.inj. lia.
+        - (* Z.of_nat g = Z.of_nat p: g = p *) apply Nat2Z.inj. lia.
+        - (* Z.of_nat g = -Z.of_nat p: 矛盾 (g > 0) *) lia. }
+      (* p | d *)
+      assert (Hp_dvd_d : Nat.divide p d).
+      { rewrite <- Hg_eq_p. apply Nat.gcd_divide_l. }
+      destruct Hp_dvd_d as [d' Hd'].
+      assert (Hd'pos : (0 < d')%nat) by (destruct d'; [rewrite Nat.mul_0_l in Hd'; lia | lia]).
+      assert (Hd'_dvd : Nat.divide d' (p^m')).
+      { apply (proj1 (Nat.mul_divide_cancel_l d' (p^m') p ltac:(lia))).
+        rewrite (Nat.mul_comm p d'), <- Hd'. exact Hdvd. }
+      destruct (IH d' Hd'pos Hd'_dvd) as [j [Hj Heq]].
+      exists (S j). split.
+      * lia.
+      * rewrite Hd', Heq, Nat.pow_succ_r'. apply Nat.mul_comm.
+Qed.
+
+
+(** (Z/p^nZ)* における (1+p) mod p^n の乗法位数は p^(n-1) である。
+    証明の方針:
+      上界: one_plus_p_pow_pk_dvd より p^n | (1+p)^(p^(n-1)) - 1 なので
+            gpow_nat elem (p^(n-1)) = e。よって d | p^(n-1)。
+      分解: nat_prime_pow_divisors より d = p^k (k ≤ n-1)。
+      下界 (n≥2): one_plus_p_pow_pk_not_dvd より (1+p)^(p^(n-2)) ≢ 1 (mod p^n)、
+                  よって gpow_nat elem (p^(n-2)) ≠ e なので ¬(d | p^(n-2))。
+      k ≤ n-2 なら p^k | p^(n-2) → 矛盾。よって k = n-1 で d = p^(n-1)。 *)
+Lemma one_plus_p_mult_order : forall (p n : nat)
+    (Hp2 : (2 <= p)%nat)
+    (Hprime : prime (Z.of_nat p))
+    (Hodd : p <> 2%nat)
+    (Hn : (1 <= n)%nat)
+    (Hpn : (1 < p^n)%nat)
+    (Hm : GroupOrder (znz_units_group (p^n) Hpn) (p^(n-1) * (p-1)))
+    (elem : carrier (znz_units_group (p^n) Hpn))
+    (Helem : proj1_sig elem = (1 + Z.of_nat p) mod Z.of_nat (p^n)),
+    mult_order (znz_units_group (p^n) Hpn) (p^(n-1) * (p-1)) Hm elem = (p^(n-1))%nat.
+Proof.
+  intros p n Hp2 Hprime Hodd Hn Hpn Hm elem Helem.
+  (* d = mult_order を設定し仕様を取得 *)
+  set (d := mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm elem).
+  pose proof (mult_order_spec (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm elem)
+    as [Hd_pos _].
+  (* 上界: gpow_nat elem (p^(n-1)) = e *)
+  assert (Hpow_up : gpow_nat (znz_units_group (p^n) Hpn) elem (p^(n-1))%nat =
+                    e (znz_units_group (p^n) Hpn)).
+  { apply sig_eq.
+    rewrite znz_units_gpow_nat_val, Helem, Z.mod_pow_l.
+    simpl proj1_sig.
+    pose proof (one_plus_p_pow_pk_dvd p (n-1)%nat Hprime) as Hdvd.
+    replace (n-1+1)%nat with n in Hdvd by lia.
+    apply dvd_to_one_mod; [lia | exact Hdvd]. }
+  (* d | p^(n-1) *)
+  assert (Hdvd_upper : Nat.divide d (p^(n-1))%nat).
+  { exact (proj1 (mult_order_divides (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1))
+                   Hm elem (p^(n-1))%nat) Hpow_up). }
+  (* nat_prime_pow_divisors: d = p^k, k ≤ n-1 *)
+  destruct (nat_prime_pow_divisors p (n-1)%nat Hprime Hp2 d Hd_pos Hdvd_upper)
+    as [k [Hk Hdeq]].
+  (* k = n-1 を示す *)
+  assert (Hk_eq : (k = n-1)%nat).
+  { assert (Hcases : (n-1 <= k)%nat \/ (k < n-1)%nat) by lia.
+    destruct Hcases as [Hle | Hlt]; [lia |].
+    (* k < n-1 → 矛盾 *)
+    exfalso.
+    assert (Hn2 : (2 <= n)%nat) by lia.
+    (* d = p^k | p^(n-2) since k ≤ n-2 *)
+    assert (Hdvd_lo : Nat.divide d (p^(n-2))%nat).
+    { rewrite Hdeq. exists (p^(n-2-k))%nat.
+      rewrite <- Nat.pow_add_r. f_equal. lia. }
+    (* gpow_nat elem (p^(n-2)) = e *)
+    assert (Hpow_lo : gpow_nat (znz_units_group (p^n) Hpn) elem (p^(n-2))%nat =
+                      e (znz_units_group (p^n) Hpn)).
+    { exact (proj2 (mult_order_divides (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1))
+                     Hm elem (p^(n-2))%nat) Hdvd_lo). }
+    (* (1+p)^(p^(n-2)) mod p^n = 1 *)
+    assert (Hval : (1 + Z.of_nat p)^Z.of_nat (p^(n-2)) mod Z.of_nat (p^n) = 1).
+    { assert (Hv1 : proj1_sig (gpow_nat (znz_units_group (p^n) Hpn) elem (p^(n-2))%nat) = 1).
+      { rewrite Hpow_lo. reflexivity. }
+      rewrite znz_units_gpow_nat_val, Helem, Z.mod_pow_l in Hv1.
+      exact Hv1. }
+    (* p^n | (1+p)^(p^(n-2)) - 1 を構成し one_plus_p_pow_pk_not_dvd に矛盾 *)
+    apply (one_plus_p_pow_pk_not_dvd p (n-2)%nat Hprime Hp2 Hodd).
+    replace (n-2+2)%nat with n by lia.
+    exists ((1+Z.of_nat p)^Z.of_nat (p^(n-2)) / Z.of_nat (p^n)).
+    pose proof (Z.div_mod ((1+Z.of_nat p)^Z.of_nat (p^(n-2)))
+                           (Z.of_nat (p^n)) ltac:(lia)) as Hdm.
+    lia. }
+  (* d = p^(n-1) *)
+  rewrite Hdeq. f_equal. exact Hk_eq.
 Qed.

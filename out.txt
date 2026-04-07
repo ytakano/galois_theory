@@ -1,0 +1,570 @@
+Compile error found:
+  file : ./integer.v
+  line : 93
+  chars: 14-28
+
+Original compiler message:
+File "./integer.v", line 93, characters 14-28:
+Warning: Reference Zis_gcd_bezout is deprecated since 9.1.
+Use Z.Bezout_coprime_iff instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 93, characters 46-57:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 93, characters 14-28:
+Warning: Reference Zis_gcd_bezout is deprecated since 9.1.
+Use Z.Bezout_coprime_iff instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 93, characters 46-57:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 240, characters 0-39:
+Warning: Alternatives to Fin.t are available, see
+<https://github.com/coq/stdlib/blob/master/theories/Vectors/Fin.v>.
+[warn-library-file-stdlib-vector,stdlib-vector,warn-library-file,user-warn,default]
+File "./integer.v", line 788, characters 12-27:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 788, characters 12-27:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 788, characters 12-27:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 869, characters 10-25:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 869, characters 10-25:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 869, characters 10-25:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 887, characters 28-43:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 887, characters 28-43:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 887, characters 28-43:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 1013, characters 22-37:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 1013, characters 22-37:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 1013, characters 22-37:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 1771, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1771, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1799, characters 62-73:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1799, characters 62-73:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1801, characters 62-73:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1801, characters 62-73:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1803, characters 10-24:
+Warning: Reference rel_prime_mult is deprecated since 9.1.
+Use Z.coprime_mul_r instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1803, characters 10-24:
+Warning: Reference rel_prime_mult is deprecated since 9.1.
+Use Z.coprime_mul_r instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1804, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1804, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1844, characters 10-21:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 1844, characters 10-21:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2836, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2836, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2842, characters 26-37:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2842, characters 26-37:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2858, characters 43-54:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2858, characters 43-54:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2860, characters 43-54:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2860, characters 43-54:
+Warning: Reference Zgcd_is_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2862, characters 10-24:
+Warning: Reference rel_prime_mult is deprecated since 9.1.
+Use Z.coprime_mul_r instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2862, characters 10-24:
+Warning: Reference rel_prime_mult is deprecated since 9.1.
+Use Z.coprime_mul_r instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2864, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 2864, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3211, characters 22-44:
+Warning: Notation Nat.div_lt_upper_bound is deprecated since 8.17.
+Use Div0.div_lt_upper_bound instead.
+[deprecated-syntactic-definition-since-8.17,deprecated-since-8.17,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 3211, characters 22-44:
+Warning: Notation Nat.div_lt_upper_bound is deprecated since 8.17.
+Use Div0.div_lt_upper_bound instead.
+[deprecated-syntactic-definition-since-8.17,deprecated-since-8.17,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 3529, characters 45-55:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3529, characters 45-55:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3564, characters 12-27:
+Warning: Reference prime_rel_prime is deprecated since 9.1.
+Use Z.coprime_prime_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3564, characters 12-27:
+Warning: Reference prime_rel_prime is deprecated since 9.1.
+Use Z.coprime_prime_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3567, characters 12-25:
+Warning: Reference rel_prime_sym is deprecated since 9.1.
+Use Z.Symmetric_coprime instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3567, characters 12-25:
+Warning: Reference rel_prime_sym is deprecated since 9.1.
+Use Z.Symmetric_coprime instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3571, characters 12-23:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3571, characters 12-23:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3640, characters 29-44:
+Warning: Notation app_length is deprecated since 8.20.
+Use length_app instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 3640, characters 29-44:
+Warning: Notation app_length is deprecated since 8.20.
+Use length_app instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 3640, characters 29-44:
+Warning: Notation app_length is deprecated since 8.20.
+Use length_app instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 3661, characters 38-48:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3661, characters 38-48:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3684, characters 10-25:
+Warning: Notation seq_length is deprecated since 8.20.
+Use length_seq instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 3684, characters 10-25:
+Warning: Notation seq_length is deprecated since 8.20.
+Use length_seq instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 3684, characters 10-25:
+Warning: Notation seq_length is deprecated since 8.20.
+Use length_seq instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 3718, characters 16-30:
+Warning: Reference prime_divisors is deprecated since 9.1.
+Use Z.divide_prime_r instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3718, characters 16-30:
+Warning: Reference prime_divisors is deprecated since 9.1.
+Use Z.divide_prime_r instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3719, characters 14-24:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3719, characters 14-24:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3720, characters 14-24:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3720, characters 14-24:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3722, characters 14-24:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3722, characters 14-24:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3722, characters 39-49:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3722, characters 39-49:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3723, characters 10-21:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3723, characters 10-21:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3724, characters 10-25:
+Warning: Reference prime_rel_prime is deprecated since 9.1.
+Use Z.coprime_prime_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3724, characters 10-25:
+Warning: Reference prime_rel_prime is deprecated since 9.1.
+Use Z.coprime_prime_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3795, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3795, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3796, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3796, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3797, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 3797, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4152, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4152, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4156, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4156, characters 8-19:
+Warning: Reference Zis_gcd_gcd is deprecated since 9.1. Use Z.gcd instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4158, characters 9-24:
+Warning: Reference prime_rel_prime is deprecated since 9.1.
+Use Z.coprime_prime_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4158, characters 9-24:
+Warning: Reference prime_rel_prime is deprecated since 9.1.
+Use Z.coprime_prime_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4193, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4193, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4213, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4213, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4266, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 4266, characters 40-50:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 5384, characters 14-29:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5384, characters 14-29:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5384, characters 14-29:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5593, characters 37-47:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 5593, characters 37-47:
+Warning: Reference prime_ge_2 is deprecated since 9.1.
+Use Z.prime_ge_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 5824, characters 28-43:
+Warning: Notation app_length is deprecated since 8.20.
+Use length_app instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5824, characters 45-60:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5824, characters 62-77:
+Warning: Notation seq_length is deprecated since 8.20.
+Use length_seq instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5824, characters 28-43:
+Warning: Notation app_length is deprecated since 8.20.
+Use length_app instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5824, characters 28-43:
+Warning: Notation app_length is deprecated since 8.20.
+Use length_app instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5824, characters 45-60:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5824, characters 45-60:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5824, characters 62-77:
+Warning: Notation seq_length is deprecated since 8.20.
+Use length_seq instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 5824, characters 62-77:
+Warning: Notation seq_length is deprecated since 8.20.
+Use length_seq instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 6007, characters 29-40:
+Warning: Notation Nat.mod_mul is deprecated since 8.17.
+Use Div0.mod_mul instead.
+[deprecated-syntactic-definition-since-8.17,deprecated-since-8.17,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 6007, characters 29-40:
+Warning: Notation Nat.mod_mul is deprecated since 8.17.
+Use Div0.mod_mul instead.
+[deprecated-syntactic-definition-since-8.17,deprecated-since-8.17,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 6018, characters 38-50:
+Warning: Notation Nat.mod_same is deprecated since 8.17.
+Use Div0.mod_same instead.
+[deprecated-syntactic-definition-since-8.17,deprecated-since-8.17,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 6018, characters 38-50:
+Warning: Notation Nat.mod_same is deprecated since 8.17.
+Use Div0.mod_same instead.
+[deprecated-syntactic-definition-since-8.17,deprecated-since-8.17,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 6998, characters 38-45:
+Warning: Reference prime_2 is deprecated since 9.1. Use Z.prime_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 6998, characters 38-45:
+Warning: Reference prime_2 is deprecated since 9.1. Use Z.prime_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7085, characters 12-27:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 7085, characters 12-27:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 7085, characters 12-27:
+Warning: Notation map_length is deprecated since 8.20.
+Use length_map instead.
+[deprecated-syntactic-definition-since-8.20,deprecated-since-8.20,deprecated-syntactic-definition,deprecated,default]
+File "./integer.v", line 7134, characters 10-26:
+Warning: Reference Zgcd_1_rel_prime is deprecated since 9.1.
+Use Z.gcd_greatest, Z.gcd_divide_l, or Z.gcd_divide_r
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7134, characters 10-26:
+Warning: Reference Zgcd_1_rel_prime is deprecated since 9.1.
+Use Z.gcd_greatest, Z.gcd_divide_l, or Z.gcd_divide_r
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7134, characters 10-26:
+Warning: Reference Zgcd_1_rel_prime is deprecated since 9.1.
+Use Z.gcd_greatest, Z.gcd_divide_l, or Z.gcd_divide_r
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7136, characters 17-30:
+Warning: Reference rel_prime_sym is deprecated since 9.1.
+Use Z.Symmetric_coprime instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7136, characters 17-30:
+Warning: Reference rel_prime_sym is deprecated since 9.1.
+Use Z.Symmetric_coprime instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7136, characters 38-49:
+Warning: Reference rel_prime_1 is deprecated since 9.1.
+Use Z.coprime_1_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7136, characters 38-49:
+Warning: Reference rel_prime_1 is deprecated since 9.1.
+Use Z.coprime_1_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7138, characters 10-24:
+Warning: Reference rel_prime_mult is deprecated since 9.1.
+Use Z.coprime_mul_r instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7138, characters 10-24:
+Warning: Reference rel_prime_mult is deprecated since 9.1.
+Use Z.coprime_mul_r instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7139, characters 12-25:
+Warning: Reference rel_prime_sym is deprecated since 9.1.
+Use Z.Symmetric_coprime instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7139, characters 12-25:
+Warning: Reference rel_prime_sym is deprecated since 9.1.
+Use Z.Symmetric_coprime instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7139, characters 33-48:
+Warning: Reference prime_rel_prime is deprecated since 9.1.
+Use Z.coprime_prime_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7139, characters 33-48:
+Warning: Reference prime_rel_prime is deprecated since 9.1.
+Use Z.coprime_prime_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7139, characters 56-63:
+Warning: Reference prime_2 is deprecated since 9.1. Use Z.prime_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7139, characters 56-63:
+Warning: Reference prime_2 is deprecated since 9.1. Use Z.prime_2 instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7142, characters 21-34:
+Warning: Reference rel_prime_sym is deprecated since 9.1.
+Use Z.Symmetric_coprime instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7142, characters 21-34:
+Warning: Reference rel_prime_sym is deprecated since 9.1.
+Use Z.Symmetric_coprime instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7142, characters 42-53:
+Warning: Reference rel_prime_1 is deprecated since 9.1.
+Use Z.coprime_1_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7142, characters 42-53:
+Warning: Reference rel_prime_1 is deprecated since 9.1.
+Use Z.coprime_1_l instead.
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7152, characters 10-26:
+Warning: Reference Zgcd_1_rel_prime is deprecated since 9.1.
+Use Z.gcd_greatest, Z.gcd_divide_l, or Z.gcd_divide_r
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7152, characters 10-26:
+Warning: Reference Zgcd_1_rel_prime is deprecated since 9.1.
+Use Z.gcd_greatest, Z.gcd_divide_l, or Z.gcd_divide_r
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7152, characters 10-26:
+Warning: Reference Zgcd_1_rel_prime is deprecated since 9.1.
+Use Z.gcd_greatest, Z.gcd_divide_l, or Z.gcd_divide_r
+[deprecated-reference-since-9.1,deprecated-since-9.1,deprecated-reference,deprecated,default]
+File "./integer.v", line 7469, characters 2-25:
+Error: Found no subterm matching "(?M1528 ^ S ?M1529)%nat"
+in the current goal.
+
+
+All sentences in the detected proof prefix were accepted by rocq repl.
+The compile error may be after that point, or caused by context outside this simplified replay.
+Goal just before the failing sentence:
+---- repl stdout ----
+1 goal
+  
+  a, b, d, k : Z
+  Hk : d = k * Z.gcd a b
+  u, v : Z
+  Hbezout : u * a + v * b = Z.gcd a b
+  ============================
+  a * (u * k) + b * (v * k) = d
+(fun a b d : Z =>
+ conj
+   (fun H : exists x y : Z, a * x + b * y = d =>
+    match H with
+    | ex_intro _ x x0 =>
+        (fun (x1 : Z) (H0 : exists y : Z, a * x1 + b * y = d) =>
+         match H0 with
+         | ex_intro _ x2 x3 =>
+             (fun (y : Z) (Heq : a * x1 + b * y = d) =>
+              eq_ind (a * x1 + b * y) (fun d0 : Z => (Z.gcd a b | d0))
+                (Z.divide_add_r (Z.gcd a b) (a * x1) 
+                   (b * y)
+                   (Z.divide_mul_l (Z.gcd a b) a x1 (Z.gcd_divide_l a b))
+                   (Z.divide_mul_l (Z.gcd a b) b y (Z.gcd_divide_r a b)))
+                d Heq)
+               x2 x3
+         end) x x0
+    end)
+   (fun H : (Z.gcd a b | d) =>
+    match H with
+    | ex_intro _ x x0 =>
+        (fun (k : Z) (Hk : d = k * Z.gcd a b) =>
+         let b0 : Bezout_deprecated a b (Z.gcd a b) :=
+           Zis_gcd_bezout a b (Z.gcd a b) (Zgcd_is_gcd a b) in
+         match b0 with
+         | Bezout_deprecated_intro _ _ _ u v x1 =>
+             (fun (u0 v0 : Z) (Hbezout : u0 * a + v0 * b = Z.gcd a b) =>
+              ex_intro (fun x2 : Z => exists y : Z, a * x2 + b * y = d)
+                (u0 * k)
+                (ex_intro (fun y : Z => a * (u0 * k) + b * y = d) 
+                   (v0 * k) ?Goal@{u:=u0; v:=v0}))
+               u v x1
+         end) x x0
+    end))
+---------------------
