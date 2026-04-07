@@ -1534,3 +1534,88 @@
 - **Dependencies**: `GroupIsomorphic_symm`, `five_gcd_pow2`, `neg_one_gcd_pow2`, `five_pow_pow2_nm2_one`, `neg_one_sq_one_pow2`, `dvd_to_one_mod`, `Zpow_mod_period_Z`, `five_pow_inj_mod`, `five_pow_mod_four`, `znz_gcd_mod_eq`, `znz_gcd_mul_coprime`, `inj_hom_surj_of_eq_order`, `znz_units_pow2_order`, `znz_group_order_n`, `group_order_product`, `pow2_nm2_times2`
 - **Notes**: ⚠️ After `unfold phi; apply sig_eq; simpl`, use `fold N; fold M` to restore set variables (simpl unfolds them). ⚠️ `Z.divide (4 | N)` requires double parens: `assert (H : ((4:Z) | N))`. ⚠️ `Z.divide n m` means `exists k, m = k * n` (witness on LEFT). ⚠️ `Z.mul_1_r` rewrites only one occurrence; use `!Z.mul_1_r` for all. ⚠️ `replace a with (Z.of_nat (Z.to_nat a))` for `five_pow_mod_four`: use `apply Z2Nat.id` (not `symmetry; apply`). ⚠️ `Z.gauss` expects `n | m * p` (m before p); ensure divisibility term matches. ⚠️ `Z.mod_add` for `(a + k*N) mod N = a mod N`: no `Z.add_comm` needed. ⚠️ `injection Heq as Heq` (not `f_equal proj1_sig`) to extract value equality from sigma type equality. ⚠️ `unfold N in Heq` before passing to `five_pow_inj_mod` to match its type.
 - **Date**: 2026-04-06 (implemented 2026-04-06)
+
+---
+
+### `znz_units_gpow_nat_val`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma znz_units_gpow_nat_val : forall (n : nat) (Hn : (1 < n)%nat)
+      (a : carrier (znz_units_group n Hn)) (k : nat),
+    proj1_sig (gpow_nat (znz_units_group n Hn) a k) =
+      Z.pow (proj1_sig a) (Z.of_nat k) mod Z.of_nat n.
+  ```
+- **Proof Strategy**: Induction on k. Base: simpl + Z.mod_small. Step: simpl + rewrite IH + Zmult_mod_idemp_r + Nat2Z.inj_succ + Z.pow_succ_r.
+- **Key Tactics**: `induction k`, `simpl`, `Zmult_mod_idemp_r`, `Nat2Z.inj_succ`, `Z.pow_succ_r`
+- **Dependencies**: `znz_units_group` (Defined)
+- **Notes**: znz_units_group must be Defined (not Qed) for simpl to unfold op.
+- **Date**: 2026-04-08
+
+---
+
+### `one_plus_p_coprime_p`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma one_plus_p_coprime_p : forall (p : nat),
+      Z.gcd (1 + Z.of_nat p) (Z.of_nat p) = 1.
+  ```
+- **Proof Strategy**: Zis_gcd_intro: if d | 1+p and d | p then d | (1+p)-p = 1.
+- **Key Tactics**: `Zgcd_1_rel_prime`, `Zis_gcd_intro`, `Z.divide_sub_r`
+- **Dependencies**: none
+- **Notes**: none
+- **Date**: 2026-04-08
+
+---
+
+### `one_plus_p_coprime_pn`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma one_plus_p_coprime_pn : forall (p n : nat),
+      (1 <= n)%nat -> Z.gcd (1 + Z.of_nat p) (Z.of_nat (p^n)) = 1.
+  ```
+- **Proof Strategy**: Induction on n using rel_prime_mult. Base: one_plus_p_coprime_p. Step: rel_prime_mult with Zgcd_1_rel_prime.
+- **Key Tactics**: `induction n`, `Nat.pow_succ_r'`, `rel_prime_mult`, `rel_prime_sym`, `rel_prime_1`
+- **Dependencies**: `one_plus_p_coprime_p`
+- **Notes**: ⚠️ simpl on rel_prime unfolds it; use rewrite Nat.pow_0_r instead of simpl for base case. ⚠️ rel_prime_1 : rel_prime 1 n (args reversed from what you might expect).
+- **Date**: 2026-04-08
+
+---
+
+### `nat_prime_pow_divisors`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma nat_prime_pow_divisors : forall (p m : nat),
+      prime (Z.of_nat p) -> (2 <= p)%nat ->
+      forall (d : nat), (0 < d)%nat -> Nat.divide d (p^m) ->
+      exists k, (k <= m)%nat /\ (d = p^k)%nat.
+  ```
+- **Proof Strategy**: Induction on m. Base: Nat.divide_1_r. Step: split on Nat.gcd d p = 1 vs ≠ 1. Gauss's lemma for gcd=1 case. prime_divisors for gcd≠1 (p|d case).
+- **Key Tactics**: `induction m`, `Nat.gauss` (explicit args), `prime_divisors`, `Nat.gcd_eq_0`, `Nat2Z.inj_mul`
+- **Dependencies**: `prime_divisors`
+- **Notes**: ⚠️ Nat.divide a b = ∃ k, b = k * a (witness on LEFT). ⚠️ apply Nat.gauss with x provides FIRST arg; use `Nat.gauss n m p args` explicitly. ⚠️ Nat.pow_succ_r' gives p^(S m) = p * p^m (left mul). ⚠️ nlinarith not available; use destruct d' for positivity. ⚠️ ring for nat fails; use Nat.mul_comm. ⚠️ Nat.gcd_eq_0_iff → use Nat.gcd_eq_0.
+- **Date**: 2026-04-08
+
+---
+
+### `one_plus_p_mult_order`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma one_plus_p_mult_order : forall (p n : nat)
+      (Hp2 : (2 <= p)%nat) (Hprime : prime (Z.of_nat p))
+      (Hodd : p <> 2%nat) (Hn : (1 <= n)%nat)
+      (Hpn : (1 < p^n)%nat)
+      (Hm : GroupOrder (znz_units_group (p^n) Hpn) (p^(n-1) * (p-1)))
+      (elem : carrier (znz_units_group (p^n) Hpn))
+      (Helem : proj1_sig elem = (1 + Z.of_nat p) mod Z.of_nat (p^n)),
+      mult_order (znz_units_group (p^n) Hpn) (p^(n-1) * (p-1)) Hm elem = (p^(n-1))%nat.
+  ```
+- **Proof Strategy**: (1) Upper bound: one_plus_p_pow_pk_dvd → gpow(p^(n-1))=e → d|p^(n-1). (2) nat_prime_pow_divisors → d=p^k, k≤n-1. (3) Lower bound (n≥2): one_plus_p_pow_pk_not_dvd → ¬(d|p^(n-2)) → k=n-1. (4) d=p^(n-1).
+- **Key Tactics**: `sig_eq`, `znz_units_gpow_nat_val`, `Z.mod_pow_l`, `dvd_to_one_mod`, `mult_order_divides`, `nat_prime_pow_divisors`, `Z.div_mod`, `linarith`
+- **Dependencies**: `znz_units_gpow_nat_val`, `one_plus_p_pow_pk_dvd`, `one_plus_p_pow_pk_not_dvd`, `nat_prime_pow_divisors`, `mult_order_divides`, `dvd_to_one_mod`
+- **Notes**: ⚠️ All nat expressions in Z_scope need %nat annotation (p^(n-1)%nat, etc.). ⚠️ Hodd : p <> 2%nat (not p <> 2 which parses as Z). ⚠️ Nat.le_or_lt doesn't exist; use assert+lia for case split. ⚠️ Z.of_nat (p^(n-2)) is fine (already wrapped in Z.of_nat).
+- **Date**: 2026-04-08

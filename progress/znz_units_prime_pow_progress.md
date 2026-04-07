@@ -39,7 +39,7 @@
 - [ ] `order_of_power_gcd_general`: mult_order(g^k) = mult_order(g)/gcd(k, mult_order(g))
 - [ ] `lift_prim_root_to_pn`: ∃ g ∈ (Z/p^nZ)* of order p-1
 - [ ] `pnm1_pm1_coprime`: gcd(p^(n-1), p-1) = 1
-- [ ] `one_plus_p_mult_order`: mult_order of (1+p) in (Z/p^nZ)* = p^(n-1)
+- [x] `one_plus_p_mult_order`: mult_order of (1+p) in (Z/p^nZ)* = p^(n-1) [COMPILED ✓ 2026-04-08]
 
 ### Phase 3: 同型写像
 - [ ] `phi_hom_inj`: the map φ(a,b)=h^a·g^b is an injective homomorphism
