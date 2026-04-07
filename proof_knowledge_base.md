@@ -1708,3 +1708,43 @@
 - **Dependencies**: `primitive_root_exists`, `znz_units_gpow_nat_val`, `mult_order_divides`, `mult_order_p_divides`, `gpow_group_order_eq_e`, `order_of_power_gcd_general`, `nat_prime_pow_divisors`, `znz_units_op_comm_gen`
 - **Notes**: Key insight for mod reduction: `Z.divide_pow_same_r` gives p|p^n; then use Z.div_mod arithmetic to get v^d mod p=1 from v^d mod p^n=1 (not Z.mod_mod). `Z.coprime_pow_r` takes `0 <= n` not `0 < n`. The `Nat.mul_divide_cancel_l` cancels (p-1) from (p-1)|d and d|p^(n-1)*(p-1). Hodd param: use `(p <> 2)` (nat, not Z notation issue).
 - **Date**: 2026-04-07
+
+### `znz_units_odd_prime_pow_structure` (THEOREM 1)
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem znz_units_odd_prime_pow_structure :
+    forall (p n : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+           (Hodd : p <> 2%nat) (Hn : (1 <= n)%nat) (Hpn : (1 < p^n)%nat),
+      exists (Hpnm1 : (0 < p^(n-1))%nat) (Hpm1 : (0 < p-1)%nat),
+        znz_units_group (p^n) Hpn ≅ znz_group (p^(n-1)) Hpnm1 ×ₒ znz_group (p-1) Hpm1.
+  ```
+- **Proof Strategy**: Construct φ(a,b) = h^a · g^b mod p^n where h has order p^(n-1) and g has order p-1. Prove Hhom (homomorphism), Hinj (injectivity via Haux/Haux2), Hsurj (surjectivity via inj_hom_surj_of_eq_order).
+- **Key Tactics**: `GroupIsomorphic_symm`, `inj_hom_surj_of_eq_order`, `Zpow_mod_period_Z`, `Z.gauss`, `Nat2Z.inj_lt`, `Z2Nat.id`, `clear - hyps` before lia
+- **Dependencies**: `one_plus_p_mult_order`, `lift_prim_root_to_pn`, `pnm1_pm1_coprime`, `znz_units_gpow_nat_val`, `odd_prime_pow_units_order`, `group_order_product`, `znz_group_order_n`, `mult_order_divides`
+- **Notes**:
+  - ⚠️ Dead end: `rewrite <- Z.pow_add_r by lia` — lia fails on nonlinear side condition `0 <= lo * M`. Fix: explicit `assert Hpow + apply Z.pow_add_r`.
+  - ⚠️ Dead end: `rewrite Z.mul_mod by lia` / `Z.mod_mod by lia` in complex context — hang. Fix: use explicit `HNval_ne0` argument.
+  - ⚠️ Dead end: `rewrite Z.mul_comm, <- Hfact` — Zmult_comm flips to wrong order for `<- Hfact`. Fix: remove Zmult_comm (goal already matches).
+  - Clear ordering for Haux: `clear Hhom Heq phi Hgcdh Hgcdg Heq_val Hhv_a1M Hhv_a2M Hperh Hperg` (h, Hh_cond must NOT be cleared).
+  - `replace X with Y by (... symmetry; apply Z2Nat.id; ...)`: replace generates side goal `X = Y` (reversed from Z2Nat.id). Need `symmetry` before `apply Z2Nat.id`.
+  - `Hdelta_nat_lt`: lia cannot prove `(Z.to_nat (hi-lo) < Qval)%nat`. Fix: `apply (proj2 (Nat2Z.inj_lt _ _)); rewrite (Z2Nat.id delta_Z ...); unfold delta_Z; lia`.
+  - `Admitted.` inside `{ }` tactic braces is invalid vernacular. Use `admit.` (tactic) instead.
+  - Do NOT use heredoc (<<'EOF') to write unicode — `≅` and Japanese chars get mangled. Use Python script with proper UTF-8 string.
+- **Date**: 2026-04-XX
+
+### `znz_units_odd_prime_pow_cyclic` (THEOREM 2)
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem znz_units_odd_prime_pow_cyclic :
+    forall (p n : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+           (Hodd : p <> 2%nat) (Hn : (1 <= n)%nat) (Hpn : (1 < p^n)%nat),
+      exists (Hphi : (0 < p^(n-1) * (p-1))%nat),
+        znz_units_group (p^n) Hpn ≅ znz_group (p^(n-1) * (p-1)) Hphi.
+  ```
+- **Proof Strategy**: Combine Theorem 1 (structure) with `znz_group_product_if_coprime` (CRT) via `GroupIsomorphic_trans` + `GroupIsomorphic_symm`.
+- **Key Tactics**: `GroupIsomorphic_trans`, `GroupIsomorphic_symm`, `destruct ... as`
+- **Dependencies**: `znz_units_odd_prime_pow_structure`, `znz_group_product_if_coprime`, `pnm1_pm1_coprime`, `GroupIsomorphic_trans`, `GroupIsomorphic_symm`
+- **Notes**: Short proof — the main work is in the dependencies.
+- **Date**: 2026-04-XX

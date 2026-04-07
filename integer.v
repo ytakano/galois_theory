@@ -8379,7 +8379,7 @@ Qed.
 
 (** ===================================================================== *)
 (** Phase 2: p-1 位数の元の存在                                          *)
-(** (Existence of an Element of Order p-1 in (Z/p^nZ)*)                 *)
+(** (Existence of an Element of Order p-1 in (Z/p^nZ)^* )               *)
 (** ===================================================================== *)
 
 (** znz_units_group n Hn は可換群（乗算は Z の可換性から）。
@@ -8505,8 +8505,8 @@ Qed.
     よって gcd(p^(n-1), p-1) = 1。 *)
 Lemma pnm1_pm1_coprime :
   forall (p n : nat),
-    prime (Z.of_nat p) -> (1 < p)%nat -> p <> 2 -> (1 <= n)%nat ->
-    Nat.gcd (p^(n-1)) (p-1) = 1.
+    prime (Z.of_nat p) -> (1 < p)%nat -> p <> 2%nat -> (1 <= n)%nat ->
+    Nat.gcd (p^(n-1)) (p-1) = 1%nat.
 Proof.
   intros p n Hprime Hp Hodd Hn.
   remember (Nat.gcd (p^(n-1)) (p-1)) as d eqn:Hd_def.
@@ -8551,7 +8551,7 @@ Qed.
     5. G_elem^(p^k) の位数 = d/gcd(p^k,d) = p-1 (order_of_power_gcd_general)。 *)
 Lemma lift_prim_root_to_pn :
   forall (p n : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
-         (Hodd : p <> 2) (Hn : (1 <= n)%nat) (Hpn : (1 < p^n)%nat)
+         (Hodd : p <> 2%nat) (Hn : (1 <= n)%nat) (Hpn : (1 < p^n)%nat)
          (Hm : GroupOrder (znz_units_group (p^n) Hpn) (p^(n-1) * (p-1))),
     exists g : carrier (znz_units_group (p^n) Hpn),
       mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm g = (p - 1)%nat.
@@ -8624,7 +8624,8 @@ Proof.
     fold v. exact Hvd_p. }
   (* (p-1) | d : mult_order_p g₀ = p-1 かつ mult_order_p g₀ | d *)
   assert (Hpm1_dvd_d : Nat.divide (p-1) d).
-  { apply (proj1 (mult_order_p_divides p Hp Hprime g₀ d)).
+  { rewrite <- Hg₀_ord.
+    apply (proj1 (mult_order_p_divides p Hp Hprime g₀ d)).
     exact Hg₀d_e. }
   (* Lagrange: d | p^(n-1)*(p-1) *)
   assert (Hd_dvd_m : Nat.divide d (p^(n-1)*(p-1))).
@@ -8640,7 +8641,7 @@ Proof.
   assert (Hq_dvd_pnm1 : Nat.divide q (p^(n-1))).
   { apply (proj1 (Nat.mul_divide_cancel_l q (p^(n-1)) (p-1) ltac:(lia))).
     replace ((p-1) * q)%nat with d by lia.
-    replace ((p-1) * p^(n-1))%nat with (p^(n-1)*(p-1))%nat by ring.
+    replace ((p-1) * p^(n-1))%nat with (p^(n-1)*(p-1))%nat by (apply Nat.mul_comm).
     exact Hd_dvd_m. }
   (* q = p^k for some k ≤ n-1 *)
   assert (Hp2 : (2 <= p)%nat) by lia.
@@ -8648,15 +8649,15 @@ Proof.
     as [k_val [Hk_le Hq_eq]].
   (* d = p^k_val * (p-1) *)
   assert (Hd_form : d = (p^k_val * (p-1))%nat).
-  { rewrite Hq_def, Hq_eq. ring. }
+  { rewrite Hq_def, Hq_eq. lia. }
   (* gcd(p^k_val, d) = p^k_val *)
-  assert (Hgcd_pk_d : Nat.gcd (p^k_val) d = p^k_val).
+  assert (Hgcd_pk_d : Nat.gcd (p^k_val) d = (p^k_val)%nat).
   { rewrite Hd_form.
     apply Nat.divide_antisym.
     - apply Nat.gcd_divide_l.
     - apply Nat.gcd_greatest.
       + apply Nat.divide_refl.
-      + exists (p-1). ring. }
+      + exists (p-1)%nat. lia. }
   (* G_elem^(p^k_val) の位数 = d / gcd(p^k_val, d) = p-1 *)
   assert (Hord_pk : mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm
                                 (gpow_nat (znz_units_group (p^n) Hpn) G_elem (p^k_val)) =
@@ -8665,7 +8666,545 @@ Proof.
     fold d.
     rewrite Hgcd_pk_d.
     rewrite Hd_form.
+    rewrite Nat.mul_comm.
     apply Nat.div_mul. lia. }
   exists (gpow_nat (znz_units_group (p^n) Hpn) G_elem (p^k_val)).
   exact Hord_pk.
+Qed.
+
+(* ================================================================= *)
+(*  Phase 3: 同型写像 φ の構成 — znz_group の 2変数 CRT (加)     *)
+(* ================================================================= *)
+
+(** 2変数の中国剰余定理（加法群版）:
+    gcd(m,n)=1 のとき znz_group (m*n) ≅ znz_group m ×ₒ znz_group n。
+    写像 φ(x) = (x mod m, x mod n) が同型写像。
+    証明: crt_exists (全射), crt_unique (単射), znz_mod_mod2_l/m (準同型)。 *)
+Lemma znz_group_product_if_coprime :
+  forall (m n : nat) (Hm : (0 < m)%nat) (Hn : (0 < n)%nat)
+         (Hmn : (0 < m*n)%nat),
+    Nat.gcd m n = 1%nat ->
+    znz_group (m*n) Hmn ≅ znz_group m Hm ×ₒ znz_group n Hn.
+Proof.
+  intros m n Hm Hn Hmn Hgcd.
+  assert (HM : 0 < Z.of_nat m) by lia.
+  assert (HN : 0 < Z.of_nat n) by lia.
+  set (phi := fun (a : carrier (znz_group (m*n) Hmn)) =>
+    ( exist (fun x => 0 <= x < Z.of_nat m)
+            (proj1_sig a mod Z.of_nat m)
+            (Z.mod_pos_bound (proj1_sig a) (Z.of_nat m) HM)
+    , exist (fun x => 0 <= x < Z.of_nat n)
+            (proj1_sig a mod Z.of_nat n)
+            (Z.mod_pos_bound (proj1_sig a) (Z.of_nat n) HN)
+    ) : carrier (znz_group m Hm ×ₒ znz_group n Hn)).
+  exists phi.
+  unfold IsIsomorphism. split; [| split].
+  (* ====== 準同型性 ====== *)
+  - intros [a Ha] [b Hb].
+    unfold phi. simpl.
+    f_equal; apply sig_eq; simpl.
+    + rewrite znz_mod_mod2_l by exact Hm. apply Z.add_mod. lia.
+    + rewrite znz_mod_mod2_m by exact Hn. apply Z.add_mod. lia.
+  (* ====== 単射性 ====== *)
+  - intros [a Ha] [b Hb] Heq.
+    apply sig_eq. simpl.
+    unfold phi in Heq. simpl in Heq.
+    injection Heq as H1 H2.
+    assert (Hmul : Z.of_nat (m * n) = Z.of_nat m * Z.of_nat n).
+    { rewrite Nat2Z.inj_mul. ring. }
+    assert (Ha' : 0 <= a < Z.of_nat m * Z.of_nat n).
+    { rewrite <- Hmul. exact Ha. }
+    assert (Hb' : 0 <= b < Z.of_nat m * Z.of_nat n).
+    { rewrite <- Hmul. exact Hb. }
+    apply crt_unique with (p := m) (q := n).
+    + exact Hgcd.
+    + exact Hm.
+    + exact Hn.
+    + exact Ha'.
+    + exact Hb'.
+    + unfold cong. apply Z.mod_divide. lia.
+      rewrite Zminus_mod, H1, Z.sub_diag. apply Zmod_0_l.
+    + unfold cong. apply Z.mod_divide. lia.
+      rewrite Zminus_mod, H2, Z.sub_diag. apply Zmod_0_l.
+  (* ====== 全射性 ====== *)
+  - intros [[x Hx] [y Hy]].
+    destruct (crt_exists m n x y Hgcd Hm Hn Hx Hy) as [z [Hz [Hzm Hzn]]].
+    assert (Hz_range : 0 <= z < Z.of_nat (m * n)).
+    { rewrite Nat2Z.inj_mul. exact Hz. }
+    exists (exist _ z Hz_range).
+    unfold phi. simpl.
+    f_equal; apply sig_eq; simpl.
+    + exact Hzm.
+    + exact Hzn.
+Qed.
+
+(* ================================================================= *)
+(*  Phase 3: 同型写像 φ の構成 — (Z/p^nZ)* の構造定理               *)
+(* ================================================================= *)
+
+(** (Z/p^nZ)* の構造定理 (奇素数 p, n ≥ 1):
+    (Z/p^nZ)* ≅ Z/p^(n-1)Z ×ₒ Z/(p-1)Z.
+    証明の方針:
+      φ(a, b) = h^a * g^b mod p^n を構成する。
+      h は位数 p^(n-1) の元 (1+p mod p^n)、g は位数 p-1 の元。
+      - 準同型性: Zpow_mod_period_Z と周期条件を使う。
+      - 単射性: gcd(p^(n-1), p-1)=1 を使った 2段階証明。
+      - 全射性: inj_hom_surj_of_eq_order (単射 + 同位数)。 *)
+Theorem znz_units_odd_prime_pow_structure :
+  forall (p n : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (Hodd : p <> 2%nat) (Hn : (1 <= n)%nat) (Hpn : (1 < p^n)%nat),
+    exists (Hpnm1 : (0 < p^(n-1))%nat) (Hpm1 : (0 < p-1)%nat),
+      znz_units_group (p^n) Hpn ≅
+      znz_group (p^(n-1)) Hpnm1 ×ₒ znz_group (p-1) Hpm1.
+Proof.
+  intros p n Hp Hprime Hodd Hn Hpn.
+  assert (Hpnm1 : (0 < p^(n-1))%nat).
+  { apply Nat.lt_le_trans with 1%nat. lia.
+    replace 1%nat with (p^0)%nat at 1 by reflexivity.
+    apply Nat.pow_le_mono_r. lia. lia. }
+  assert (Hpm1 : (0 < p-1)%nat) by lia.
+  exists Hpnm1, Hpm1.
+  apply GroupIsomorphic_symm.
+  (* 定数の設定 *)
+  set (Mval := (p^(n-1))%nat).   (* h の位数 *)
+  set (Qval := (p-1)%nat).        (* g の位数 *)
+  set (Nval := Z.of_nat (p^n)).  (* mod の法 *)
+  assert (HNpos : 0 < Nval) by (unfold Nval; lia).
+  assert (HN1   : 1 < Nval) by (unfold Nval; lia).
+  assert (HMpos : 0 < Z.of_nat Mval) by (unfold Mval; lia).
+  assert (HQpos : 0 < Z.of_nat Qval) by (unfold Qval; lia).
+  (* GroupOrder の取得 *)
+  set (Hm := odd_prime_pow_units_order p n Hp Hprime Hn Hpn
+               : GroupOrder (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1))).
+  (* h の構成: (1+p) mod p^n ∈ (Z/p^nZ)* *)
+  assert (Hh_cond : 0 <= (1 + Z.of_nat p) mod Nval < Nval /\
+                    Z.gcd ((1 + Z.of_nat p) mod Nval) Nval = 1).
+  { split.
+    - apply Z.mod_pos_bound. exact HNpos.
+    - unfold Nval. rewrite znz_gcd_mod_eq by lia.
+      exact (one_plus_p_coprime_pn p n Hn). }
+  set (h := exist _ ((1 + Z.of_nat p) mod Nval) Hh_cond
+              : carrier (znz_units_group (p^n) Hpn)).
+  assert (Hh_val : proj1_sig h = (1 + Z.of_nat p) mod Nval) by reflexivity.
+  (* h の位数: mult_order h = Mval *)
+  assert (Hh_ord : mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm h =
+                   Mval).
+  { unfold Mval.
+    exact (one_plus_p_mult_order p n ltac:(lia) Hprime Hodd Hn Hpn Hm h Hh_val). }
+  (* g の構成: lift_prim_root_to_pn から位数 p-1 の元 *)
+  destruct (lift_prim_root_to_pn p n Hp Hprime Hodd Hn Hpn Hm) as [g Hg_ord_raw].
+  assert (Hg_ord : mult_order (znz_units_group (p^n) Hpn) (p^(n-1)*(p-1)) Hm g =
+                   Qval).
+  { unfold Qval. exact Hg_ord_raw. }
+  (* h^Mval ≡ 1 mod Nval (位数 Mval の条件) *)
+  assert (HhMval_e : gpow_nat (znz_units_group (p^n) Hpn) h Mval =
+                     e (znz_units_group (p^n) Hpn)).
+  { apply (proj2 (mult_order_divides (znz_units_group (p^n) Hpn)
+                    (p^(n-1)*(p-1)) Hm h Mval)).
+    rewrite Hh_ord. apply Nat.divide_refl. }
+  assert (Hperh : (proj1_sig h)^(Z.of_nat Mval) mod Nval = 1).
+  { assert (Hval : proj1_sig (gpow_nat (znz_units_group (p^n) Hpn) h Mval) =
+                   proj1_sig (e (znz_units_group (p^n) Hpn)))
+      by (rewrite HhMval_e; reflexivity).
+    rewrite znz_units_gpow_nat_val in Hval.
+    simpl proj1_sig at 2 in Hval. fold Nval in Hval.
+    exact Hval. }
+  (* g^Qval ≡ 1 mod Nval (Qval の条件) *)
+  assert (HgQval_e : gpow_nat (znz_units_group (p^n) Hpn) g Qval =
+                     e (znz_units_group (p^n) Hpn)).
+  { apply (proj2 (mult_order_divides (znz_units_group (p^n) Hpn)
+                    (p^(n-1)*(p-1)) Hm g Qval)).
+    rewrite Hg_ord. apply Nat.divide_refl. }
+  assert (Hperg : (proj1_sig g)^(Z.of_nat Qval) mod Nval = 1).
+  { assert (Hval : proj1_sig (gpow_nat (znz_units_group (p^n) Hpn) g Qval) =
+                   proj1_sig (e (znz_units_group (p^n) Hpn)))
+      by (rewrite HgQval_e; reflexivity).
+    rewrite znz_units_gpow_nat_val in Hval.
+    simpl proj1_sig at 2 in Hval. fold Nval in Hval.
+    exact Hval. }
+  (* gcd(h_val^a, Nval) = 1 *)
+  assert (Hgcdh : forall a : Z, 0 <= a -> Z.gcd ((proj1_sig h)^a) Nval = 1).
+  { intros a Ha.
+    apply Z.coprime_pow_l; [exact Ha | exact (proj2 Hh_cond)]. }
+  (* gcd(g_val^b, Nval) = 1 *)
+  assert (Hgcdg : forall b : Z, 0 <= b -> Z.gcd ((proj1_sig g)^b) Nval = 1).
+  { intros b Hb.
+    apply Z.coprime_pow_l; [exact Hb | exact (proj2 (proj2_sig g))]. }
+  (* 同型写像 φ(a, b) = h^a * g^b mod Nval *)
+  set (phi :=
+    fun pair : carrier (znz_group Mval Hpnm1 ×ₒ znz_group Qval Hpm1) =>
+    let a := proj1_sig (fst pair) in
+    let b := proj1_sig (snd pair) in
+    exist (fun x : Z => 0 <= x < Nval /\ Z.gcd x Nval = 1)
+      ((proj1_sig h)^a * (proj1_sig g)^b mod Nval)
+      (conj
+        (Z.mod_pos_bound _ Nval HNpos)
+        (eq_trans
+          (znz_gcd_mod_eq (p^n) ltac:(lia) ((proj1_sig h)^a * (proj1_sig g)^b))
+          (znz_gcd_mul_coprime (p^n) ((proj1_sig h)^a) ((proj1_sig g)^b)
+            (Hgcdh a (proj1 (proj2_sig (fst pair))))
+            (Hgcdg b (proj1 (proj2_sig (snd pair)))))))).
+  (* ====== 準同型性 ====== *)
+  assert (Hhom : forall p1 p2 : carrier (znz_group Mval Hpnm1 ×ₒ znz_group Qval Hpm1),
+      phi (op (znz_group Mval Hpnm1 ×ₒ znz_group Qval Hpm1) p1 p2) =
+      op (znz_units_group (p^n) Hpn) (phi p1) (phi p2)).
+  { intros [[a1 Ha1] [b1 Hb1]] [[a2 Ha2] [b2 Hb2]].
+    apply sig_eq.
+    set (hv := proj1_sig h). set (gv := proj1_sig g).
+    (* change を使って両辺を明示的な Z 式に変換する *)
+    change (hv^((a1+a2) mod Z.of_nat Mval) * gv^((b1+b2) mod Z.of_nat Qval) mod Nval =
+            hv^a1*gv^b1 mod Nval * (hv^a2*gv^b2 mod Nval) mod Nval).
+    set (mid := hv^(a1+a2) * gv^(b1+b2) mod Nval).
+    assert (HLHS : hv^((a1+a2) mod Z.of_nat Mval) * gv^((b1+b2) mod Z.of_nat Qval) mod Nval = mid).
+    { unfold mid.
+      rewrite Z.mul_mod at 1 by lia.
+      rewrite <- (Zpow_mod_period_Z hv Nval (Z.of_nat Mval) (a1+a2) HN1 HMpos ltac:(lia) Hperh).
+      rewrite <- (Zpow_mod_period_Z gv Nval (Z.of_nat Qval) (b1+b2) HN1 HQpos ltac:(lia) Hperg).
+      rewrite <- Z.mul_mod by lia. reflexivity. }
+    assert (HRHS : hv^a1*gv^b1 mod Nval * (hv^a2*gv^b2 mod Nval) mod Nval = mid).
+    { unfold mid.
+      rewrite <- Z.mul_mod by lia.
+      rewrite (Z.pow_add_r hv a1 a2 (proj1 Ha1) (proj1 Ha2)).
+      rewrite (Z.pow_add_r gv b1 b2 (proj1 Hb1) (proj1 Hb2)).
+      assert (Hring : hv^a1 * gv^b1 * (hv^a2 * gv^b2) =
+                      hv^a1 * hv^a2 * (gv^b1 * gv^b2)) by ring.
+      rewrite Hring. reflexivity. }
+    rewrite HLHS, HRHS. reflexivity. }
+  (* ====== 単射性 ====== *)
+  assert (Hinj : forall p1 p2 : carrier (znz_group Mval Hpnm1 ×ₒ znz_group Qval Hpm1),
+      phi p1 = phi p2 -> p1 = p2).
+  { intros [[a1 Ha1] [b1 Hb1]] [[a2 Ha2] [b2 Hb2]] Heq.
+    set (hv := proj1_sig h).
+    set (gv := proj1_sig g).
+    assert (HNval_ne0 : Nval <> 0) by (intro H; subst; lia).
+    assert (HMval_ne0 : Z.of_nat Mval <> 0) by lia.
+    assert (Heq_val : hv^a1 * gv^b1 mod Nval = hv^a2 * gv^b2 mod Nval).
+    { apply (f_equal (@proj1_sig Z (fun x => 0 <= x < Nval /\ Z.gcd x Nval = 1))) in Heq.
+      change (hv^a1 * gv^b1 mod Nval = hv^a2 * gv^b2 mod Nval) in Heq.
+      exact Heq. }
+    assert (Hhv_a1M : hv^(a1 * Z.of_nat Mval) mod Nval = 1).
+    { rewrite (Zpow_mod_period_Z hv Nval (Z.of_nat Mval) (a1 * Z.of_nat Mval)
+                HN1 HMpos
+                (Z.mul_nonneg_nonneg a1 (Z.of_nat Mval) (proj1 Ha1) (Nat2Z.is_nonneg Mval))
+                Hperh).
+      rewrite (Z.mod_mul a1 (Z.of_nat Mval) HMval_ne0).
+      rewrite Z.pow_0_r. apply Z.mod_1_l. exact HN1. }
+    assert (Hhv_a2M : hv^(a2 * Z.of_nat Mval) mod Nval = 1).
+    { rewrite (Zpow_mod_period_Z hv Nval (Z.of_nat Mval) (a2 * Z.of_nat Mval)
+                HN1 HMpos
+                (Z.mul_nonneg_nonneg a2 (Z.of_nat Mval) (proj1 Ha2) (Nat2Z.is_nonneg Mval))
+                Hperh).
+      rewrite (Z.mod_mul a2 (Z.of_nat Mval) HMval_ne0).
+      rewrite Z.pow_0_r. apply Z.mod_1_l. exact HN1. }
+    assert (Hgpow_eq : gv^(b1 * Z.of_nat Mval) mod Nval =
+                       gv^(b2 * Z.of_nat Mval) mod Nval).
+    { assert (Hlift : (hv^a1 * gv^b1)^(Z.of_nat Mval) mod Nval =
+                      (hv^a2 * gv^b2)^(Z.of_nat Mval) mod Nval).
+      { transitivity ((hv^a1*gv^b1 mod Nval)^(Z.of_nat Mval) mod Nval).
+        - symmetry. exact (Z.mod_pow_l (hv^a1*gv^b1) (Z.of_nat Mval) Nval).
+        - transitivity ((hv^a2*gv^b2 mod Nval)^(Z.of_nat Mval) mod Nval).
+          + rewrite Heq_val. reflexivity.
+          + exact (Z.mod_pow_l (hv^a2*gv^b2) (Z.of_nat Mval) Nval). }
+      rewrite Z.pow_mul_l, Z.pow_mul_l in Hlift.
+      rewrite <- (Z.pow_mul_r hv a1 (Z.of_nat Mval) (proj1 Ha1) (Nat2Z.is_nonneg Mval)) in Hlift.
+      rewrite <- (Z.pow_mul_r gv b1 (Z.of_nat Mval) (proj1 Hb1) (Nat2Z.is_nonneg Mval)) in Hlift.
+      rewrite <- (Z.pow_mul_r hv a2 (Z.of_nat Mval) (proj1 Ha2) (Nat2Z.is_nonneg Mval)) in Hlift.
+      rewrite <- (Z.pow_mul_r gv b2 (Z.of_nat Mval) (proj1 Hb2) (Nat2Z.is_nonneg Mval)) in Hlift.
+      assert (H1 : hv^(a1 * Z.of_nat Mval) * gv^(b1 * Z.of_nat Mval) mod Nval =
+                   gv^(b1 * Z.of_nat Mval) mod Nval).
+      { rewrite (Z.mul_mod (hv^(a1*Z.of_nat Mval)) (gv^(b1*Z.of_nat Mval)) Nval HNval_ne0).
+        rewrite Hhv_a1M, Z.mul_1_l. apply Z.mod_mod. exact HNval_ne0. }
+      assert (H2 : hv^(a2 * Z.of_nat Mval) * gv^(b2 * Z.of_nat Mval) mod Nval =
+                   gv^(b2 * Z.of_nat Mval) mod Nval).
+      { rewrite (Z.mul_mod (hv^(a2*Z.of_nat Mval)) (gv^(b2*Z.of_nat Mval)) Nval HNval_ne0).
+        rewrite Hhv_a2M, Z.mul_1_l. apply Z.mod_mod. exact HNval_ne0. }
+      rewrite H1, H2 in Hlift. exact Hlift. }
+    assert (Hbb : b1 = b2).
+    { assert (Haux : forall (lo hi : Z), 0 <= lo -> 0 <= hi ->
+          lo < Z.of_nat Qval -> hi < Z.of_nat Qval ->
+          gv^(lo * Z.of_nat Mval) mod Nval = gv^(hi * Z.of_nat Mval) mod Nval ->
+          lo = hi).
+      { (* Clear power-term hypotheses to prevent lia hangs *)
+        clear Hhom Heq phi Hgcdh Hgcdg Heq_val Hhv_a1M Hhv_a2M Hperh Hperg.
+        intros lo hi Hlo_nn Hhi_nn Hlo_lt Hhi_lt Heq_gpow.
+        destruct (Z.lt_trichotomy lo hi) as [Hlt | [Heqa | Hgt]]; [| exact Heqa |].
+        - exfalso.
+          set (delta_Z := hi - lo).
+          assert (Hdelta_pos : 0 < delta_Z) by
+            (unfold delta_Z; clear - Hlt; lia).
+          assert (HN_dvd_diff : (Nval | gv^(hi * Z.of_nat Mval) - gv^(lo * Z.of_nat Mval))).
+          { exists (gv^(hi*Z.of_nat Mval)/Nval - gv^(lo*Z.of_nat Mval)/Nval).
+            pose proof (Z.div_mod (gv^(hi*Z.of_nat Mval)) Nval HNval_ne0) as H1.
+            pose proof (Z.div_mod (gv^(lo*Z.of_nat Mval)) Nval HNval_ne0) as H2.
+            clear - H1 H2 Heq_gpow. lia. }
+          assert (Hfact : gv^(hi*Z.of_nat Mval) - gv^(lo*Z.of_nat Mval) =
+                          gv^(lo*Z.of_nat Mval) * (gv^(delta_Z * Z.of_nat Mval) - 1)).
+          { assert (Hpow : gv^(hi * Z.of_nat Mval) =
+                           gv^(lo * Z.of_nat Mval) * gv^(delta_Z * Z.of_nat Mval)).
+            { assert (Heq_add : hi * Z.of_nat Mval = lo * Z.of_nat Mval + delta_Z * Z.of_nat Mval)
+                by (unfold delta_Z; ring).
+              rewrite Heq_add. apply Z.pow_add_r.
+              - apply Z.mul_nonneg_nonneg; [exact Hlo_nn | apply Nat2Z.is_nonneg].
+              - apply Z.mul_nonneg_nonneg;
+                  [exact (Z.lt_le_incl 0 delta_Z Hdelta_pos) | apply Nat2Z.is_nonneg]. }
+            rewrite Hpow. ring. }
+          assert (HN_dvd_delta : (Nval | gv^(delta_Z * Z.of_nat Mval) - 1)).
+          { apply Z.gauss with (gv^(lo * Z.of_nat Mval)).
+            - rewrite <- Hfact. exact HN_dvd_diff.
+            - rewrite Z.gcd_comm. apply Z.coprime_pow_l.
+              + apply Z.mul_nonneg_nonneg;
+                  [exact Hlo_nn | apply Nat2Z.is_nonneg].
+              + exact (proj2 (proj2_sig g)). }
+          assert (Hgv_one : gv^(delta_Z * Z.of_nat Mval) mod Nval = 1).
+          { apply dvd_to_one_mod; [exact HN1 | exact HN_dvd_delta]. }
+          set (delta_nat := Z.to_nat delta_Z).
+          assert (Hdelta_nat_pos : (0 < delta_nat)%nat).
+          { unfold delta_nat.
+            clear Heq_gpow HN_dvd_diff Hfact HN_dvd_delta Hgv_one.
+            clear - Hdelta_pos. lia. }
+          assert (Hdelta_nat_lt : (delta_nat < Qval)%nat).
+          { apply (proj2 (Nat2Z.inj_lt _ _)).
+            unfold delta_nat.
+            rewrite (Z2Nat.id delta_Z (Z.lt_le_incl 0 delta_Z Hdelta_pos)).
+            unfold delta_Z. clear - Hhi_lt Hlo_nn. lia. }
+          assert (Hgpow_e : gpow_nat (znz_units_group (p^n) Hpn) g (delta_nat * Mval) =
+                            e (znz_units_group (p^n) Hpn)).
+          { apply sig_eq. rewrite znz_units_gpow_nat_val.
+            simpl proj1_sig. fold gv. fold Nval.
+            rewrite Nat2Z.inj_mul.
+            replace (Z.of_nat delta_nat) with delta_Z
+              by (unfold delta_nat; symmetry; apply Z2Nat.id;
+                  exact (Z.lt_le_incl 0 delta_Z Hdelta_pos)).
+            exact Hgv_one. }
+          pose proof (proj1 (mult_order_divides (znz_units_group (p^n) Hpn)
+                               (p^(n-1)*(p-1)) Hm g (delta_nat * Mval)) Hgpow_e)
+            as HQ_dvd_delta_M.
+          rewrite Hg_ord in HQ_dvd_delta_M.
+          assert (HQ_dvd_delta : Nat.divide Qval delta_nat).
+          { apply Nat.gauss with Mval.
+            - rewrite Nat.mul_comm. exact HQ_dvd_delta_M.
+            - unfold Qval, Mval. rewrite Nat.gcd_comm.
+              exact (pnm1_pm1_coprime p n Hprime Hp Hodd Hn). }
+          destruct HQ_dvd_delta as [k Hk].
+          clear - Hk Hdelta_nat_pos Hdelta_nat_lt. destruct k; lia.
+        - exfalso.
+          set (delta_Z := lo - hi).
+          assert (Hdelta_pos : 0 < delta_Z) by
+            (unfold delta_Z; clear - Hgt; lia).
+          assert (HN_dvd_diff : (Nval | gv^(lo * Z.of_nat Mval) - gv^(hi * Z.of_nat Mval))).
+          { exists (gv^(lo*Z.of_nat Mval)/Nval - gv^(hi*Z.of_nat Mval)/Nval).
+            pose proof (Z.div_mod (gv^(lo*Z.of_nat Mval)) Nval HNval_ne0) as H1.
+            pose proof (Z.div_mod (gv^(hi*Z.of_nat Mval)) Nval HNval_ne0) as H2.
+            clear - H1 H2 Heq_gpow. lia. }
+          assert (Hfact : gv^(lo*Z.of_nat Mval) - gv^(hi*Z.of_nat Mval) =
+                          gv^(hi*Z.of_nat Mval) * (gv^(delta_Z * Z.of_nat Mval) - 1)).
+          { assert (Hpow : gv^(lo * Z.of_nat Mval) =
+                           gv^(hi * Z.of_nat Mval) * gv^(delta_Z * Z.of_nat Mval)).
+            { assert (Heq_add : lo * Z.of_nat Mval = hi * Z.of_nat Mval + delta_Z * Z.of_nat Mval)
+                by (unfold delta_Z; ring).
+              rewrite Heq_add. apply Z.pow_add_r.
+              - apply Z.mul_nonneg_nonneg; [exact Hhi_nn | apply Nat2Z.is_nonneg].
+              - apply Z.mul_nonneg_nonneg;
+                  [exact (Z.lt_le_incl 0 delta_Z Hdelta_pos) | apply Nat2Z.is_nonneg]. }
+            rewrite Hpow. ring. }
+          assert (HN_dvd_delta : (Nval | gv^(delta_Z * Z.of_nat Mval) - 1)).
+          { apply Z.gauss with (gv^(hi * Z.of_nat Mval)).
+            - rewrite <- Hfact. exact HN_dvd_diff.
+            - rewrite Z.gcd_comm. apply Z.coprime_pow_l.
+              + apply Z.mul_nonneg_nonneg;
+                  [exact Hhi_nn | apply Nat2Z.is_nonneg].
+              + exact (proj2 (proj2_sig g)). }
+          assert (Hgv_one : gv^(delta_Z * Z.of_nat Mval) mod Nval = 1).
+          { apply dvd_to_one_mod; [exact HN1 | exact HN_dvd_delta]. }
+          set (delta_nat := Z.to_nat delta_Z).
+          assert (Hdelta_nat_pos : (0 < delta_nat)%nat).
+          { unfold delta_nat.
+            clear Heq_gpow HN_dvd_diff Hfact HN_dvd_delta Hgv_one.
+            clear - Hdelta_pos. lia. }
+          assert (Hdelta_nat_lt : (delta_nat < Qval)%nat).
+          { apply (proj2 (Nat2Z.inj_lt _ _)).
+            unfold delta_nat.
+            rewrite (Z2Nat.id delta_Z (Z.lt_le_incl 0 delta_Z Hdelta_pos)).
+            unfold delta_Z. clear - Hlo_lt Hhi_nn. lia. }
+          assert (Hgpow_e : gpow_nat (znz_units_group (p^n) Hpn) g (delta_nat * Mval) =
+                            e (znz_units_group (p^n) Hpn)).
+          { apply sig_eq. rewrite znz_units_gpow_nat_val.
+            simpl proj1_sig. fold gv. fold Nval.
+            rewrite Nat2Z.inj_mul.
+            replace (Z.of_nat delta_nat) with delta_Z
+              by (unfold delta_nat; symmetry; apply Z2Nat.id;
+                  exact (Z.lt_le_incl 0 delta_Z Hdelta_pos)).
+            exact Hgv_one. }
+          pose proof (proj1 (mult_order_divides (znz_units_group (p^n) Hpn)
+                               (p^(n-1)*(p-1)) Hm g (delta_nat * Mval)) Hgpow_e)
+            as HQ_dvd_delta_M.
+          rewrite Hg_ord in HQ_dvd_delta_M.
+          assert (HQ_dvd_delta : Nat.divide Qval delta_nat).
+          { apply Nat.gauss with Mval.
+            - rewrite Nat.mul_comm. exact HQ_dvd_delta_M.
+            - unfold Qval, Mval. rewrite Nat.gcd_comm.
+              exact (pnm1_pm1_coprime p n Hprime Hp Hodd Hn). }
+          destruct HQ_dvd_delta as [k Hk].
+          clear - Hk Hdelta_nat_pos Hdelta_nat_lt. destruct k; lia. }
+      exact (Haux b1 b2 (proj1 Hb1) (proj1 Hb2) (proj2 Hb1) (proj2 Hb2)
+               Hgpow_eq). }
+    subst b2.
+    assert (Haa : a1 = a2).
+    { assert (HN_dvd_hv : (Nval | hv^a1 - hv^a2)).
+      { assert (HN_dvd_diff : (Nval | hv^a1 * gv^b1 - hv^a2 * gv^b1)).
+        { exists (hv^a1 * gv^b1 / Nval - hv^a2 * gv^b1 / Nval).
+          pose proof (Z.div_mod (hv^a1 * gv^b1) Nval HNval_ne0) as H1.
+          pose proof (Z.div_mod (hv^a2 * gv^b1) Nval HNval_ne0) as H2.
+          clear - H1 H2 Heq_val. lia. }
+        apply Z.gauss with (gv^b1).
+        - replace (gv^b1 * (hv^a1 - hv^a2)) with
+                  (hv^a1 * gv^b1 - hv^a2 * gv^b1) by ring.
+          exact HN_dvd_diff.
+        - rewrite Z.gcd_comm. apply Z.coprime_pow_l;
+            [exact (proj1 Hb1) | exact (proj2 (proj2_sig g))]. }
+      assert (Haux2 : forall (lo hi : Z), 0 <= lo -> 0 <= hi ->
+          lo < Z.of_nat Mval -> hi < Z.of_nat Mval ->
+          (Nval | hv^lo - hv^hi) -> lo = hi).
+      { (* Clear power-term hypotheses to prevent lia hangs *)
+        clear Hhom Heq phi Hgcdh Hgcdg Heq_val Hhv_a1M Hhv_a2M Hgpow_eq Hperg.
+        intros lo hi Hlo_nn Hhi_nn Hlo_lt Hhi_lt HN_dvd.
+        destruct (Z.lt_trichotomy lo hi) as [Hlt | [Heqa | Hgt]]; [| exact Heqa |].
+        - exfalso.
+          set (alpha_Z := hi - lo).
+          assert (Halpha_pos : 0 < alpha_Z) by
+            (unfold alpha_Z; clear - Hlt; lia).
+          assert (HN_dvd_pos : (Nval | hv^hi - hv^lo)).
+          { destruct HN_dvd as [k Hk]. exists (-k). lia. }
+          assert (Hfact : hv^hi - hv^lo = hv^lo * (hv^alpha_Z - 1)).
+          { assert (Hpow : hv^hi = hv^lo * hv^alpha_Z).
+            { assert (Heq_add : hi = lo + alpha_Z) by (unfold alpha_Z; ring).
+              rewrite Heq_add. apply Z.pow_add_r;
+                [exact Hlo_nn | exact (Z.lt_le_incl 0 alpha_Z Halpha_pos)]. }
+            rewrite Hpow. ring. }
+          assert (HN_dvd_alpha : (Nval | hv^alpha_Z - 1)).
+          { apply Z.gauss with (hv^lo).
+            - rewrite <- Hfact. exact HN_dvd_pos.
+            - rewrite Z.gcd_comm. apply Z.coprime_pow_l;
+                [exact Hlo_nn | exact (proj2 Hh_cond)]. }
+          assert (Hhv_one : hv^alpha_Z mod Nval = 1).
+          { apply dvd_to_one_mod; [exact HN1 | exact HN_dvd_alpha]. }
+          set (alpha_nat := Z.to_nat alpha_Z).
+          assert (Halpha_nat_pos : (0 < alpha_nat)%nat).
+          { unfold alpha_nat.
+            clear HN_dvd HN_dvd_pos Hfact HN_dvd_alpha Hhv_one.
+            clear - Halpha_pos. lia. }
+          assert (Halpha_nat_lt : (alpha_nat < Mval)%nat).
+          { apply (proj2 (Nat2Z.inj_lt _ _)).
+            unfold alpha_nat.
+            rewrite (Z2Nat.id alpha_Z (Z.lt_le_incl 0 alpha_Z Halpha_pos)).
+            unfold alpha_Z. clear - Hhi_lt Hlo_nn. lia. }
+          assert (Hhpow_e : gpow_nat (znz_units_group (p^n) Hpn) h alpha_nat =
+                            e (znz_units_group (p^n) Hpn)).
+          { apply sig_eq. rewrite znz_units_gpow_nat_val.
+            simpl proj1_sig. fold hv. fold Nval.
+            replace (Z.of_nat alpha_nat) with alpha_Z
+              by (unfold alpha_nat; symmetry; apply Z2Nat.id;
+                  exact (Z.lt_le_incl 0 alpha_Z Halpha_pos)).
+            exact Hhv_one. }
+          pose proof (proj1 (mult_order_divides (znz_units_group (p^n) Hpn)
+                               (p^(n-1)*(p-1)) Hm h alpha_nat) Hhpow_e)
+            as HM_dvd_alpha.
+          rewrite Hh_ord in HM_dvd_alpha.
+          destruct HM_dvd_alpha as [k Hk].
+          clear - Hk Halpha_nat_pos Halpha_nat_lt. destruct k; lia.
+        - exfalso.
+          set (alpha_Z := lo - hi).
+          assert (Halpha_pos : 0 < alpha_Z) by
+            (unfold alpha_Z; clear - Hgt; lia).
+          assert (Hfact : hv^lo - hv^hi = hv^hi * (hv^alpha_Z - 1)).
+          { assert (Hpow : hv^lo = hv^hi * hv^alpha_Z).
+            { assert (Heq_add : lo = hi + alpha_Z) by (unfold alpha_Z; ring).
+              rewrite Heq_add. apply Z.pow_add_r;
+                [exact Hhi_nn | exact (Z.lt_le_incl 0 alpha_Z Halpha_pos)]. }
+            rewrite Hpow. ring. }
+          assert (HN_dvd_alpha : (Nval | hv^alpha_Z - 1)).
+          { apply Z.gauss with (hv^hi).
+            - rewrite <- Hfact. exact HN_dvd.
+            - rewrite Z.gcd_comm. apply Z.coprime_pow_l;
+                [exact Hhi_nn | exact (proj2 Hh_cond)]. }
+          assert (Hhv_one : hv^alpha_Z mod Nval = 1).
+          { apply dvd_to_one_mod; [exact HN1 | exact HN_dvd_alpha]. }
+          set (alpha_nat := Z.to_nat alpha_Z).
+          assert (Halpha_nat_pos : (0 < alpha_nat)%nat).
+          { unfold alpha_nat.
+            clear HN_dvd Hfact HN_dvd_alpha Hhv_one.
+            clear - Halpha_pos. lia. }
+          assert (Halpha_nat_lt : (alpha_nat < Mval)%nat).
+          { apply (proj2 (Nat2Z.inj_lt _ _)).
+            unfold alpha_nat.
+            rewrite (Z2Nat.id alpha_Z (Z.lt_le_incl 0 alpha_Z Halpha_pos)).
+            unfold alpha_Z. clear - Hlo_lt Hhi_nn. lia. }
+          assert (Hhpow_e : gpow_nat (znz_units_group (p^n) Hpn) h alpha_nat =
+                            e (znz_units_group (p^n) Hpn)).
+          { apply sig_eq. rewrite znz_units_gpow_nat_val.
+            simpl proj1_sig. fold hv. fold Nval.
+            replace (Z.of_nat alpha_nat) with alpha_Z
+              by (unfold alpha_nat; symmetry; apply Z2Nat.id;
+                  exact (Z.lt_le_incl 0 alpha_Z Halpha_pos)).
+            exact Hhv_one. }
+          pose proof (proj1 (mult_order_divides (znz_units_group (p^n) Hpn)
+                               (p^(n-1)*(p-1)) Hm h alpha_nat) Hhpow_e)
+            as HM_dvd_alpha.
+          rewrite Hh_ord in HM_dvd_alpha.
+          destruct HM_dvd_alpha as [k Hk].
+          clear - Hk Halpha_nat_pos Halpha_nat_lt. destruct k; lia. }
+      exact (Haux2 a1 a2 (proj1 Ha1) (proj1 Ha2)
+               (proj2 Ha1) (proj2 Ha2)
+               HN_dvd_hv). }
+    subst a2.
+    f_equal; apply sig_eq; reflexivity. }
+
+  (* ====== 全射性 ====== *)
+  exists phi. split; [| split].
+  - exact Hhom.
+  - exact Hinj.
+  - assert (HordG : GroupOrder
+        (znz_group Mval Hpnm1 ×ₒ znz_group Qval Hpm1)
+        (Mval * Qval)%nat).
+    { apply group_order_product.
+      - exact (znz_group_order_n Mval Hpnm1).
+      - exact (znz_group_order_n Qval Hpm1). }
+    assert (HMQ_eq : (Mval * Qval)%nat = (p^(n-1) * (p-1))%nat).
+    { unfold Mval, Qval. reflexivity. }
+    rewrite HMQ_eq in HordG.
+    exact (inj_hom_surj_of_eq_order
+      (znz_group Mval Hpnm1 ×ₒ znz_group Qval Hpm1)
+      (znz_units_group (p^n) Hpn)
+      (p^(n-1) * (p-1))%nat
+      phi Hhom Hinj HordG Hm).
+Qed.
+
+(* ======================================================
+   (Z/p^nZ)* の巡回性
+   - 奇素数 p, n ≥ 1 に (Z/p^nZ)* ≅ Z/(p^(n-1)*(p-1))Z
+   - 証明: Theorem 1 の ≅ と znz_group_product_if_coprime の合成
+   ====================================================== *)
+Theorem znz_units_odd_prime_pow_cyclic :
+  forall (p n : nat) (Hp : (1 < p)%nat) (Hprime : prime (Z.of_nat p))
+         (Hodd : p <> 2%nat) (Hn : (1 <= n)%nat) (Hpn : (1 < p^n)%nat),
+    exists (Hphi : (0 < p^(n-1) * (p-1))%nat),
+      znz_units_group (p^n) Hpn ≅ znz_group (p^(n-1) * (p-1)) Hphi.
+Proof.
+  intros p n Hp Hprime Hodd Hn Hpn.
+  assert (Hpnm1 : (0 < p^(n-1))%nat).
+  { apply Nat.lt_le_trans with 1%nat. lia.
+    replace 1%nat with (p^0)%nat at 1 by reflexivity.
+    apply Nat.pow_le_mono_r; lia. }
+  assert (Hpm1 : (0 < p-1)%nat) by lia.
+  assert (Hphi : (0 < p^(n-1) * (p-1))%nat) by (apply Nat.mul_pos_pos; assumption).
+  exists Hphi.
+  destruct (znz_units_odd_prime_pow_structure p n Hp Hprime Hodd Hn Hpn)
+    as [Hpnm1' [Hpm1' Hiso1]].
+  assert (Hgcd : Nat.gcd (p^(n-1)) (p-1) = 1%nat)
+    by exact (pnm1_pm1_coprime p n Hprime Hp Hodd Hn).
+  pose proof (znz_group_product_if_coprime (p^(n-1)) (p-1) Hpnm1' Hpm1' Hphi Hgcd)
+    as Hiso2.
+  apply (GroupIsomorphic_trans _ (znz_group (p^(n-1)) Hpnm1' ×ₒ znz_group (p-1) Hpm1')).
+  - exact Hiso1.
+  - exact (GroupIsomorphic_symm _ _ Hiso2).
 Qed.

@@ -1,9 +1,9 @@
 # Proof Progress: znz_units_prime_pow_structure / cyclic
 
 ## Status Overview
-- Overall: In Progress
-- Complete Lemmas: 23/26+ (Phase 0 + Phase 1 + Phase 2 complete)
-- Unproven (`Admitted`): Phase 3-4 lemmas still needed
+- Overall: **Complete** (2026-04-XX)
+- Complete Lemmas: All (Phase 0–4)
+- Unproven (`Admitted`): none
 - Failed/Abandoned Items: none
 
 ## Completed Lemmas
@@ -40,11 +40,13 @@
 - `pnm1_pm1_coprime`: gcd(p^(n-1), p-1) = 1 for odd prime p, n≥1 [COMPILED ✓]
 - `lift_prim_root_to_pn`: ∃ g ∈ (Z/p^nZ)* of order p-1 [COMPILED ✓]
 
+### Phase 3 (complete — 2026-04-XX)
+- `znz_units_odd_prime_pow_structure` (THEOREM 1): (Z/p^nZ)* ≅ Z/p^(n-1)Z × Z/(p-1)Z [COMPILED ✓]
+  - Hinj proof fixed: Z.mul_comm removal, symmetry before Z2Nat.id, Nat2Z.inj_lt for delta_nat, clear to prevent lia hangs
+
+### Phase 4 (complete — 2026-04-XX)
+- `znz_units_odd_prime_pow_cyclic` (THEOREM 2): (Z/p^nZ)* ≅ Z/(p^(n-1)*(p-1))Z [COMPILED ✓]
+  - Uses: znz_units_odd_prime_pow_structure + znz_group_product_if_coprime + pnm1_pm1_coprime + GroupIsomorphic_trans + GroupIsomorphic_symm
+
 ## TODO
-
-### Phase 3: 同型写像
-- [ ] `phi_hom_inj`: the map φ(a,b)=h^a·g^b is an injective homomorphism
-- [ ] `znz_units_odd_prime_pow_structure` (THEOREM 1)
-
-### Phase 4: 巡回性
-- [ ] `znz_units_odd_prime_pow_cyclic` (THEOREM 2)
+(none — all goals complete)
