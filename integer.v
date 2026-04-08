@@ -9208,3 +9208,251 @@ Proof.
   - exact Hiso1.
   - exact (GroupIsomorphic_symm _ _ Hiso2).
 Qed.
+
+(* ======================================================
+   巡回群の直積述語と既約剰余類群の構造定理
+   ====================================================== *)
+
+(** 巡回群の直積述語 (Direct Product of Cyclic Groups):
+    群 G が巡回群の直積であるとは:
+      - G 自体が巡回群 (CyclicGroup) である、または
+      - G = H ×ₒ K で H, K ともに巡回群の直積である、または
+      - G ≅ H で H が巡回群の直積である。  *)
+Inductive IsCyclicProduct : Group -> Prop :=
+  | ICP_cyclic  : forall C : CyclicGroup, IsCyclicProduct C
+  | ICP_product : forall G H : Group,
+      IsCyclicProduct G -> IsCyclicProduct H ->
+      IsCyclicProduct (G ×ₒ H)
+  | ICP_iso     : forall G H : Group,
+      G ≅ H -> IsCyclicProduct H -> IsCyclicProduct G.
+
+(** znz_group n Hn は IsCyclicProduct:
+    znz_cyclic_group n Hn が CyclicGroup を与えるので ICP_cyclic を適用できる。  *)
+Lemma icp_znz_group : forall (n : nat) (Hn : (0 < n)%nat),
+  IsCyclicProduct (znz_group n Hn).
+Proof.
+  intros n Hn.
+  exact (ICP_cyclic (znz_cyclic_group n Hn)).
+Qed.
+
+(** (Z/2Z)* の位数は 1:
+    euler_phi(2) = 1 と euler_phi_group_order から導く。  *)
+Lemma znz_units_2_order : forall (H2 : (1 < 2)%nat),
+  GroupOrder (znz_units_group 2 H2) 1.
+Proof.
+  intro H2.
+  assert (Hphi : euler_phi 2 = 1%nat) by (compute; reflexivity).
+  rewrite <- Hphi. apply euler_phi_group_order.
+Qed.
+
+(** 位数 1 の群は IsCyclicProduct:
+    Fin.t 1 への全単射より全元が単位元に一致 → e が生成元 → 巡回群。  *)
+Lemma group_order_1_is_cyclic : forall (G : Group),
+  GroupOrder G 1 -> IsCyclicProduct G.
+Proof.
+  intros G [f [Hinj _]].
+  assert (Honly_e : forall x : carrier G, x = e G).
+  { intro x. apply Hinj.
+    apply (Fin.caseS' (f x)).
+    - apply (Fin.caseS' (f (e G))).
+      + reflexivity.
+      + intro j. exfalso. exact (Fin.case0 (fun _ => False) j).
+    - intro j. exfalso. exact (Fin.case0 (fun _ => False) j). }
+  assert (HCYC : forall x : carrier G, exists n : Z, gpow G (e G) n = x).
+  { intro x. exists 0%Z. rewrite (Honly_e x). reflexivity. }
+  exact (ICP_cyclic {|
+    cyclic_group := G;
+    generator := e G;
+    cyclic_property := HCYC |}).
+Qed.
+
+(** (Z/2^k Z)* は IsCyclicProduct (k >= 1):
+    k=1 は位数 1 (trivial), k>=2 は znz_units_pow2_structure を使う。  *)
+Lemma znz_units_pow2_is_cyclic_product :
+  forall (k : nat) (Hk : (1 <= k)%nat)
+         (H2k : (1 < 2^k)%nat),
+    IsCyclicProduct (znz_units_group (2^k) H2k).
+Proof.
+  intros k Hk H2k.
+  destruct k as [|k']. { lia. }
+  destruct k' as [|k''].
+  - (* k = 1: 2^1 = 2 *)
+    change (2^1)%nat with 2%nat in H2k |- *.
+    exact (group_order_1_is_cyclic _ (znz_units_2_order H2k)).
+  - (* k = S(S k'') >= 2 *)
+    set (n := S (S k'')).
+    assert (Hn : (2 <= n)%nat) by (unfold n; lia).
+    assert (Hn2 : (0 < 2^(n-2))%nat).
+    { apply Nat.lt_le_trans with 1%nat. lia.
+      replace (1%nat) with (2^0)%nat at 1 by reflexivity.
+      apply Nat.pow_le_mono_r; lia. }
+    apply (ICP_iso _ (znz_group (2^(n-2)) Hn2 ×ₒ znz_group 2 (Nat.lt_0_succ 1))).
+    + exact (znz_units_pow2_structure n Hn H2k Hn2).
+    + apply ICP_product.
+      * exact (icp_znz_group (2^(n-2)) Hn2).
+      * exact (icp_znz_group 2 (Nat.lt_0_succ 1)).
+Qed.
+
+(** (Z/p^k Z)* は IsCyclicProduct (奇素数 p, k >= 1):
+    znz_units_odd_prime_pow_cyclic で (Z/p^kZ)* ≅ Z/(phi)Z を得て ICP_iso を適用。  *)
+Lemma znz_units_odd_prime_pow_is_cyclic_product :
+  forall (p k : nat) (Hp : (1 < p)%nat)
+         (Hprime : prime (Z.of_nat p)) (Hodd : p <> 2%nat)
+         (Hk : (1 <= k)%nat) (Hpk : (1 < p^k)%nat),
+    IsCyclicProduct (znz_units_group (p^k) Hpk).
+Proof.
+  intros p k Hp Hprime Hodd Hk Hpk.
+  destruct (znz_units_odd_prime_pow_cyclic p k Hp Hprime Hodd Hk Hpk) as [Hphi Hiso].
+  exact (ICP_iso _ (znz_group _ Hphi) Hiso (icp_znz_group _ Hphi)).
+Qed.
+
+(** 素数冪 (Z/p^k Z)* は IsCyclicProduct (任意の素数 p, k >= 1):
+    p=2 と p が奇素数の場合に場合分け。  *)
+Lemma znz_units_prime_pow_is_cyclic_product :
+  forall (p k : nat) (Hprime : prime (Z.of_nat p))
+         (Hk : (1 <= k)%nat) (Hpk : (1 < p^k)%nat),
+    IsCyclicProduct (znz_units_group (p^k) Hpk).
+Proof.
+  intros p k Hprime Hk Hpk.
+  assert (Hp : (1 < p)%nat) by (apply prime_ge_2 in Hprime; lia).
+  destruct (Nat.eq_dec p 2) as [Hpeq2 | Hpne2].
+  - subst p. exact (znz_units_pow2_is_cyclic_product k Hk Hpk).
+  - exact (znz_units_odd_prime_pow_is_cyclic_product p k Hp Hprime Hpne2 Hk Hpk).
+Qed.
+
+(** 補助補題: 任意の n > 1 は素数因子を持つ (Nat 版)。
+    強帰納法: n が素数なら n 自身、素数でなければ not_prime_divide から。  *)
+Lemma nat_prime_divisor_exists :
+  forall n : nat, (1 < n)%nat ->
+  exists p : nat, prime (Z.of_nat p) /\ Nat.divide p n.
+Proof.
+  intro n.
+  apply (lt_wf_ind n). clear n.
+  intros n IH.
+  intro Hn.
+  destruct (prime_dec (Z.of_nat n)) as [Hprime | Hnprime].
+  - (* n is prime *)
+    exists n. split. exact Hprime. apply Nat.divide_refl.
+  - (* n is not prime: get factor k with 1 < k < n, k | n *)
+    destruct (not_prime_divide (Z.of_nat n) (ltac:(lia)) Hnprime)
+      as [k_Z [Hk_Z Hdvd_Z]].
+    set (k := Z.to_nat k_Z).
+    assert (Hk_gt1 : (1 < k)%nat).
+    { unfold k. apply (proj2 (Nat2Z.inj_lt 1 (Z.to_nat k_Z))).
+      rewrite Z2Nat.id by lia. lia. }
+    assert (Hk_pos : (0 < k)%nat) by lia.
+    assert (Hk_lt_n : (k < n)%nat).
+    { unfold k. apply (proj2 (Nat2Z.inj_lt (Z.to_nat k_Z) n)).
+      rewrite Z2Nat.id by lia. lia. }
+    assert (Hk_dvd_n : Nat.divide k n).
+    { apply Z_divide_nat. unfold k. rewrite Z2Nat.id by lia. exact Hdvd_Z. }
+    destruct (IH k Hk_lt_n Hk_gt1) as [p [Hpprime Hpdvd]].
+    exists p. split. exact Hpprime.
+    exact (Nat.divide_trans _ _ _ Hpdvd Hk_dvd_n).
+Qed.
+
+(** 素数 p が n を割るとき、n = m * p^k (gcd(m, p^k) = 1, k >= 1) の分解が存在する:
+    強帰納法: n/p < n を利用して p 進付値を抽出する。  *)
+Lemma prime_divides_exists_prime_power_split :
+  forall (p n : nat),
+    prime (Z.of_nat p) ->
+    (1 <= n)%nat ->
+    (Z.of_nat p | Z.of_nat n) ->
+    exists k m : nat,
+      (1 <= k)%nat /\
+      (n = m * p^k)%nat /\
+      Nat.gcd m (p^k) = 1%nat.
+Proof.
+  intros p.
+  intro n.
+  apply (lt_wf_ind n). clear n.
+  intros n IH.
+  intros Hprime Hn Hdvd.
+  assert (Hp2 : (2 <= p)%nat) by (apply prime_ge_2 in Hprime; lia).
+  (* p | n を Nat で取得 *)
+  assert (Hn_dvd_nat : Nat.divide p n) by exact (Z_divide_nat p n Hdvd).
+  (* n >= p >= 2 なので n mod p = 0 かつ n = (n/p)*p *)
+  assert (Hn_mod0 : (n mod p = 0)%nat).
+  { apply (proj2 (Nat.mod_divide n p (ltac:(lia)))). exact Hn_dvd_nat. }
+  assert (Hpn_eq : (n = n / p * p)%nat).
+  { pose proof (Nat.div_mod n p (ltac:(lia))) as Hmod. lia. }
+  assert (Hn_ge_p : (p <= n)%nat) by (apply (Nat.divide_pos_le p n); [lia | exact Hn_dvd_nat]).
+  assert (Hnp_pos : (1 <= n/p)%nat) by nia.
+  assert (Hnp_lt : (n / p < n)%nat) by (apply Nat.div_lt; lia).
+  (* (n/p) mod p の場合分け *)
+  destruct (Nat.eq_dec ((n / p)%nat mod p) 0) as [Hmod0' | Hmodne0].
+  - (* Case: p | (n/p): 帰納仮定を使う *)
+    assert (Hnp_dvd_Z : (Z.of_nat p | Z.of_nat (n/p)%nat)).
+    { apply nat_divide_Z. apply (proj1 (Nat.mod_divide (n/p)%nat p (ltac:(lia)))). exact Hmod0'. }
+    destruct (IH (n/p)%nat Hnp_lt Hprime Hnp_pos Hnp_dvd_Z) as [k' [m' [Hk' [Heq' Hgcd']]]].
+    (* n = m' * p^(k'+1) *)
+    exists (S k'), m'.
+    split. { lia. }
+    split.
+    + rewrite Hpn_eq, Heq'. simpl. nia.
+    + (* gcd(m', p^(k'+1)) = 1 から prime_pow_coprime_iff を使う *)
+      assert (Hm'_mod : (m' mod p <> 0)%nat).
+      { assert (HZ_gcd : Z.gcd (Z.of_nat m') (Z.of_nat (p^k')) = 1).
+        { rewrite Z_gcd_of_nat, Hgcd'. reflexivity. }
+        exact (proj1 (prime_pow_coprime_iff p k' m' Hprime Hk') HZ_gcd). }
+      apply Nat2Z.inj. simpl. rewrite <- Z_gcd_of_nat.
+      apply (proj2 (prime_pow_coprime_iff p (S k') m' Hprime (ltac:(lia)))).
+      exact Hm'_mod.
+  - (* Case: p ∤ (n/p): k=1, m = n/p *)
+    exists 1%nat, (n/p)%nat.
+    split. { lia. }
+    split.
+    + rewrite Nat.pow_1_r. exact Hpn_eq.
+    + apply Nat2Z.inj. simpl. rewrite <- Z_gcd_of_nat.
+      apply (proj2 (prime_pow_coprime_iff p 1 (n/p)%nat Hprime (ltac:(lia)))).
+      exact Hmodne0.
+Qed.
+
+(** 主定理: 任意の n > 1 に対して (Z/nZ)* は巡回群の直積に同型である。
+    証明: n に関する強帰納法。
+      (1) n の素因数 p を取り出す (nat_prime_divisor_exists)。
+      (2) prime_divides_exists_prime_power_split で n = m * p^k を得る。
+      (3) m = 1 の場合: n = p^k → znz_units_prime_pow_is_cyclic_product。
+      (4) m > 1 の場合: znz_units_decomp2 + 帰納仮定 + 素数冪補題。  *)
+Theorem znz_units_is_cyclic_product :
+  forall (n : nat) (Hn : (1 < n)%nat),
+    IsCyclicProduct (znz_units_group n Hn).
+Proof.
+  intro n.
+  apply (lt_wf_ind n). clear n.
+  intros n IH.
+  intro Hn.
+  (* Step 1: n の素因数 p を取り出す *)
+  destruct (nat_prime_divisor_exists n Hn) as [p [Hprime Hp_dvd_n]].
+  assert (Hp2 : (2 <= p)%nat) by (apply prime_ge_2 in Hprime; lia).
+  (* p | n を Z に変換 *)
+  assert (Hdvd_Z : (Z.of_nat p | Z.of_nat n)) by exact (nat_divide_Z p n Hp_dvd_n).
+  (* Step 2: n = m * p^k (gcd(m, p^k) = 1, k >= 1) *)
+  destruct (prime_divides_exists_prime_power_split p n Hprime (ltac:(lia)) Hdvd_Z)
+    as [k [m [Hk [Heqn Hgcd]]]].
+  (* p^k > 1 *)
+  assert (Hpk : (1 < p^k)%nat).
+  { apply Nat.lt_le_trans with p.
+    - apply prime_ge_2 in Hprime. lia.
+    - replace p with (p^1)%nat at 1 by (simpl; lia).
+      apply Nat.pow_le_mono_r; lia. }
+  (* Step 3: m = 1 か m > 1 で場合分け *)
+  destruct (Nat.eq_dec m 1) as [Hm1 | Hmne1].
+  - (* Case m = 1: n = p^k *)
+    subst m.
+    rewrite Nat.mul_1_l in Heqn.
+    revert Hn. rewrite Heqn. intro Hn.
+    exact (znz_units_prime_pow_is_cyclic_product p k Hprime Hk Hn).
+  - (* Case m > 1 *)
+    assert (Hm : (1 < m)%nat).
+    { destruct m. { simpl in Heqn. lia. } destruct m. contradiction. lia. }
+    assert (Hm_lt_n : (m < n)%nat) by (rewrite Heqn; nia).
+    (* Hn を m * p^k の形に変換 *)
+    revert Hn. rewrite Heqn. intro Hn.
+    (* ICP_iso で結合 *)
+    apply (ICP_iso _ (znz_units_group m Hm ×ₒ znz_units_group (p^k) Hpk)).
+    + exact (znz_units_decomp2 m (p^k) Hm Hpk Hn Hgcd).
+    + apply ICP_product.
+      * exact (IH m Hm_lt_n Hm).
+      * exact (znz_units_prime_pow_is_cyclic_product p k Hprime Hk Hpk).
+Qed.
