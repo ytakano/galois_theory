@@ -1748,3 +1748,87 @@
 - **Dependencies**: `znz_units_odd_prime_pow_structure`, `znz_group_product_if_coprime`, `pnm1_pm1_coprime`, `GroupIsomorphic_trans`, `GroupIsomorphic_symm`
 - **Notes**: Short proof — the main work is in the dependencies.
 - **Date**: 2026-04-XX
+
+---
+
+### `IsCyclicProduct`
+- **Type**: Inductive Definition
+- **Statement**:
+  ```coq
+  Inductive IsCyclicProduct : Group -> Prop :=
+    | ICP_cyclic  : forall C : CyclicGroup, IsCyclicProduct C
+    | ICP_product : forall G H : Group,
+        IsCyclicProduct G -> IsCyclicProduct H -> IsCyclicProduct (G ×ₒ H)
+    | ICP_iso     : forall G H : Group,
+        G ≅ H -> IsCyclicProduct H -> IsCyclicProduct G.
+  ```
+- **Proof Strategy**: Inductive predicate with 3 constructors: direct cyclic, product, isomorphism.
+- **Key Tactics**: n/a (definition)
+- **Dependencies**: CyclicGroup, GroupIsomorphic, group_product
+- **Notes**: ICP_iso constructor avoids needing proof irrelevance when rewriting group indices.
+- **Date**: 2026-04-08
+
+---
+
+### `group_order_1_is_cyclic`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma group_order_1_is_cyclic : forall (G : Group),
+    GroupOrder G 1 -> IsCyclicProduct G.
+  ```
+- **Proof Strategy**: Fin.caseS' + Fin.case0 prove all elements equal e G. Then construct CyclicGroup inline with generator = e G.
+- **Key Tactics**: `Fin.caseS'`, `Fin.case0`, inline CyclicGroup construction
+- **Dependencies**: GroupOrder (definition), Fin.t structure
+- **Notes**: `Fin.t 1` has unique element `Fin.F1`; any element equals it via `Fin.caseS' i` (F1 case → refl, FS case → Fin.case0 (empty)).
+- **Date**: 2026-04-08
+
+---
+
+### `nat_prime_divisor_exists`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma nat_prime_divisor_exists :
+    forall n : nat, (1 < n)%nat ->
+    exists p : nat, prime (Z.of_nat p) /\ Nat.divide p n.
+  ```
+- **Proof Strategy**: Strong induction on n. If n is prime: exists n. If not prime: `not_prime_divide` gives factor k with 1 < k < n, then apply IH to k and use `Nat.divide_trans`.
+- **Key Tactics**: `Nat.strong_ind`, `prime_dec`, `not_prime_divide`, `Z_divide_nat`, `Nat.divide_trans`
+- **Dependencies**: `prime_dec`, `not_prime_divide`, `Z_divide_nat`, `Z2Nat.id`
+- **Notes**: Use `Nat2Z.inj_lt` to convert Z < comparison to nat. `Z.to_nat k_Z < n` from `k_Z < Z.of_nat n` via `Nat2Z.inj_lt`. ⚠ `prime_divisor_exists` does not exist in Rocq 9.1 Stdlib; must prove manually.
+- **Date**: 2026-04-08
+
+---
+
+### `prime_divides_exists_prime_power_split`
+- **Type**: Lemma
+- **Statement**:
+  ```coq
+  Lemma prime_divides_exists_prime_power_split :
+    forall (p n : nat),
+      prime (Z.of_nat p) -> (1 <= n)%nat -> (Z.of_nat p | Z.of_nat n) ->
+      exists k m : nat,
+        (1 <= k)%nat /\ (n = m * p^k)%nat /\ Nat.gcd m (p^k) = 1%nat.
+  ```
+- **Proof Strategy**: Strong induction on n. n = (n/p)*p from p|n. Split on (n/p) mod p = 0 or not. If p|(n/p): IH gives n/p = m'*p^k', then n = m'*p^(k'+1) and gcd from prime_pow_coprime_iff. If p∤(n/p): k=1, m=n/p, gcd from prime_pow_coprime_iff.
+- **Key Tactics**: `Nat.strong_ind`, `Nat.mod_eq_0_iff_dvd`, `Nat.div_mod`, `prime_pow_coprime_iff`, `Z_gcd_of_nat`, `Nat2Z.inj`
+- **Dependencies**: `Z_divide_nat`, `nat_divide_Z`, `prime_pow_coprime_iff`, `Z_gcd_of_nat`
+- **Notes**: Use `Nat.mod_eq_0_iff_dvd.2` (or `.1`) for (p | n) ↔ n mod p = 0. Use `Nat2Z.inj` to convert `Z.of_nat (Nat.gcd ...) = Z.of_nat 1` to `Nat.gcd ... = 1`. `rewrite <- Z_gcd_of_nat` before `prime_pow_coprime_iff` application.
+- **Date**: 2026-04-08
+
+---
+
+### `znz_units_is_cyclic_product`
+- **Type**: Theorem
+- **Statement**:
+  ```coq
+  Theorem znz_units_is_cyclic_product :
+    forall (n : nat) (Hn : (1 < n)%nat),
+      IsCyclicProduct (znz_units_group n Hn).
+  ```
+- **Proof Strategy**: Strong induction on n. (1) Get prime factor p via `nat_prime_divisor_exists`. (2) Extract p-adic decomposition n = m*p^k via `prime_divides_exists_prime_power_split`. (3) m=1 case: `znz_units_prime_pow_is_cyclic_product` after rewriting. (4) m>1 case: ICP_iso + znz_units_decomp2 + IH(m) + prime_pow case. Key: `rewrite Heqn in Hn` then `rewrite Heqn` in goal to unify types.
+- **Key Tactics**: `Nat.strong_ind`, `nat_prime_divisor_exists`, `prime_divides_exists_prime_power_split`, `znz_units_decomp2`, `ICP_iso`, `ICP_product`, `nia`
+- **Dependencies**: `nat_prime_divisor_exists`, `prime_divides_exists_prime_power_split`, `znz_units_prime_pow_is_cyclic_product`, `znz_units_decomp2`, `nat_divide_Z`
+- **Notes**: ⚠️ After rewriting `Heqn : n = m * p^k` in the goal, must also `rewrite Heqn in Hn` first so that `Hn : (1 < m*p^k)%nat` for `znz_units_decomp2`. The key trick: rewrite Hn before rewriting goal to avoid type mismatch. Use `nia` for `m < m * p^k`.
+- **Date**: 2026-04-08
